@@ -12,5 +12,6 @@ The manifest declaration, not this directory, defines Bundle identity. Domain pa
 | [`web-app/`](web-app/README.md) | Browser surface: web patch layer + runtime glue plugin | mounts rows |
 | [`headless/`](headless/README.md) | Direct one-shot task mode over base, with no Host or Web layer | mounts `headless-runner` |
 | [`minecraft-neoforge/`](minecraft-neoforge/README.md) | Web profile layer selecting the shipped NeoForge agent preset and Java LSP provider | — (patch only) |
+| [`minecraft-neoforge-headless/`](minecraft-neoforge-headless/README.md) | Headless NeoForge task profile layer with Java LSP and a narrow code-development tool set | — (patch only) |
 
 In-box bundles resolve from the dsh installation; out-of-tree bundles install into a profile through `dsh plugin --profile <name> add <package>`.

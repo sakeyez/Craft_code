@@ -12,5 +12,6 @@ Bundle 身份由 manifest 声明决定，而不是由本目录决定。领域包
 | [`web-app/`](web-app/README.zh.md) | 浏览器表层：web patch 层 + 运行时粘合插件 | 挂载多条配置行 |
 | [`headless/`](headless/README.zh.md) | 直接运行在 base 之上的一次性任务模式，不含 Host 或 Web 层 | 挂载 `headless-runner` |
 | [`minecraft-neoforge/`](minecraft-neoforge/README.zh.md) | 选择随包 NeoForge agent preset 与 Java LSP 提供方的 Web profile 层 | —（仅 patch） |
+| [`minecraft-neoforge-headless/`](minecraft-neoforge-headless/README.zh.md) | 带 Java LSP 与收窄代码开发工具集的 headless NeoForge 任务 profile 层 | —（仅 patch） |
 
 内置组合包从 dsh 安装目录解析；树外（out-of-tree）组合包通过 `dsh plugin --profile <name> add <package>` 安装进 profile。

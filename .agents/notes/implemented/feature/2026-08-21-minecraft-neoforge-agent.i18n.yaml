@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-21-minecraft-neoforge-agent.md
-2026-08-21-minecraft-neoforge-agent.md: 93dd7b872106bde09a798b2a783bcca2e7127b72
-2026-08-21-minecraft-neoforge-agent.zh.md: b24abbc1d971530354ec19833c0c0f1ed0f73484
+2026-08-21-minecraft-neoforge-agent.md: d7237f64a7d9bc80b33c788f227f82348f759f8a
+2026-08-21-minecraft-neoforge-agent.zh.md: 4dd5a8c62884ff75061e4ffab6a7be4a0de6f71f

@@ -12,15 +12,16 @@ The domain is also loader-sensitive. NeoForge, Fabric, Forge, and Architectury u
 
 ## Decision
 
-Minecraft support ships as a Web profile and agent-preset composition:
+Minecraft support ships as a Web preset composition and a headless profile composition:
 
 - `@deepseek-ai/dsh-minecraft-neoforge-agent` contributes only five prompt sections: `minecraft:identity`, `minecraft:scope`, `minecraft:workflow`, `minecraft:resources`, and `minecraft:version-discipline`.
 - `@deepseek-ai/dsh-minecraft-neoforge-bundle` is a profile patch layer that selects `minecraft-neoforge` as the default preset and inserts the host-plane `ctx.lsp` and stdio Java provider rows.
 - The shipped `minecraft-neoforge` preset mounts the prompt package plus existing file, search, platform shell, jobs, `lsp`, skill, ask-user, and compaction rows. Its bundled `neoforge-modding` skill travels with the preset through a `customSkillDirs` entry resolved from the preset's `baseUrl`.
+- `@deepseek-ai/dsh-minecraft-neoforge-headless-bundle` is a profile patch layer applied after `dsh-base` and `dsh-headless`. The shipped `minecraft-neoforge` profile template uses those three bundles to run the existing one-shot headless runner with NeoForge prompt sections, the bundled `neoforge-modding` skill, Java LSP, and a first-version code-development tool set.
 
 The v1 scope is NeoForge Java mods. The prompt tells the model to detect NeoForge from Gradle and mod metadata, to report non-NeoForge projects as outside the v1 implementation scope, and to avoid version-mixed API guesses. The preset intentionally omits web search, workflow, Ralph, general subagents, todo, and goal tools. Those capabilities remain available to other presets and to user-authored copies that choose to add them.
 
-Java LSP is deployment-owned. The bundle's default stdio command is `jdtls`, with `.java` mapped to language id `java`; a profile overlay can replace the full `lsp-stdio` row when a machine needs an absolute JDTLS path or arguments.
+Java LSP is deployment-owned. Both bundle defaults use stdio command `jdtls`, with `.java` mapped to language id `java`; a profile overlay can replace the full `lsp-stdio` row when a machine needs an absolute JDTLS path or arguments.
 
 ## Alternatives considered
 
@@ -34,6 +35,6 @@ Java LSP is deployment-owned. The bundle's default stdio command is `jdtls`, wit
 
 ## Consequences
 
-The shipped preset is a narrow domain agent that remains inside the normal harness composition model. Model-visible behavior is fully reconstructable from existing prompt sections and tool schemas, so no new session event is required. The Web profile surface can select the preset through the bundle; headless remains a separate composition decision.
+The shipped preset and headless profile are narrow domain agents that remain inside the normal harness composition model. Model-visible behavior is fully reconstructable from existing prompt sections and tool schemas, so no new session event is required. The Web profile surface can select the preset through its bundle; `dsh --profile minecraft-neoforge "task"` uses the headless bundle stack.
 
 The implementation depends on a host Java language server being available when the profile enables the bundle. A missing or misconfigured JDTLS affects only LSP queries; file, search, shell, skills, jobs, ask-user, permissions, compaction, and session persistence continue to come from their existing packages.

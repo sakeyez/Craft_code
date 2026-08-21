@@ -213,6 +213,9 @@ importers:
       '@deepseek-ai/dsh-minecraft-neoforge-bundle':
         specifier: workspace:^
         version: link:../../packages/bundle/minecraft-neoforge
+      '@deepseek-ai/dsh-minecraft-neoforge-headless-bundle':
+        specifier: workspace:^
+        version: link:../../packages/bundle/minecraft-neoforge-headless
       '@deepseek-ai/dsh-persona':
         specifier: workspace:^
         version: link:../../packages/preset/persona
@@ -1296,6 +1299,37 @@ importers:
       '@deepseek-ai/dsh-lsp-stdio':
         specifier: workspace:^
         version: link:../../lsp/lsp-stdio
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/cordis-plugin-include':
+        specifier: workspace:^
+        version: link:../../../vendor/include
+      '@deepseek-ai/dsh-app-boot':
+        specifier: workspace:^
+        version: link:../../boot/app-boot
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
+      js-yaml:
+        specifier: ^4.2.0
+        version: 4.2.0
+
+  packages/bundle/minecraft-neoforge-headless:
+    dependencies:
+      '@deepseek-ai/dsh-lsp':
+        specifier: workspace:^
+        version: link:../../lsp/lsp
+      '@deepseek-ai/dsh-lsp-stdio':
+        specifier: workspace:^
+        version: link:../../lsp/lsp-stdio
+      '@deepseek-ai/dsh-minecraft-neoforge-agent':
+        specifier: workspace:^
+        version: link:../../minecraft/neoforge-agent
+      '@deepseek-ai/dsh-tool-lsp':
+        specifier: workspace:^
+        version: link:../../lsp/tool-lsp
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^

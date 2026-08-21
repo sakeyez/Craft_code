@@ -144,7 +144,11 @@ describe('loadProfile', () => {
   })
 
   it('auto-initializes only shipped templates and fails loud otherwise', () => {
-    const anchor = stageInstallation({})
+    const anchor = stageInstallation({
+      '@deepseek-ai/dsh-base': { patch: '[]\n' },
+      '@deepseek-ai/dsh-headless': { patch: '[]\n' },
+      '@deepseek-ai/dsh-minecraft-neoforge-headless-bundle': { patch: '[]\n' },
+    })
     const home = tmp()
     expect(() => loadProfile('t', 'custom', anchor, home))
       .toThrow('profile "custom" does not exist')
@@ -159,6 +163,13 @@ describe('loadProfile', () => {
     }
     expect(readProfileManifest('t', resolveProfileDir('web', home)).dsh?.profile?.bundles)
       .toEqual([...PROFILE_TEMPLATES.web ?? []])
+    const minecraftTemplate = PROFILE_TEMPLATES['minecraft-neoforge']
+    if (minecraftTemplate === undefined) throw new Error('minecraft-neoforge template must ship')
+    const minecraft = loadProfile('t', 'minecraft-neoforge', anchor, home)
+    expect(minecraft.layers.map(layer => layer.packageName))
+      .toEqual([...minecraftTemplate])
+    expect(readProfileManifest('t', resolveProfileDir('minecraft-neoforge', home)).dsh?.profile?.bundles)
+      .toEqual([...minecraftTemplate])
   })
 
   it('normalizes only the exact installation-owned headless bundle tuple', () => {

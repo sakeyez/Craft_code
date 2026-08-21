@@ -1,6 +1,6 @@
 # Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write packages/boot/app-boot/README.md
-README.md: a8a037a8daa57547006116267207cbb3d9a8c4a2
-README.zh.md: 21707f4be7d23241c901e0c9c4ab36b1d9a5995b
+#   pnpm run verify-translation-pairing --write packages/bundle/minecraft-neoforge-headless/README.md
+README.md: 4e7a47e0731c50a798ea0206c881c2b4c8b72a91
+README.zh.md: 8a0253fd1ed04e78231e7937c205f242cda553e9

@@ -12,15 +12,16 @@ Minecraft 模组开发需要领域专用行为，但既有 harness 已经以插�
 
 ## 决策
 
-Minecraft 支持以 Web profile 和 agent-preset 组合发布：
+Minecraft 支持以 Web preset 组合与 headless profile 组合发布：
 
 - `@deepseek-ai/dsh-minecraft-neoforge-agent` 只贡献五个提示词段落：`minecraft:identity`、`minecraft:scope`、`minecraft:workflow`、`minecraft:resources` 和 `minecraft:version-discipline`。
 - `@deepseek-ai/dsh-minecraft-neoforge-bundle` 是 profile patch 层，选择 `minecraft-neoforge` 作为默认 preset，并插入 host-plane `ctx.lsp` 和 stdio Java 提供方行。
 - 随包 `minecraft-neoforge` preset 挂载提示词包，以及既有的文件、搜索、平台 shell、jobs、`lsp`、skill、ask-user 和压缩行。它携带的 `neoforge-modding` skill 通过从 preset `baseUrl` 解析的 `customSkillDirs` 条目随 preset 一起移动。
+- `@deepseek-ai/dsh-minecraft-neoforge-headless-bundle` 是在 `dsh-base` 和 `dsh-headless` 之后应用的 profile patch 层。随包 `minecraft-neoforge` profile 模板使用这三个 bundle，让既有一次性 headless runner 带着 NeoForge 提示词段落、随包 `neoforge-modding` skill、Java LSP 与第一版代码开发工具集运行。
 
 v1 范围是 NeoForge Java 模组。提示词要求模型从 Gradle 和模组元数据检测 NeoForge，将非 NeoForge 项目报告为不在 v1 实现范围内，并避免混用不同版本 API 的猜测。preset 刻意省略 web search、workflow、Ralph、通用 subagent、todo 和 goal 工具。这些能力仍可供其他 preset 使用，也可由选择添加它们的用户自定义副本使用。
 
-Java LSP 由部署拥有。bundle 默认 stdio 命令为 `jdtls`，将 `.java` 映射到 language id `java`；当机器需要绝对 JDTLS 路径或参数时，profile overlay 可以替换完整的 `lsp-stdio` 行。
+Java LSP 由部署拥有。两个 bundle 默认都使用 stdio 命令 `jdtls`，将 `.java` 映射到 language id `java`；当机器需要绝对 JDTLS 路径或参数时，profile overlay 可以替换完整的 `lsp-stdio` 行。
 
 ## 曾考虑的替代方案
 
@@ -34,6 +35,6 @@ Java LSP 由部署拥有。bundle 默认 stdio 命令为 `jdtls`，将 `.java` �
 
 ## 后果
 
-随包 preset 是一个窄领域 agent，仍停留在普通 harness 组合模型内。模型可见行为完全可由既有提示词段落和工具 schema 重建，因此不需要新的会话事件。Web profile 表层可以通过 bundle 选择该 preset；headless 仍是单独的组合决策。
+随包 preset 与 headless profile 都是窄领域 agent，仍停留在普通 harness 组合模型内。模型可见行为完全可由既有提示词段落和工具 schema 重建，因此不需要新的会话事件。Web profile 表层可以通过它的 bundle 选择该 preset；`dsh --profile minecraft-neoforge "task"` 使用 headless bundle 栈。
 
 该实现依赖 profile 启用 bundle 时宿主存在 Java language server。缺失或配置错误的 JDTLS 只影响 LSP 查询；文件、搜索、shell、skill、jobs、ask-user、权限、压缩和会话持久化仍来自它们既有的包。

@@ -43,6 +43,7 @@
     "@deepseek-ai/dsh-mcp-client": "workspace:^",
     "@deepseek-ai/dsh-minecraft-neoforge-agent": "workspace:^",
     "@deepseek-ai/dsh-minecraft-neoforge-bundle": "workspace:^",
+    "@deepseek-ai/dsh-minecraft-neoforge-headless-bundle": "workspace:^",
     "@deepseek-ai/dsh-home-paths": "workspace:^",
     "@deepseek-ai/dsh-lsp": "workspace:^",
     "@deepseek-ai/dsh-lsp-stdio": "workspace:^",
