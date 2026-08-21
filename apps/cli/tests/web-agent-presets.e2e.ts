@@ -28,6 +28,7 @@ const BASE_PATCH = join(REPO_ROOT, 'packages/bundle/base/cordis.patch.yml')
 const WEB_PATCH = join(REPO_ROOT, 'packages/bundle/web-app/cordis.patch.yml')
 const CODEX_PACKAGE_DIR = join(REPO_ROOT, 'packages/subagent/subagent-codex')
 const CLAUDE_CODE_PACKAGE_DIR = join(REPO_ROOT, 'packages/subagent/subagent-claude-code')
+const MINECRAFT_NEOFORGE_BUNDLE_PACKAGE_DIR = join(REPO_ROOT, 'packages/bundle/minecraft-neoforge')
 /** The installation anchor whose dependency surface the preset module fallback mirrors. */
 const INSTALL_ANCHOR = join(REPO_ROOT, 'apps/cli/package.json')
 const MINIMAL_PROMPT = 'You are a helpful software engineer assistant.'
@@ -219,7 +220,7 @@ describe('the shipped Web composition', () => {
   it('supplies both shipped presets, and only those, from the system root', async () => {
     const listed = await ctx.agentPresets.list()
 
-    expect(listed.map(preset => preset.id).sort()).toEqual(['code', 'cordis', 'minimal', 'standard'])
+    expect(listed.map(preset => preset.id).sort()).toEqual(['code', 'cordis', 'minecraft-neoforge', 'minimal', 'standard'])
     expect(listed.every(preset => preset.trust === 'system')).toBe(true)
     expect(ctx.agentPresets.defaultId).toBe('standard')
   })
@@ -266,6 +267,75 @@ describe('the shipped Web composition', () => {
       await handle.dispose()
     }
   })
+
+  it('composes the Minecraft NeoForge agent from its profile bundle', async () => {
+    const settingsFile = join(await mkdtemp(join(tmpdir(), 'dsh-minecraft-neoforge-')), 'settings.yaml')
+    await writeFile(settingsFile, '{}\n')
+    const minecraftCtx = await bootWeb(settingsFile, [
+      {
+        id: 'lsp-stdio',
+        config: {
+          servers: {
+            java: {
+              command: process.execPath,
+              args: ['-e', 'process.stdin.resume()'],
+              extensionToLanguage: { '.java': 'java' },
+            },
+          },
+        },
+      },
+      {
+        id: 'agent-presets',
+        config: {
+          default: 'minecraft-neoforge',
+          roots: [{ path: join(CONFIG_DIR, 'agent-presets'), trust: 'system' }],
+          includeUserRoot: false,
+        },
+      },
+    ], [MINECRAFT_NEOFORGE_BUNDLE_PACKAGE_DIR], [
+      '@deepseek-ai/dsh-base',
+      '@deepseek-ai/dsh-web-app',
+      '@deepseek-ai/dsh-minecraft-neoforge-bundle',
+    ])
+    const handle = await minecraftCtx.agents.create({
+      sessionId: SessionId(`preset-minecraft-neoforge-${randomUUID()}`),
+      setup: agentCtx => minecraftCtx.agentPresets.mount(agentCtx, 'minecraft-neoforge').then(() => undefined),
+    })
+    try {
+      expect(minecraftCtx.agentPresets.defaultId).toBe('minecraft-neoforge')
+      const shellTool = process.platform === 'win32' ? 'pwsh' : 'bash'
+      expect(toolNames(minecraftCtx, handle.agent).filter(name => name !== 'glob' && name !== 'grep')).toEqual([
+        'ask_user_question', 'edit', 'job_kill', 'job_list', 'job_output',
+        'lsp', 'read', 'read_image', shellTool, 'skill', 'write',
+      ].sort())
+      for (const forbidden of [
+        'create_goal', 'exit_plan_mode', 'get_goal', 'interrupt_agent',
+        'list_agents', 'ralph', 'send_message', 'subagent', 'subagent_fork',
+        'todo_write', 'update_goal', 'web_search', 'workflow',
+      ]) {
+        expect(toolNames(minecraftCtx, handle.agent)).not.toContain(forbidden)
+      }
+      const assembly = await minecraftCtx.systemPrompt.assemble({ scope: handle.agent })
+      expect(assembly.sections.map(section => section.name)).toEqual(expect.arrayContaining([
+        'deployment:persona',
+        'minecraft:identity',
+        'minecraft:scope',
+        'minecraft:workflow',
+        'minecraft:resources',
+        'minecraft:version-discipline',
+        'tool:lsp',
+      ]))
+      expect(assembly.sections.find(section => section.name === 'minecraft:scope')?.text)
+        .toContain('v1 supports NeoForge Java mods only')
+      expect(assembly.tools.map(tool => tool.name)).toContain('lsp')
+      const scopedSkills = (await minecraftCtx.skills.list({ scope: handle.agent })).map(skill => skill.name)
+      expect(scopedSkills).toContain('neoforge-modding')
+      expect((await minecraftCtx.skills.list()).map(skill => skill.name)).not.toContain('neoforge-modding')
+    } finally {
+      await handle.dispose()
+      await minecraftCtx.fiber.dispose()
+    }
+  }, 120_000)
 
   it('keeps two differently composed sessions independent', async () => {
     const full = await ctx.agents.create({

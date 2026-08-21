@@ -1,0 +1,16 @@
+- id: agent-presets
+  config:
+    default: minecraft-neoforge
+
+- insert:
+    - id: lsp
+      name: '@deepseek-ai/dsh-lsp'
+
+    - id: lsp-stdio
+      name: '@deepseek-ai/dsh-lsp-stdio'
+      config:
+        servers:
+          java:
+            command: jdtls
+            extensionToLanguage:
+              .java: java
