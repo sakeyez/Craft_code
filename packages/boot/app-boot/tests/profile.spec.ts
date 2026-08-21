@@ -147,7 +147,7 @@ describe('loadProfile', () => {
     const anchor = stageInstallation({
       '@deepseek-ai/dsh-base': { patch: '[]\n' },
       '@deepseek-ai/dsh-headless': { patch: '[]\n' },
-      '@deepseek-ai/dsh-minecraft-neoforge-headless-bundle': { patch: '[]\n' },
+      '@deepseek-ai/dsh-mcmod-headless-bundle': { patch: '[]\n' },
     })
     const home = tmp()
     expect(() => loadProfile('t', 'custom', anchor, home))
@@ -163,12 +163,12 @@ describe('loadProfile', () => {
     }
     expect(readProfileManifest('t', resolveProfileDir('web', home)).dsh?.profile?.bundles)
       .toEqual([...PROFILE_TEMPLATES.web ?? []])
-    const minecraftTemplate = PROFILE_TEMPLATES['minecraft-neoforge']
-    if (minecraftTemplate === undefined) throw new Error('minecraft-neoforge template must ship')
-    const minecraft = loadProfile('t', 'minecraft-neoforge', anchor, home)
+    const minecraftTemplate = PROFILE_TEMPLATES['mcmod']
+    if (minecraftTemplate === undefined) throw new Error('mcmod template must ship')
+    const minecraft = loadProfile('t', 'mcmod', anchor, home)
     expect(minecraft.layers.map(layer => layer.packageName))
       .toEqual([...minecraftTemplate])
-    expect(readProfileManifest('t', resolveProfileDir('minecraft-neoforge', home)).dsh?.profile?.bundles)
+    expect(readProfileManifest('t', resolveProfileDir('mcmod', home)).dsh?.profile?.bundles)
       .toEqual([...minecraftTemplate])
   })
 

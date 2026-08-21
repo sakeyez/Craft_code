@@ -1,0 +1,106 @@
+# Headless Minecraft mod-development profile layer. Apply after dsh-base and
+# dsh-headless: the existing one-shot runner stays in place, while this layer
+# narrows the global model-facing tool set to code-development essentials and
+# adds Fabric-first prompt, skill, and Java LSP rows.
+
+- id: system-prompt
+  config:
+    persona: >-
+      You are a Minecraft mod-development coding agent powered by the {{model}} model. Your working directory is {{cwd}}. Identify the project's loader and pinned Minecraft toolchain before edits; when no project decision exists, use Fabric + Java + Minecraft 1.21.x as the default prototype.
+
+- insert:
+    - id: mcmod-agent
+      name: '@deepseek-ai/dsh-mcmod-agent'
+
+    - id: lsp
+      name: '@deepseek-ai/dsh-lsp'
+
+    - id: lsp-stdio
+      name: '@deepseek-ai/dsh-lsp-stdio'
+      config:
+        servers:
+          java:
+            command: jdtls
+            extensionToLanguage:
+              .java: java
+
+    - id: tool-lsp
+      name: '@deepseek-ai/dsh-tool-lsp'
+
+- id: skill-filesystem
+  config:
+    customSkillDirs:
+      - !!js "process.getBuiltinModule('node:url').fileURLToPath(new URL('skills/', baseUrl))"
+
+# v1 keeps the existing file/search, platform shell, LSP, skill, compaction,
+# permission, and session-persistence rows. The rows below remain disabled so
+# the first headless Minecraft profile does not expose web retrieval,
+# workflow orchestration, Ralph, general subagents, goals, todos, or jobs.
+- id: web
+  disabled: true
+
+- id: web-search-deepseek
+  disabled: true
+
+- id: tool-web
+  disabled: true
+
+- id: workflow-worker-thread
+  disabled: true
+
+- id: tool-workflow
+  disabled: true
+
+- id: tool-ralph
+  disabled: true
+
+- id: subagent
+  disabled: true
+
+- id: subagent-spawn-in-process
+  disabled: true
+
+- id: subagent-fork-in-process
+  disabled: true
+
+- id: tool-subagent-control
+  disabled: true
+
+- id: tool-subagent-list-agents
+  disabled: true
+
+- id: tool-subagent
+  disabled: true
+
+- id: tool-subagent-fork
+  disabled: true
+
+- id: tool-subagent-report
+  disabled: true
+
+- id: jobs
+  disabled: true
+
+- id: tool-jobs
+  disabled: true
+
+- id: goal
+  disabled: true
+
+- id: goal-round-driver
+  disabled: true
+
+- id: command-goal
+  disabled: true
+
+- id: tool-goal
+  disabled: true
+
+- id: tool-todo
+  disabled: true
+
+- id: plan-mode
+  disabled: true
+
+- id: tool-str-replace-editor
+  disabled: true

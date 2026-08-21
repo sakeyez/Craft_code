@@ -204,18 +204,18 @@ importers:
       '@deepseek-ai/dsh-lsp-stdio':
         specifier: workspace:^
         version: link:../../packages/lsp/lsp-stdio
+      '@deepseek-ai/dsh-mcmod-agent':
+        specifier: workspace:^
+        version: link:../../packages/minecraft/mcmod-agent
+      '@deepseek-ai/dsh-mcmod-bundle':
+        specifier: workspace:^
+        version: link:../../packages/bundle/mcmod
+      '@deepseek-ai/dsh-mcmod-headless-bundle':
+        specifier: workspace:^
+        version: link:../../packages/bundle/mcmod-headless
       '@deepseek-ai/dsh-mcp-client':
         specifier: workspace:^
         version: link:../../packages/mcp/mcp-client
-      '@deepseek-ai/dsh-minecraft-neoforge-agent':
-        specifier: workspace:^
-        version: link:../../packages/minecraft/neoforge-agent
-      '@deepseek-ai/dsh-minecraft-neoforge-bundle':
-        specifier: workspace:^
-        version: link:../../packages/bundle/minecraft-neoforge
-      '@deepseek-ai/dsh-minecraft-neoforge-headless-bundle':
-        specifier: workspace:^
-        version: link:../../packages/bundle/minecraft-neoforge-headless
       '@deepseek-ai/dsh-persona':
         specifier: workspace:^
         version: link:../../packages/preset/persona
@@ -1291,7 +1291,7 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
 
-  packages/bundle/minecraft-neoforge:
+  packages/bundle/mcmod:
     dependencies:
       '@deepseek-ai/dsh-lsp':
         specifier: workspace:^
@@ -1316,7 +1316,7 @@ importers:
         specifier: ^4.2.0
         version: 4.2.0
 
-  packages/bundle/minecraft-neoforge-headless:
+  packages/bundle/mcmod-headless:
     dependencies:
       '@deepseek-ai/dsh-lsp':
         specifier: workspace:^
@@ -1324,9 +1324,9 @@ importers:
       '@deepseek-ai/dsh-lsp-stdio':
         specifier: workspace:^
         version: link:../../lsp/lsp-stdio
-      '@deepseek-ai/dsh-minecraft-neoforge-agent':
+      '@deepseek-ai/dsh-mcmod-agent':
         specifier: workspace:^
-        version: link:../../minecraft/neoforge-agent
+        version: link:../../minecraft/mcmod-agent
       '@deepseek-ai/dsh-tool-lsp':
         specifier: workspace:^
         version: link:../../lsp/tool-lsp
@@ -5879,7 +5879,7 @@ importers:
         specifier: ^2026.7.4
         version: 2026.7.10(supports-color@9.4.0)(zod@4.4.3)
 
-  packages/minecraft/neoforge-agent:
+  packages/minecraft/mcmod-agent:
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^

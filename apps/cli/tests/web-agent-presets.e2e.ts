@@ -28,7 +28,7 @@ const BASE_PATCH = join(REPO_ROOT, 'packages/bundle/base/cordis.patch.yml')
 const WEB_PATCH = join(REPO_ROOT, 'packages/bundle/web-app/cordis.patch.yml')
 const CODEX_PACKAGE_DIR = join(REPO_ROOT, 'packages/subagent/subagent-codex')
 const CLAUDE_CODE_PACKAGE_DIR = join(REPO_ROOT, 'packages/subagent/subagent-claude-code')
-const MINECRAFT_NEOFORGE_BUNDLE_PACKAGE_DIR = join(REPO_ROOT, 'packages/bundle/minecraft-neoforge')
+const MCMOD_BUNDLE_PACKAGE_DIR = join(REPO_ROOT, 'packages/bundle/mcmod')
 /** The installation anchor whose dependency surface the preset module fallback mirrors. */
 const INSTALL_ANCHOR = join(REPO_ROOT, 'apps/cli/package.json')
 const MINIMAL_PROMPT = 'You are a helpful software engineer assistant.'
@@ -220,7 +220,7 @@ describe('the shipped Web composition', () => {
   it('supplies both shipped presets, and only those, from the system root', async () => {
     const listed = await ctx.agentPresets.list()
 
-    expect(listed.map(preset => preset.id).sort()).toEqual(['code', 'cordis', 'minecraft-neoforge', 'minimal', 'standard'])
+    expect(listed.map(preset => preset.id).sort()).toEqual(['code', 'cordis', 'mcmod', 'minimal', 'standard'])
     expect(listed.every(preset => preset.trust === 'system')).toBe(true)
     expect(ctx.agentPresets.defaultId).toBe('standard')
   })
@@ -268,8 +268,8 @@ describe('the shipped Web composition', () => {
     }
   })
 
-  it('composes the Minecraft NeoForge agent from its profile bundle', async () => {
-    const settingsFile = join(await mkdtemp(join(tmpdir(), 'dsh-minecraft-neoforge-')), 'settings.yaml')
+  it('composes the Minecraft modding agent from its profile bundle', async () => {
+    const settingsFile = join(await mkdtemp(join(tmpdir(), 'dsh-mcmod-')), 'settings.yaml')
     await writeFile(settingsFile, '{}\n')
     const minecraftCtx = await bootWeb(settingsFile, [
       {
@@ -287,22 +287,22 @@ describe('the shipped Web composition', () => {
       {
         id: 'agent-presets',
         config: {
-          default: 'minecraft-neoforge',
+          default: 'mcmod',
           roots: [{ path: join(CONFIG_DIR, 'agent-presets'), trust: 'system' }],
           includeUserRoot: false,
         },
       },
-    ], [MINECRAFT_NEOFORGE_BUNDLE_PACKAGE_DIR], [
+    ], [MCMOD_BUNDLE_PACKAGE_DIR], [
       '@deepseek-ai/dsh-base',
       '@deepseek-ai/dsh-web-app',
-      '@deepseek-ai/dsh-minecraft-neoforge-bundle',
+      '@deepseek-ai/dsh-mcmod-bundle',
     ])
     const handle = await minecraftCtx.agents.create({
-      sessionId: SessionId(`preset-minecraft-neoforge-${randomUUID()}`),
-      setup: agentCtx => minecraftCtx.agentPresets.mount(agentCtx, 'minecraft-neoforge').then(() => undefined),
+      sessionId: SessionId(`preset-mcmod-${randomUUID()}`),
+      setup: agentCtx => minecraftCtx.agentPresets.mount(agentCtx, 'mcmod').then(() => undefined),
     })
     try {
-      expect(minecraftCtx.agentPresets.defaultId).toBe('minecraft-neoforge')
+      expect(minecraftCtx.agentPresets.defaultId).toBe('mcmod')
       const shellTool = process.platform === 'win32' ? 'pwsh' : 'bash'
       expect(toolNames(minecraftCtx, handle.agent).filter(name => name !== 'glob' && name !== 'grep')).toEqual([
         'ask_user_question', 'edit', 'job_kill', 'job_list', 'job_output',
@@ -326,11 +326,11 @@ describe('the shipped Web composition', () => {
         'tool:lsp',
       ]))
       expect(assembly.sections.find(section => section.name === 'minecraft:scope')?.text)
-        .toContain('v1 supports NeoForge Java mods only')
+        .toContain('v1 is Fabric + Java + Minecraft 1.21.x by default')
       expect(assembly.tools.map(tool => tool.name)).toContain('lsp')
       const scopedSkills = (await minecraftCtx.skills.list({ scope: handle.agent })).map(skill => skill.name)
-      expect(scopedSkills).toContain('neoforge-modding')
-      expect((await minecraftCtx.skills.list()).map(skill => skill.name)).not.toContain('neoforge-modding')
+      expect(scopedSkills).toContain('minecraft-modding')
+      expect((await minecraftCtx.skills.list()).map(skill => skill.name)).not.toContain('minecraft-modding')
     } finally {
       await handle.dispose()
       await minecraftCtx.fiber.dispose()

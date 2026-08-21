@@ -6,6 +6,6 @@
 
 | 包 | 职责 | ctx key |
 |---|---|---|
-| [`neoforge-agent/`](neoforge-agent/README.zh.md) | 面向 agent preset 的纯提示词 NeoForge Java 模组开发指导 | —（仅提示词段落） |
+| [`mcmod-agent/`](mcmod-agent/README.zh.md) | 面向 agent preset 的纯提示词 Fabric-first Minecraft Java 模组开发指导 | —（仅提示词段落） |
 
 这些领域包不替换核心 agent loop。它们与 profile bundle 和 preset 组合，复用既有的文件、搜索、shell、LSP、skill、压缩、权限和会话持久化能力系列。

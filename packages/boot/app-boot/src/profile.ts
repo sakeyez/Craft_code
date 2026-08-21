@@ -114,10 +114,10 @@ export function resolveProfileDir(name: string, home: string = resolveDshHome())
 export const PROFILE_TEMPLATES: Record<string, readonly string[]> = {
   web: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'],
   headless: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-headless'],
-  'minecraft-neoforge': [
+  'mcmod': [
     '@deepseek-ai/dsh-base',
     '@deepseek-ai/dsh-headless',
-    '@deepseek-ai/dsh-minecraft-neoforge-headless-bundle',
+    '@deepseek-ai/dsh-mcmod-headless-bundle',
   ],
 }
 
