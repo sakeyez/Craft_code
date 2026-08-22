@@ -4,7 +4,7 @@
  * rows, and disables non-v1 model-facing capabilities inherited from base.
  */
 
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -20,12 +20,23 @@ interface PatchRow {
   insert?: PatchRow[]
 }
 
+const MINECRAFT_SKILL_NAMES = [
+  'fabric-mod-dev',
+  'minecraft-datagen',
+  'minecraft-resources',
+  'mixin-debugging',
+].sort()
+
 function bundleRoot(): string {
   return fileURLToPath(new URL('..', import.meta.url))
 }
 
 function repoBundleRoot(): string {
   return fileURLToPath(new URL('../..', import.meta.url))
+}
+
+function repoRoot(): string {
+  return fileURLToPath(new URL('../../../..', import.meta.url))
 }
 
 function loadPatch(path = resolve(bundleRoot(), 'cordis.patch.yml')): PatchRow[] {
@@ -36,6 +47,26 @@ function loadPatch(path = resolve(bundleRoot(), 'cordis.patch.yml')): PatchRow[]
 
 function flatten(rows: readonly PatchRow[]): PatchRow[] {
   return rows.flatMap(row => [row, ...(row.insert ?? [])])
+}
+
+function skillNames(root: string): string[] {
+  return readdirSync(root, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => entry.name)
+    .sort()
+}
+
+function skillFrontmatter(path: string): Record<string, unknown> {
+  const content = readFileSync(path, 'utf8')
+  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(content)
+  if (match === null) throw new Error(`${path} has no YAML frontmatter`)
+  const yamlText = match[1]
+  if (yamlText === undefined) throw new Error(`${path} has empty YAML frontmatter capture`)
+  const parsed = yaml.load(yamlText)
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new TypeError(`${path} frontmatter must be a mapping`)
+  }
+  return parsed as Record<string, unknown>
 }
 
 describe('dsh-mcmod-headless bundle', () => {
@@ -82,6 +113,25 @@ describe('dsh-mcmod-headless bundle', () => {
     })
     expect(byId.get('tool-lsp')).toMatchObject({ name: '@deepseek-ai/dsh-tool-lsp' })
     expect(JSON.stringify(byId.get('skill-filesystem')?.config)).toContain('skills/')
+  })
+
+  it('ships the first Minecraft skills with parseable matching frontmatter', () => {
+    const root = resolve(bundleRoot(), 'skills')
+
+    expect(skillNames(root)).toEqual(MINECRAFT_SKILL_NAMES)
+    for (const skillName of MINECRAFT_SKILL_NAMES) {
+      const frontmatter = skillFrontmatter(resolve(root, skillName, 'SKILL.md'))
+      expect(frontmatter.name).toBe(skillName)
+      expect(typeof frontmatter.description).toBe('string')
+      expect(frontmatter.description).not.toHaveLength(0)
+    }
+  })
+
+  it('keeps the Web preset and headless bundled skill sets in sync', () => {
+    const headlessSkills = resolve(bundleRoot(), 'skills')
+    const webPresetSkills = resolve(repoRoot(), 'apps/cli/config/agent-presets/mcmod/skills')
+
+    expect(skillNames(webPresetSkills)).toEqual(skillNames(headlessSkills))
   })
 
   it('disables non-v1 inherited capabilities explicitly', () => {

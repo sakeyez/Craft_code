@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, mkdtemp, readFile, stat, symlink, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, stat, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -29,6 +29,13 @@ const WEB_PATCH = join(REPO_ROOT, 'packages/bundle/web-app/cordis.patch.yml')
 const CODEX_PACKAGE_DIR = join(REPO_ROOT, 'packages/subagent/subagent-codex')
 const CLAUDE_CODE_PACKAGE_DIR = join(REPO_ROOT, 'packages/subagent/subagent-claude-code')
 const MCMOD_BUNDLE_PACKAGE_DIR = join(REPO_ROOT, 'packages/bundle/mcmod')
+const MCMOD_PRESET_SKILL_DIR = join(CONFIG_DIR, 'agent-presets/mcmod/skills')
+const MINECRAFT_SKILL_NAMES = [
+  'fabric-mod-dev',
+  'minecraft-datagen',
+  'minecraft-resources',
+  'mixin-debugging',
+].sort()
 /** The installation anchor whose dependency surface the preset module fallback mirrors. */
 const INSTALL_ANCHOR = join(REPO_ROOT, 'apps/cli/package.json')
 const MINIMAL_PROMPT = 'You are a helpful software engineer assistant.'
@@ -150,6 +157,11 @@ async function bootWeb(
 
 const toolNames = (ctx: Context, agent?: Agent): string[] =>
   ctx.tools.schemas(agent).map(schema => schema.name).sort()
+
+async function bundledSkillNames(root: string): Promise<string[]> {
+  const entries = await readdir(root, { withFileTypes: true })
+  return entries.filter(entry => entry.isDirectory()).map(entry => entry.name).sort()
+}
 
 function toolParameterNames(ctx: Context, agent: Agent, toolName: string): string[] {
   const schema = ctx.tools.schemas(agent).find(tool => tool.name === toolName)
@@ -305,7 +317,7 @@ describe('the shipped Web composition', () => {
       expect(minecraftCtx.agentPresets.defaultId).toBe('mcmod')
       const shellTool = process.platform === 'win32' ? 'pwsh' : 'bash'
       expect(toolNames(minecraftCtx, handle.agent).filter(name => name !== 'glob' && name !== 'grep')).toEqual([
-        'ask_user_question', 'edit', 'job_kill', 'job_list', 'job_output',
+        'ask_user_question', 'detect_mc_project', 'edit', 'job_kill', 'job_list', 'job_output',
         'lsp', 'read', 'read_image', shellTool, 'skill', 'write',
       ].sort())
       for (const forbidden of [
@@ -328,9 +340,12 @@ describe('the shipped Web composition', () => {
       expect(assembly.sections.find(section => section.name === 'minecraft:scope')?.text)
         .toContain('v1 is Fabric + Java + Minecraft 1.21.x by default')
       expect(assembly.tools.map(tool => tool.name)).toContain('lsp')
-      const scopedSkills = (await minecraftCtx.skills.list({ scope: handle.agent })).map(skill => skill.name)
-      expect(scopedSkills).toContain('minecraft-modding')
-      expect((await minecraftCtx.skills.list()).map(skill => skill.name)).not.toContain('minecraft-modding')
+      const scopedSkills = (await minecraftCtx.skills.list({ scope: handle.agent })).map(skill => skill.name).sort()
+      expect(scopedSkills).toEqual(expect.arrayContaining(MINECRAFT_SKILL_NAMES))
+      expect(scopedSkills).not.toContain('minecraft-modding')
+      const globalSkills = (await minecraftCtx.skills.list()).map(skill => skill.name)
+      for (const skillName of MINECRAFT_SKILL_NAMES) expect(globalSkills).not.toContain(skillName)
+      expect(await bundledSkillNames(MCMOD_PRESET_SKILL_DIR)).toEqual(MINECRAFT_SKILL_NAMES)
     } finally {
       await handle.dispose()
       await minecraftCtx.fiber.dispose()

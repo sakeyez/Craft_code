@@ -22,11 +22,11 @@ Java 命令刻意使用普通的 `jdtls`。安装该 bundle 的 profile 可以�
 
 #### What the model sees
 
-间接可见：此 profile 中的新会话默认从随包 `mcmod` preset 组装。模型会看到该 preset 的 Fabric-first Minecraft 模组开发提示词段落和工具 schema。bundle 本身不贡献提示词文本或工具 schema。
+间接可见：此 profile 中的新会话默认从随包 `mcmod` preset 组装。模型会看到该 preset 的 Fabric-first Minecraft 模组开发提示词段落、四个 scoped Minecraft skills 和工具 schema。bundle 本身不贡献提示词文本、skill 正文或工具 schema。
 
 #### Token effect
 
-没有直接 token 成本。token 变化来自被选中的 preset 以及该 preset 挂载的工具。
+没有直接 token 成本。token 变化来自被选中的 preset、它的 skill catalog 以及该 preset 挂载的工具。
 
 #### KV Cache effect
 

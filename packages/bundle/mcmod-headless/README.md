@@ -17,7 +17,7 @@ The patch keeps the `headless-runner` from `dsh-headless` and the base services 
 | `lsp` | `@deepseek-ai/dsh-lsp` | Provides the `ctx.lsp` registry. |
 | `lsp-stdio` | `@deepseek-ai/dsh-lsp-stdio` | Registers a Java provider for `.java` files with command `jdtls` and language id `java`. |
 | `tool-lsp` | `@deepseek-ai/dsh-tool-lsp` | Exposes the read-only `lsp` tool to the model. |
-| `skill-filesystem` | existing base row | Adds the bundled `minecraft-modding` skill directory while retaining normal project and user skill roots. |
+| `skill-filesystem` | existing base row | Adds the bundled Minecraft skill directory while retaining normal project and user skill roots. |
 
 The Java command is deliberately plain `jdtls`. A profile can replace the full `lsp-stdio` row in its own `cordis.patch.yml` when JDTLS lives at a machine-specific path or needs arguments.
 
@@ -29,11 +29,11 @@ The patch disables web retrieval, workflow orchestration, Ralph, general subagen
 
 #### What the model sees
 
-The model sees the headless persona, the five Fabric-first Minecraft modding prompt sections from `@deepseek-ai/dsh-mcmod-agent`, and the remaining model-facing tool schemas: filesystem read/write/edit/search, `detect_mc_project`, one platform shell tool, `lsp`, and `skill`.
+The model sees the headless persona, the five Fabric-first Minecraft modding prompt sections from `@deepseek-ai/dsh-mcmod-agent`, the four bundled Minecraft skills (`fabric-mod-dev`, `minecraft-resources`, `minecraft-datagen`, and `mixin-debugging`) in the skill catalog, and the remaining model-facing tool schemas: filesystem read/write/edit/search, `detect_mc_project`, one platform shell tool, `lsp`, and `skill`.
 
 #### Token effect
 
-The request prefix gains the Minecraft modding prompt sections and the LSP tool guidance. The bundled skill appears in the skill catalog and is loaded only when the model calls the skill tool.
+The request prefix gains the Minecraft modding prompt sections, the LSP tool guidance, and skill catalog summaries. Each bundled skill body is loaded only when the model calls the skill tool for that skill.
 
 #### KV Cache effect
 

@@ -17,7 +17,7 @@
 | `lsp` | `@deepseek-ai/dsh-lsp` | 提供 `ctx.lsp` 注册表。 |
 | `lsp-stdio` | `@deepseek-ai/dsh-lsp-stdio` | 为 `.java` 文件注册 Java provider，命令为 `jdtls`，language id 为 `java`。 |
 | `tool-lsp` | `@deepseek-ai/dsh-tool-lsp` | 向模型暴露只读 `lsp` 工具。 |
-| `skill-filesystem` | 既有 base 行 | 添加随包 `minecraft-modding` skill 目录，同时保留普通项目与用户 skill 根。 |
+| `skill-filesystem` | 既有 base 行 | 添加随包 Minecraft skill 目录，同时保留普通项目与用户 skill 根。 |
 
 Java 命令刻意保持为普通的 `jdtls`。如果 JDTLS 位于机器特定路径或需要参数，profile 可以在自己的 `cordis.patch.yml` 中替换完整的 `lsp-stdio` 行。
 
@@ -29,11 +29,11 @@ Java 命令刻意保持为普通的 `jdtls`。如果 JDTLS 位于机器特定路
 
 #### 模型会看到什么
 
-模型会看到 headless persona、`@deepseek-ai/dsh-mcmod-agent` 提供的五个 Fabric-first Minecraft 模组开发提示词段落，以及剩余的模型可见工具 schema：文件系统 read/write/edit/search、`detect_mc_project`、一个平台 shell 工具、`lsp` 与 `skill`。
+模型会看到 headless persona、`@deepseek-ai/dsh-mcmod-agent` 提供的五个 Fabric-first Minecraft 模组开发提示词段落、skill catalog 中的四个随包 Minecraft skills（`fabric-mod-dev`、`minecraft-resources`、`minecraft-datagen` 和 `mixin-debugging`），以及剩余的模型可见工具 schema：文件系统 read/write/edit/search、`detect_mc_project`、一个平台 shell 工具、`lsp` 与 `skill`。
 
 #### Token 影响
 
-请求前缀会增加 Minecraft 模组开发提示词段落与 LSP 工具指引。随包 skill 会出现在 skill catalog 中；只有当模型调用 skill 工具时，skill 正文才会加载。
+请求前缀会增加 Minecraft 模组开发提示词段落、LSP 工具指引与 skill catalog 概述。只有当模型针对某个 skill 调用 skill 工具时，该随包 skill 的正文才会加载。
 
 #### KV Cache 影响
 

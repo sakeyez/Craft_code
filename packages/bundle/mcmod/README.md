@@ -22,11 +22,11 @@ The Java command is deliberately plain `jdtls`. A profile that installs this bun
 
 #### What the model sees
 
-Indirectly, new sessions in the profile compose from the shipped `mcmod` preset by default. The model sees that preset's Fabric-first Minecraft modding prompt sections and tool schemas. The bundle itself contributes no prompt text or tool schema.
+Indirectly, new sessions in the profile compose from the shipped `mcmod` preset by default. The model sees that preset's Fabric-first Minecraft modding prompt sections, four scoped Minecraft skills, and tool schemas. The bundle itself contributes no prompt text, skill body, or tool schema.
 
 #### Token effect
 
-No direct token cost. Token changes come from the selected preset and the tools mounted by that preset.
+No direct token cost. Token changes come from the selected preset, its skill catalog, and the tools mounted by that preset.
 
 #### KV Cache effect
 
