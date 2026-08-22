@@ -317,16 +317,19 @@ describe('the shipped Web composition', () => {
       expect(minecraftCtx.agentPresets.defaultId).toBe('mcmod')
       const shellTool = process.platform === 'win32' ? 'pwsh' : 'bash'
       expect(toolNames(minecraftCtx, handle.agent).filter(name => name !== 'glob' && name !== 'grep')).toEqual([
-        'ask_user_question', 'detect_mc_project', 'edit', 'job_kill', 'job_list', 'job_output',
-        'lsp', 'read', 'read_image', shellTool, 'skill', 'write',
+        'ask_user_question', 'detect_mc_project', 'edit', 'lsp', 'read',
+        'read_image', 'run_mc_check', shellTool, 'skill', 'validate_mc_resources',
+        'write',
       ].sort())
       for (const forbidden of [
         'create_goal', 'exit_plan_mode', 'get_goal', 'interrupt_agent',
+        'job_kill', 'job_list', 'job_output',
         'list_agents', 'ralph', 'send_message', 'subagent', 'subagent_fork',
         'todo_write', 'update_goal', 'web_search', 'workflow',
       ]) {
         expect(toolNames(minecraftCtx, handle.agent)).not.toContain(forbidden)
       }
+      expect(toolParameterNames(minecraftCtx, handle.agent, shellTool)).not.toContain('run_in_background')
       const assembly = await minecraftCtx.systemPrompt.assemble({ scope: handle.agent })
       expect(assembly.sections.map(section => section.name)).toEqual(expect.arrayContaining([
         'deployment:persona',

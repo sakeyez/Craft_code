@@ -22,7 +22,7 @@ The Java command is deliberately plain `jdtls`. A profile that installs this bun
 
 #### What the model sees
 
-Indirectly, new sessions in the profile compose from the shipped `mcmod` preset by default. The model sees that preset's Fabric-first Minecraft modding prompt sections, four scoped Minecraft skills, and tool schemas. The bundle itself contributes no prompt text, skill body, or tool schema.
+Indirectly, new sessions in the profile compose from the shipped `mcmod` preset by default. The model sees that preset's Fabric-first Minecraft modding prompt sections, four scoped Minecraft skills, and the remaining tool schemas: filesystem read/write/edit/search, `detect_mc_project`, `validate_mc_resources`, `run_mc_check`, one foreground-only platform shell tool, `lsp`, `skill`, and `ask_user_question`. The bundle itself contributes no prompt text, skill body, or tool schema.
 
 #### Token effect
 
@@ -36,4 +36,4 @@ No direct request-prefix contribution. The selected preset decides the prompt pr
 
 - **Web profile surface** — this bundle expects the Web agent-preset roster supplied by `@deepseek-ai/dsh-web-app`; it is not the headless task surface.
 - **JDTLS is deployment-owned** — the default command name must resolve on the host PATH. Project-specific or machine-specific JDTLS launch details belong in the profile's own overlay.
-- **No optional tool expansion** — the patch does not enable web search, workflows, Ralph, subagents, todo, or goal tools.
+- **No optional tool expansion** — the patch does not enable web search, workflows, Ralph, subagents, background job controls, todo, or goal tools.

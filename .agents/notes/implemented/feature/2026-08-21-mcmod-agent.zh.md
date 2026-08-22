@@ -16,10 +16,10 @@ Minecraft 支持以 Web preset 组合与 headless profile 组合发布：
 
 - `@deepseek-ai/dsh-mcmod-agent` 只贡献五个提示词段落：`minecraft:identity`、`minecraft:scope`、`minecraft:workflow`、`minecraft:resources` 和 `minecraft:version-discipline`。
 - `@deepseek-ai/dsh-mcmod-bundle` 是 profile patch 层，选择 `mcmod` 作为默认 preset，并插入 host-plane `ctx.lsp` 和 stdio Java 提供方行。
-- 随包 `mcmod` preset 挂载提示词包，以及既有的文件、搜索、平台 shell、jobs、`lsp`、skill、ask-user 和压缩行。它携带的 Minecraft skills（`fabric-mod-dev`、`minecraft-resources`、`minecraft-datagen` 和 `mixin-debugging`）通过从 preset `baseUrl` 解析的 `customSkillDirs` 条目随 preset 一起移动。
+- 随包 `mcmod` preset 挂载提示词包，以及既有的文件、搜索、只前台执行的平台 shell、Minecraft 项目工具、`lsp`、skill、ask-user 和压缩行。它携带的 Minecraft skills（`fabric-mod-dev`、`minecraft-resources`、`minecraft-datagen` 和 `mixin-debugging`）通过从 preset `baseUrl` 解析的 `customSkillDirs` 条目随 preset 一起移动。
 - `@deepseek-ai/dsh-mcmod-headless-bundle` 是在 `dsh-base` 和 `dsh-headless` 之后应用的 profile patch 层。随包 `mcmod` profile 模板使用这三个 bundle，让既有一次性 headless runner 带着 Fabric-first Minecraft 模组开发提示词段落、同一组四个随包 Minecraft skills、Java LSP 与第一版代码开发工具集运行。
 
-当项目尚未决定 loader 或版本时，v1 默认使用 Fabric + Java + Minecraft 1.21.x。提示词要求模型先从 Gradle、元数据、依赖坐标、主 mod 类与 mixin 配置检测已有 loader 事实，再选择 API，并避免混用 Fabric、Forge、NeoForge、Architectury 或跨版本 Minecraft API。preset 刻意省略 web search、workflow、Ralph、通用 subagent、todo 和 goal 工具。这些能力仍可供其他 preset 使用，也可由选择添加它们的用户自定义副本使用。
+当项目尚未决定 loader 或版本时，v1 默认使用 Fabric + Java + Minecraft 1.21.x。提示词要求模型先从 Gradle、元数据、依赖坐标、主 mod 类与 mixin 配置检测已有 loader 事实，再选择 API，并避免混用 Fabric、Forge、NeoForge、Architectury 或跨版本 Minecraft API。preset 刻意省略 web search、workflow、Ralph、通用 subagent、后台 job 控制、todo 和 goal 工具。shell 工具也不暴露 `run_in_background`，因此模型不能启动缺少 `job_*` 收集或停止工具的后台 shell 工作。这些能力仍可供其他 preset 使用，也可由选择添加它们的用户自定义副本使用。
 
 Java LSP 由部署拥有。两个 bundle 默认都使用 stdio 命令 `jdtls`，将 `.java` 映射到 language id `java`；当机器需要绝对 JDTLS 路径或参数时，profile overlay 可以替换完整的 `lsp-stdio` 行。
 
@@ -33,10 +33,10 @@ Java LSP 由部署拥有。两个 bundle 默认都使用 stdio 命令 `jdtls`，
 
 **单个全用途 Minecraft skill。** 已拒绝，因为它会把代码、资源、datagen 和 mixin 指导一起加载给只需要其中一块的任务。拆分后的 skills 让 catalog 保持可发现，同时只在任务匹配对应工作流时加载详细指令。
 
-**添加 Minecraft 专用工具。** v1 中已拒绝，因为既有文件／搜索／shell／LSP／skill 工具覆盖首个工作流。若后续功能需要模型可见的持久状态或结构化 Minecraft 操作，可以再添加新工具。
+**添加宽泛的 Minecraft 专用工具。** v1 中已拒绝，因为首个领域包只应替代容易猜错的项目事实提取与验证路由。已接受的 `@deepseek-ai/dsh-tool-mc-project` 工具只覆盖检测、静态资源校验和前台 shell 支撑的检查；若后续功能需要更宽的结构化 Minecraft 操作，可以再添加。
 
 ## 后果
 
 随包 preset 与 headless profile 都是窄领域 agent，仍停留在普通 harness 组合模型内。模型可见行为完全可由既有提示词段落、skill catalog、skill 加载和工具 schema 重建，因此不需要新的会话事件。Web profile 表层可以通过它的 bundle 选择该 preset；`dsh --profile mcmod "task"` 使用 headless bundle 栈。
 
-该实现依赖 profile 启用 bundle 时宿主存在 Java language server。缺失或配置错误的 JDTLS 只影响 LSP 查询；文件、搜索、shell、skill、jobs、ask-user、权限、压缩和会话持久化仍来自它们既有的包。
+该实现依赖 profile 启用 bundle 时宿主存在 Java language server。缺失或配置错误的 JDTLS 只影响 LSP 查询；文件、搜索、前台 shell、Minecraft 项目工具、skill、ask-user、权限、压缩和会话持久化仍来自它们既有的包。没有后台 job 控制时，长时间 Gradle 工作必须通过有界前台调用完成，或由显式 profile overlay 同时恢复 jobs 与 shell 后台支持。

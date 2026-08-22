@@ -27,10 +27,14 @@
 - id: tool-bash
   name: '@deepseek-ai/dsh-tool-bash'
   disabled: !!js process.platform === 'win32'
+  config:
+    enableRunInBackground: false
 
 - id: tool-pwsh
   name: '@deepseek-ai/dsh-tool-pwsh'
   disabled: !!js process.platform !== 'win32'
+  config:
+    enableRunInBackground: false
 
 # ── filesystem ──────────────────────────────────────────────────────────────
 
@@ -46,11 +50,6 @@
 
 - id: tool-mc-project
   name: '@deepseek-ai/dsh-tool-mc-project'
-
-# ── background jobs ────────────────────────────────────────────────────────
-
-- id: tool-jobs
-  name: '@deepseek-ai/dsh-tool-jobs'
 
 # ── LSP ─────────────────────────────────────────────────────────────────────
 

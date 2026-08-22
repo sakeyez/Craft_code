@@ -149,6 +149,8 @@ describe('dsh-mcmod-headless bundle', () => {
     const byId = new Map(flatten(loadPatch()).map(row => [row.id, row]))
 
     for (const id of disabled) expect(byId.get(id)?.disabled, id).toBe(true)
+    expect(byId.get('tool-bash')?.config).toMatchObject({ enableRunInBackground: false })
+    expect(byId.get('tool-pwsh')?.config).toMatchObject({ enableRunInBackground: false })
   })
 
   it('composes without warnings after base and headless bundle layers', () => {
@@ -169,6 +171,9 @@ describe('dsh-mcmod-headless bundle', () => {
     expect(byId.get('tool-web')?.disabled).toBe(true)
     expect(byId.get('tool-workflow')?.disabled).toBe(true)
     expect(byId.get('tool-subagent')?.disabled).toBe(true)
+    expect(byId.get('tool-jobs')?.disabled).toBe(true)
+    expect(byId.get('tool-bash')?.config).toMatchObject({ enableRunInBackground: false })
+    expect(byId.get('tool-pwsh')?.config).toMatchObject({ enableRunInBackground: false })
     expect(byId.get('agent-loop')?.name).toBe('@deepseek-ai/dsh-agent-loop')
   })
 })

@@ -21,7 +21,7 @@ The patch keeps the `headless-runner` from `dsh-headless` and the base services 
 
 The Java command is deliberately plain `jdtls`. A profile can replace the full `lsp-stdio` row in its own `cordis.patch.yml` when JDTLS lives at a machine-specific path or needs arguments.
 
-The patch disables web retrieval, workflow orchestration, Ralph, general subagents, jobs, goals, todos, plan mode, and the legacy str-replace editor row. Those rows are inherited from `dsh-base`; they stay available to other profiles and to user-authored copies that choose to re-enable them. The first version keeps only file/search tools, the Minecraft project detector, the platform shell tool, `lsp`, `skill`, compaction, permissions, and session persistence.
+The patch disables web retrieval, workflow orchestration, Ralph, general subagents, jobs, goals, todos, plan mode, and the legacy str-replace editor row. Those rows are inherited from `dsh-base`; they stay available to other profiles and to user-authored copies that choose to re-enable them. The first version keeps only file/search tools, the Minecraft project tools, one foreground-only platform shell tool, `lsp`, `skill`, compaction, permissions, and session persistence.
 
 ## Model Experience
 
@@ -29,7 +29,7 @@ The patch disables web retrieval, workflow orchestration, Ralph, general subagen
 
 #### What the model sees
 
-The model sees the headless persona, the five Fabric-first Minecraft modding prompt sections from `@deepseek-ai/dsh-mcmod-agent`, the four bundled Minecraft skills (`fabric-mod-dev`, `minecraft-resources`, `minecraft-datagen`, and `mixin-debugging`) in the skill catalog, and the remaining model-facing tool schemas: filesystem read/write/edit/search, `detect_mc_project`, `validate_mc_resources`, `run_mc_check`, one platform shell tool, `lsp`, and `skill`.
+The model sees the headless persona, the five Fabric-first Minecraft modding prompt sections from `@deepseek-ai/dsh-mcmod-agent`, the four bundled Minecraft skills (`fabric-mod-dev`, `minecraft-resources`, `minecraft-datagen`, and `mixin-debugging`) in the skill catalog, and the remaining model-facing tool schemas: filesystem read/write/edit/search, `detect_mc_project`, `validate_mc_resources`, `run_mc_check`, one foreground-only platform shell tool, `lsp`, and `skill`. The shell schema omits `run_in_background`; long validation should use bounded foreground calls or `run_mc_check`.
 
 #### Token effect
 
@@ -43,4 +43,4 @@ The profile has a stable prefix for a given installed patch and skill catalog. C
 
 - **Headless only** - this bundle does not mount Web Host rows or the Web agent-preset roster. Use [`mcmod/`](../mcmod/README.md) for the Web profile layer.
 - **JDTLS is deployment-owned** - the default command name must resolve on the host PATH. Project-specific or machine-specific JDTLS launch details belong in the profile's own overlay.
-- **No background jobs in v1** - long-running Gradle commands run through the ordinary shell tool, so callers should prefer bounded checks or re-enable jobs in a profile overlay when they need background process controls.
+- **No background jobs in v1** - shell tools omit `run_in_background`, so callers should prefer bounded checks or re-enable jobs and shell background support together in a profile overlay when they need background process controls.

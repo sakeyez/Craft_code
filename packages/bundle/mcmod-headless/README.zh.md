@@ -21,7 +21,7 @@
 
 Java 命令刻意保持为普通的 `jdtls`。如果 JDTLS 位于机器特定路径或需要参数，profile 可以在自己的 `cordis.patch.yml` 中替换完整的 `lsp-stdio` 行。
 
-这份 patch 禁用 web retrieval、workflow orchestration、Ralph、通用 subagent、jobs、goals、todos、plan mode 与旧的 str-replace editor 行。这些行继承自 `dsh-base`；其他 profile 以及用户自定义副本仍可选择重新启用。第一版只保留 file/search 工具、Minecraft 项目检测工具、平台 shell 工具、`lsp`、`skill`、压缩、权限与 session persistence。
+这份 patch 禁用 web retrieval、workflow orchestration、Ralph、通用 subagent、jobs、goals、todos、plan mode 与旧的 str-replace editor 行。这些行继承自 `dsh-base`；其他 profile 以及用户自定义副本仍可选择重新启用。第一版只保留 file/search 工具、Minecraft 项目工具、一个只前台执行的平台 shell 工具、`lsp`、`skill`、压缩、权限与 session persistence。
 
 ## 模型体验
 
@@ -29,7 +29,7 @@ Java 命令刻意保持为普通的 `jdtls`。如果 JDTLS 位于机器特定路
 
 #### 模型会看到什么
 
-模型会看到 headless persona、`@deepseek-ai/dsh-mcmod-agent` 提供的五个 Fabric-first Minecraft 模组开发提示词段落、skill catalog 中的四个随包 Minecraft skills（`fabric-mod-dev`、`minecraft-resources`、`minecraft-datagen` 和 `mixin-debugging`），以及剩余的模型可见工具 schema：文件系统 read/write/edit/search、`detect_mc_project`、`validate_mc_resources`、`run_mc_check`、一个平台 shell 工具、`lsp` 与 `skill`。
+模型会看到 headless persona、`@deepseek-ai/dsh-mcmod-agent` 提供的五个 Fabric-first Minecraft 模组开发提示词段落、skill catalog 中的四个随包 Minecraft skills（`fabric-mod-dev`、`minecraft-resources`、`minecraft-datagen` 和 `mixin-debugging`），以及剩余的模型可见工具 schema：文件系统 read/write/edit/search、`detect_mc_project`、`validate_mc_resources`、`run_mc_check`、一个只前台执行的平台 shell 工具、`lsp` 与 `skill`。shell schema 不包含 `run_in_background`；长验证应使用有界前台调用或 `run_mc_check`。
 
 #### Token 影响
 
@@ -43,4 +43,4 @@ Java 命令刻意保持为普通的 `jdtls`。如果 JDTLS 位于机器特定路
 
 - **仅限 headless** — 该 bundle 不挂载 Web Host 行，也不挂载 Web agent-preset roster。Web profile 层使用 [`mcmod/`](../mcmod/README.zh.md)。
 - **JDTLS 由部署拥有** — 默认命令名必须能在宿主 PATH 中解析。项目或机器特定的 JDTLS 启动细节属于 profile 自己的 overlay。
-- **v1 不提供后台 jobs** — 长时间运行的 Gradle 命令通过普通 shell 工具执行，因此调用方应优先选择有界检查；需要后台进程控制时，可在 profile overlay 中重新启用 jobs。
+- **v1 不提供后台 jobs** — shell 工具不暴露 `run_in_background`，因此调用方应优先选择有界检查；需要后台进程控制时，应在 profile overlay 中同时重新启用 jobs 与 shell 后台支持。

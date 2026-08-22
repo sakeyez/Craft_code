@@ -921,7 +921,7 @@ function modelPath(root: string, namespace: string, path: string): string {
   return relJoin(root, `assets/${namespace}/models/${path}.json`)
 }
 
-function parseJsonForValidation(result: ResourceValidationResult, path: string, text: string): unknown | undefined {
+function parseJsonForValidation(result: ResourceValidationResult, path: string, text: string): unknown {
   result.checkedFiles.push(path)
   try {
     return JSON.parse(text) as unknown
@@ -1643,7 +1643,7 @@ export function apply(ctx: Context, rawConfig: Config = {}): void {
           render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
         },
         execute: (args: RunCheckArgs, exec) => runMcCheck(shellCtx, exec, config, args),
-        presentCall: args => ({ card: 'generic', title: `Run Minecraft check: ${String((args as Partial<RunCheckArgs>).target ?? 'unknown')}`, kind: 'execute' }),
+        presentCall: args => ({ card: 'generic', title: `Run Minecraft check: ${args.target}`, kind: 'execute' }),
         presentResult: (_args, result: ToolResult) => ({
           card: 'generic',
           title: 'Minecraft check result',

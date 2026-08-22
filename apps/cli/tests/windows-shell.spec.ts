@@ -128,10 +128,14 @@ describe('shipped agent presets gate both shell tools by platform', () => {
       { schema: entryListSchema },
     )
     if (!Array.isArray(entries)) throw new TypeError('mcmod preset must parse to an entry array')
-    const row = entries.find((entry): entry is Record<string, unknown> => (
-      typeof entry === 'object' && entry !== null && (entry as Record<string, unknown>).id === 'tool-mc-project'
-    ))
-    expect(row).toMatchObject({ name: '@deepseek-ai/dsh-tool-mc-project' })
+    const byId = new Map(entries
+      .filter((entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null)
+      .map(entry => [entry.id, entry]))
+
+    expect(byId.get('tool-mc-project')).toMatchObject({ name: '@deepseek-ai/dsh-tool-mc-project' })
+    expect(byId.has('tool-jobs')).toBe(false)
+    expect(byId.get('tool-bash')?.config).toMatchObject({ enableRunInBackground: false })
+    expect(byId.get('tool-pwsh')?.config).toMatchObject({ enableRunInBackground: false })
   })
 
   it('minimal mounts no shell tool row and gates its persistent shell stack by platform', () => {

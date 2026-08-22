@@ -35,6 +35,14 @@
     customSkillDirs:
       - !!js "process.getBuiltinModule('node:url').fileURLToPath(new URL('skills/', baseUrl))"
 
+- id: tool-bash
+  config:
+    enableRunInBackground: false
+
+- id: tool-pwsh
+  config:
+    enableRunInBackground: false
+
 # v1 keeps the existing file/search, platform shell, LSP, skill, compaction,
 # permission, and session-persistence rows. The rows below remain disabled so
 # the first headless Minecraft profile does not expose web retrieval,
