@@ -8,6 +8,8 @@ import Loader from '@deepseek-ai/cordis-plugin-loader'
 import Include from '@deepseek-ai/cordis-plugin-include'
 import { CallId } from '@deepseek-ai/dsh-llm'
 import LocalFileSystem from '@deepseek-ai/dsh-fs-local'
+import { ShellExecutor } from '@deepseek-ai/dsh-shell'
+import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellRunResult } from '@deepseek-ai/dsh-shell'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import * as ToolMcProject from '@deepseek-ai/dsh-tool-mc-project'
@@ -43,6 +45,102 @@ interface ResourceValidationResult {
   detectedModId: string | null
 }
 
+interface CheckResult {
+  commands: string[]
+  exitCode: number | null
+  steps: Array<{
+    step: string
+    command?: string
+    status: string
+    exitCode: number | null
+    stdout: { text: string; truncated: boolean; spillPath?: string }
+    stderr: { text: string; truncated: boolean; spillPath?: string }
+    timedOut: boolean
+    aborted: boolean
+    signal: string | null
+    sandbox?: { mode: string; denied: boolean; enforcement?: string; runnerFailed?: boolean }
+    message?: string
+  }>
+  failedStep: string | null
+  suggestedNextAction: string | null
+}
+
+class RecordingShellExecutor extends ShellExecutor {
+  readonly commands: string[] = []
+  readonly timeoutMs: Array<number | undefined> = []
+  readonly results = new Map<string, ShellRunResult>()
+
+  resolve(request: ShellExecRequest): ShellExecSpec {
+    this.timeoutMs.push(request.timeoutMs)
+    return {
+      command: request.command,
+      workdir: request.workdir ?? process.cwd(),
+      timeoutMs: request.timeoutMs ?? 1_000,
+      stdoutMaxBytes: request.stdoutMaxBytes ?? 64_000,
+      ...request.signal !== undefined ? { signal: request.signal } : {},
+      sandboxPolicy: request.sandboxPolicy,
+    }
+  }
+
+  run(spec: ShellExecSpec): Promise<ShellRunResult> {
+    this.commands.push(spec.command)
+    return Promise.resolve(this.results.get(spec.command) ?? okResult(`ran ${spec.command}\n`))
+  }
+
+  start(): ShellProcess {
+    throw new Error('run_mc_check tests do not start background processes')
+  }
+}
+
+function okResult(stdout: string): ShellRunResult {
+  return {
+    exitCode: 0,
+    signal: null,
+    timedOut: false,
+    aborted: false,
+    timeoutMs: 1_000,
+    stdout: { text: stdout, truncated: false },
+    stderr: { text: '', truncated: false },
+  }
+}
+
+function failedResult(exitCode: number, stderr: string): ShellRunResult {
+  return {
+    exitCode,
+    signal: null,
+    timedOut: false,
+    aborted: false,
+    timeoutMs: 1_000,
+    stdout: { text: '', truncated: false },
+    stderr: { text: stderr, truncated: false },
+  }
+}
+
+function timeoutResult(): ShellRunResult {
+  return {
+    exitCode: null,
+    signal: 'SIGTERM',
+    timedOut: true,
+    aborted: false,
+    timeoutMs: 1_000,
+    stdout: { text: 'partial output', truncated: false },
+    stderr: { text: '', truncated: false },
+  }
+}
+
+function sandboxDeniedResult(): ShellRunResult {
+  return {
+    exitCode: 1,
+    signal: null,
+    timedOut: false,
+    aborted: false,
+    timeoutMs: 1_000,
+    stdout: { text: '', truncated: false },
+    stderr: { text: 'Permission denied', truncated: false },
+    sandbox: { mode: 'read-only', denied: true, enforcement: 'full' },
+  }
+}
+
 let dir: string | undefined
 let ctx: Context | undefined
 
@@ -70,6 +168,21 @@ async function bootDirect(workspace: string): Promise<Context> {
   return context
 }
 
+async function bootWithShell(
+  workspace: string,
+  config?: ToolMcProject.Config,
+): Promise<{ context: Context; shell: RecordingShellExecutor }> {
+  const context = new Context()
+  ctx = context
+  await context.plugin(SystemPrompt)
+  await context.plugin(ToolRuntime)
+  await context.plugin(LocalFileSystem, { cwd: workspace })
+  await context.plugin(RecordingShellExecutor)
+  const shell = context.shell as RecordingShellExecutor
+  await context.plugin(ToolMcProject, config)
+  return { context, shell }
+}
+
 async function callDetect(context: Context, workspace: string): Promise<DetectionResult> {
   const result = await context.tools.execute({
     signal: new AbortController().signal,
@@ -92,6 +205,18 @@ async function callValidate(context: Context, workspace: string): Promise<Resour
   })
   expect(result.isError).toBe(false)
   return result.value as unknown as ResourceValidationResult
+}
+
+async function callRunCheck(context: Context, workspace: string, args: { target: string; timeoutMs?: number }): Promise<CheckResult> {
+  const result = await context.tools.execute({
+    signal: new AbortController().signal,
+    callId: CallId(`run-check-${Date.now()}`),
+    name: ToolMcProject.RUN_MC_CHECK,
+    arguments: args,
+    agent: { session: { header: { cwd: workspace } } } as never,
+  })
+  expect(result.isError).toBe(false)
+  return result.value as unknown as CheckResult
 }
 
 async function createFabricProject(): Promise<string> {
@@ -119,6 +244,7 @@ async function createFabricProject(): Promise<string> {
   ].join('\n'))
   await write('gradle/libs.versions.toml', '[versions]\nminecraft = "1.21.1"\n')
   await write('gradlew', '#!/bin/sh\n')
+  await write('gradlew.bat', '@echo off\r\n')
   await write('src/main/resources/fabric.mod.json', JSON.stringify({
     schemaVersion: 1,
     id: 'examplemod',
@@ -134,6 +260,36 @@ async function createFabricProject(): Promise<string> {
   await write('src/main/java/com/example/ExampleMod.java', 'package com.example;\npublic final class ExampleMod {}\n')
   await write('src/main/java/com/example/ExampleDataGenerator.java', 'package com.example;\nimport net.fabricmc.fabric.api.datagen.v1.DataGeneratorEntrypoint;\npublic final class ExampleDataGenerator implements DataGeneratorEntrypoint {}\n')
   return dir
+}
+
+async function createForgeProject(loader: 'forge' | 'neoforge' = 'forge'): Promise<string> {
+  dir = await mkdtemp(join(tmpdir(), `dsh-mc-project-${loader}-`))
+  await write('settings.gradle', 'rootProject.name = "ForgeExample"\n')
+  await write('build.gradle', [
+    'plugins {',
+    loader === 'forge'
+      ? '  id "net.minecraftforge.gradle" version "6.0.0"'
+      : '  id "net.neoforged.moddev" version "2.0.0"',
+    '}',
+    'minecraftVersion = "1.21.1"',
+    'tasks.register("runData") {}',
+    '',
+  ].join('\n'))
+  await write('gradlew', '#!/bin/sh\n')
+  await write('gradlew.bat', '@echo off\r\n')
+  await write(`src/main/resources/META-INF/${loader === 'neoforge' ? 'neoforge.mods.toml' : 'mods.toml'}`, [
+    'modLoader="javafml"',
+    'loaderVersion="[1,)"',
+    '[[mods]]',
+    'modId="forgeexample"',
+    '',
+  ].join('\n'))
+  await write('src/main/java/com/example/ForgeData.java', 'package com.example;\nimport net.minecraftforge.data.event.GatherDataEvent;\nfinal class ForgeData { GatherDataEvent event; }\n')
+  return dir
+}
+
+function expectedGradle(task: string): string {
+  return `${process.platform === 'win32' ? '.\\gradlew.bat' : './gradlew'} ${task}`
 }
 
 async function addValidResources(namespace = 'examplemod'): Promise<void> {
@@ -355,5 +511,166 @@ describe('validate_mc_resources', () => {
         reference: 'wrongmod',
       }),
     ]))
+  })
+})
+
+describe('run_mc_check', () => {
+  it('is registered only when a shell executor is mounted', async () => {
+    const workspace = await createFabricProject()
+    const context = await bootDirect(workspace)
+
+    expect(context.tools.schemas().map(schema => schema.name)).not.toContain(ToolMcProject.RUN_MC_CHECK)
+  })
+
+  it('selects Fabric wrapper commands for build, test, datagen, resources, and all', async () => {
+    const workspace = await createFabricProject()
+    await addValidResources()
+    const { context, shell } = await bootWithShell(workspace)
+
+    const build = await callRunCheck(context, workspace, { target: 'build', timeoutMs: 1234 })
+    const test = await callRunCheck(context, workspace, { target: 'test' })
+    const datagen = await callRunCheck(context, workspace, { target: 'datagen' })
+    const resources = await callRunCheck(context, workspace, { target: 'resources' })
+    const all = await callRunCheck(context, workspace, { target: 'all' })
+
+    expect(build.commands).toEqual([expectedGradle('build')])
+    expect(build.steps.map(step => step.step)).toEqual(['build'])
+    expect(build.failedStep).toBeNull()
+    expect(test.commands).toEqual([expectedGradle('test')])
+    expect(datagen.commands).toEqual([expectedGradle('runDatagen')])
+    expect(resources.commands).toEqual([expectedGradle('processResources')])
+    expect(resources.steps.map(step => step.step)).toEqual(['resources:static', 'resources:gradle'])
+    expect(all.commands).toEqual([
+      expectedGradle('runDatagen'),
+      expectedGradle('processResources'),
+      expectedGradle('test'),
+      expectedGradle('build'),
+    ])
+    expect(all.steps.map(step => step.step)).toEqual(['datagen', 'resources:static', 'resources:gradle', 'test', 'build'])
+    expect(shell.commands).toEqual([
+      expectedGradle('build'),
+      expectedGradle('test'),
+      expectedGradle('runDatagen'),
+      expectedGradle('processResources'),
+      expectedGradle('runDatagen'),
+      expectedGradle('processResources'),
+      expectedGradle('test'),
+      expectedGradle('build'),
+    ])
+    expect(shell.timeoutMs[0]).toBe(1234)
+  })
+
+  it('selects runData for Forge and NeoForge datagen', async () => {
+    const forge = await createForgeProject('forge')
+    const forgeHarness = await bootWithShell(forge)
+    const forgeResult = await callRunCheck(forgeHarness.context, forge, { target: 'datagen' })
+    await forgeHarness.context.fiber.dispose()
+    await rm(forge, { recursive: true, force: true })
+
+    const neoforge = await createForgeProject('neoforge')
+    const neoHarness = await bootWithShell(neoforge)
+    const neoResult = await callRunCheck(neoHarness.context, neoforge, { target: 'datagen' })
+
+    expect(forgeResult.commands).toEqual([expectedGradle('runData')])
+    expect(neoResult.commands).toEqual([expectedGradle('runData')])
+  })
+
+  it('fails datagen when loader detection is unknown', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'dsh-mc-project-unknown-loader-'))
+    await write('build.gradle', 'tasks.register("runDatagen") {}\n')
+    const { context, shell } = await bootWithShell(dir)
+    const result = await callRunCheck(context, dir, { target: 'datagen' })
+
+    expect(result.commands).toEqual([])
+    expect(result.exitCode).toBeNull()
+    expect(result.failedStep).toBe('datagen')
+    expect(result.suggestedNextAction).toContain('loader evidence')
+    expect(shell.commands).toEqual([])
+  })
+
+  it('fails before Gradle when static resource validation reports errors', async () => {
+    const workspace = await createFabricProject()
+    await addValidResources()
+    await rm(join(workspace, 'src/main/resources/assets/examplemod/textures/item/example_item.png'), { force: true })
+    const { context, shell } = await bootWithShell(workspace)
+    const result = await callRunCheck(context, workspace, { target: 'resources' })
+
+    expect(result.commands).toEqual([expectedGradle('processResources')])
+    expect(result.exitCode).toBeNull()
+    expect(result.failedStep).toBe('resources:static')
+    expect(result.steps).toHaveLength(1)
+    expect(result.steps[0]).toMatchObject({
+      step: 'resources:static',
+      status: 'failed',
+      exitCode: null,
+    })
+    expect(result.steps[0]?.stdout.text).toContain('missing_texture')
+    expect(shell.commands).toEqual([])
+  })
+
+  it('stops all at the first failed Gradle step', async () => {
+    const workspace = await createFabricProject()
+    await addValidResources()
+    const { context, shell } = await bootWithShell(workspace)
+    shell.results.set(expectedGradle('processResources'), failedResult(7, 'resources failed\n'))
+    const result = await callRunCheck(context, workspace, { target: 'all' })
+
+    expect(result.commands).toEqual([
+      expectedGradle('runDatagen'),
+      expectedGradle('processResources'),
+      expectedGradle('test'),
+      expectedGradle('build'),
+    ])
+    expect(result.exitCode).toBe(7)
+    expect(result.failedStep).toBe('resources:gradle')
+    expect(result.steps.map(step => step.step)).toEqual(['datagen', 'resources:static', 'resources:gradle'])
+    expect(shell.commands).toEqual([expectedGradle('runDatagen'), expectedGradle('processResources')])
+    expect(result.suggestedNextAction).toContain('resources:gradle')
+  })
+
+  it('reports missing Gradle files without running shell', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'dsh-mc-project-no-gradle-'))
+    await write('src/main/resources/fabric.mod.json', JSON.stringify({ schemaVersion: 1, id: 'nogradle' }))
+    const { context, shell } = await bootWithShell(dir)
+    const result = await callRunCheck(context, dir, { target: 'build' })
+
+    expect(result.commands).toEqual([])
+    expect(result.exitCode).toBeNull()
+    expect(result.failedStep).toBe('gradle')
+    expect(result.suggestedNextAction).toContain('Gradle wrapper')
+    expect(shell.commands).toEqual([])
+  })
+
+  it('summarizes timeout and sandbox-denial failures', async () => {
+    const workspace = await createFabricProject()
+    const { context, shell } = await bootWithShell(workspace)
+    shell.results.set(expectedGradle('test'), timeoutResult())
+    shell.results.set(expectedGradle('build'), sandboxDeniedResult())
+
+    const timedOut = await callRunCheck(context, workspace, { target: 'test' })
+    const denied = await callRunCheck(context, workspace, { target: 'build' })
+
+    expect(timedOut.failedStep).toBe('test')
+    expect(timedOut.steps[0]).toMatchObject({ timedOut: true, signal: 'SIGTERM' })
+    expect(timedOut.suggestedNextAction).toContain('timed out')
+    expect(denied.failedStep).toBe('build')
+    expect(denied.steps[0]?.sandbox).toEqual({ mode: 'read-only', denied: true, enforcement: 'full' })
+    expect(denied.suggestedNextAction).toContain('sandbox denied')
+  })
+
+  it('caps inline command output summaries', async () => {
+    const workspace = await createFabricProject()
+    const { context, shell } = await bootWithShell(workspace, { maxOutputSummaryBytes: 10 })
+    shell.results.set(expectedGradle('build'), {
+      ...okResult('0123456789abcdefghijklmnopqrstuvwxyz'),
+      stdout: { text: '0123456789abcdefghijklmnopqrstuvwxyz', truncated: false, spillPath: 'full.log' },
+    })
+    const result = await callRunCheck(context, workspace, { target: 'build' })
+
+    expect(result.steps[0]?.stdout).toEqual({
+      text: 'qrstuvwxyz',
+      truncated: true,
+      spillPath: 'full.log',
+    })
   })
 })

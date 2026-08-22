@@ -412,14 +412,16 @@ const TOOL_PACKAGES: ToolPackage[] = [
     pkg: '@deepseek-ai/dsh-tool-mc-project',
     dir: 'tool-mc-project',
     source: 'packages/minecraft/tool-mc-project/src/index.ts',
-    requires: ['ctx.tools', 'ctx.fs'],
+    requires: ['ctx.tools', 'ctx.fs', 'ctx.shell for run_mc_check'],
     writes: ['tool/call', 'tool/result'],
     async mount(ctx) {
       await ctx.plugin(LocalFileSystem)
+      await ctx.plugin(LocalSubprocessRuntime)
+      await ctx.plugin(LocalBashExecutor)
       await ctx.plugin(ToolMcProject)
     },
     note:
-      'Minecraft project tools read the current workspace through ctx.fs. They extract Gradle, metadata, and resource facts without executing Gradle, loading dependencies, or emulating Minecraft resource loading.',
+      'Minecraft project detection and resource validation read the current workspace through ctx.fs. run_mc_check is registered only when ctx.shell exists; it selects Gradle commands from detected project facts and executes them through the shell executor rather than spawning directly.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-ralph',

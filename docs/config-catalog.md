@@ -2690,10 +2690,16 @@ export interface Config {
    * with a warning instead of being partially parsed.
    */
   maxFileBytes?: number
+  /**
+   * Maximum UTF-8 bytes retained inline from each command stdout/stderr tail in
+   * `run_mc_check` step summaries. The shell executor may already have
+   * truncated or spilled the stream before this bound is applied.
+   */
+  maxOutputSummaryBytes?: number
 }
 ```
 
-Source: [`packages/minecraft/tool-mc-project/src/index.ts:31`](../packages/minecraft/tool-mc-project/src/index.ts)
+Source: [`packages/minecraft/tool-mc-project/src/index.ts:36`](../packages/minecraft/tool-mc-project/src/index.ts)
 
 <a id="deepseek-aidsh-tool-pwsh"></a>
 

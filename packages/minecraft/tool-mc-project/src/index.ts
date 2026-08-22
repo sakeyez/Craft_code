@@ -13,6 +13,8 @@ import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { ToolExecution, ToolResult } from '@deepseek-ai/dsh-tools'
 import type { FsDirEntry, FsTarget } from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-fs'
+import type { CollectedOutput, ShellRunResult, ShellSandboxInfo } from '@deepseek-ai/dsh-shell'
+import type {} from '@deepseek-ai/dsh-shell'
 
 /** Cordis plugin name. */
 export const name = 'tool-mc-project'
@@ -23,9 +25,12 @@ export const inject = ['tools', 'fs']
 export const DETECT_MC_PROJECT = 'detect_mc_project'
 /** Model-facing Minecraft resource validator tool name. */
 export const VALIDATE_MC_RESOURCES = 'validate_mc_resources'
+/** Model-facing Minecraft project check runner tool name. */
+export const RUN_MC_CHECK = 'run_mc_check'
 
 const DEFAULT_MAX_ENTRIES = 2_000
 const DEFAULT_MAX_FILE_BYTES = 512 * 1024
+const DEFAULT_MAX_OUTPUT_SUMMARY_BYTES = 4_096
 
 /** Tool configuration. */
 export interface Config {
@@ -40,20 +45,30 @@ export interface Config {
    * with a warning instead of being partially parsed.
    */
   maxFileBytes?: number
+  /**
+   * Maximum UTF-8 bytes retained inline from each command stdout/stderr tail in
+   * `run_mc_check` step summaries. The shell executor may already have
+   * truncated or spilled the stream before this bound is applied.
+   */
+  maxOutputSummaryBytes?: number
 }
 
 /** Schemastery configuration for the detector. */
 export const Config: z<Config> = z.object({
   maxEntries: z.number().default(DEFAULT_MAX_ENTRIES),
   maxFileBytes: z.number().default(DEFAULT_MAX_FILE_BYTES),
+  maxOutputSummaryBytes: z.number().default(DEFAULT_MAX_OUTPUT_SUMMARY_BYTES),
 })
 
 type Loader = 'fabric' | 'forge' | 'neoforge' | 'quilt' | 'unknown'
 type Confidence = 'high' | 'medium' | 'low'
+type CheckTarget = 'build' | 'test' | 'datagen' | 'resources' | 'all'
+type CheckStepStatus = 'passed' | 'failed' | 'skipped'
 
 interface ResolvedConfig {
   maxEntries: number
   maxFileBytes: number
+  maxOutputSummaryBytes: number
 }
 
 interface MappingsInfo {
@@ -122,6 +137,51 @@ interface ResourceValidationResult {
   detectedModId: string | null
 }
 
+interface OutputSummary {
+  text: string
+  truncated: boolean
+  spillPath?: string
+}
+
+interface SandboxSummary {
+  mode: string
+  denied: boolean
+  enforcement?: string
+  runnerFailed?: boolean
+}
+
+interface CheckStepResult {
+  step: string
+  command?: string
+  status: CheckStepStatus
+  exitCode: number | null
+  stdout: OutputSummary
+  stderr: OutputSummary
+  timedOut: boolean
+  aborted: boolean
+  signal: string | null
+  sandbox?: SandboxSummary
+  message?: string
+}
+
+interface CheckResult {
+  commands: string[]
+  exitCode: number | null
+  steps: CheckStepResult[]
+  failedStep: string | null
+  suggestedNextAction: string | null
+}
+
+interface RunCheckArgs {
+  target: CheckTarget
+  timeoutMs?: number
+}
+
+interface CommandPlan {
+  step: string
+  task: string
+}
+
 interface TextFile {
   path: string
   text: string
@@ -172,13 +232,17 @@ const RESOURCE_LOCATION_SCAN_PATTERN = /#?([a-z0-9_.-]+):([a-z0-9/._-]+)/gu
 function resolveConfig(config: Config | undefined): ResolvedConfig {
   const maxEntries = config?.maxEntries ?? DEFAULT_MAX_ENTRIES
   const maxFileBytes = config?.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES
+  const maxOutputSummaryBytes = config?.maxOutputSummaryBytes ?? DEFAULT_MAX_OUTPUT_SUMMARY_BYTES
   if (!Number.isFinite(maxEntries) || !Number.isInteger(maxEntries) || maxEntries < 1) {
     throw new Error('tool-mc-project config maxEntries must be a positive integer')
   }
   if (!Number.isFinite(maxFileBytes) || !Number.isInteger(maxFileBytes) || maxFileBytes < 1) {
     throw new Error('tool-mc-project config maxFileBytes must be a positive integer')
   }
-  return { maxEntries, maxFileBytes }
+  if (!Number.isFinite(maxOutputSummaryBytes) || !Number.isInteger(maxOutputSummaryBytes) || maxOutputSummaryBytes < 1) {
+    throw new Error('tool-mc-project config maxOutputSummaryBytes must be a positive integer')
+  }
+  return { maxEntries, maxFileBytes, maxOutputSummaryBytes }
 }
 
 function sessionResolveOptions(exec: ToolExecution): { cwd?: string; signal?: AbortSignal } {
@@ -523,6 +587,288 @@ function validationCommands(loader: Loader, hasGradle: boolean, hasWrapper: bool
   if (datagen.length > 0) commands.push(`${gradle} runDatagen`)
   if (loader === 'forge' || loader === 'neoforge') commands.push(`${gradle} runData`)
   return uniq(commands, command => command)
+}
+
+function outputSummarySchema() {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      text: { type: 'string', required: true },
+      truncated: { type: 'boolean', required: true },
+      spillPath: { type: 'string' },
+    },
+  } as const
+}
+
+function sandboxSummarySchema() {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      mode: { type: 'string', required: true },
+      denied: { type: 'boolean', required: true },
+      enforcement: { type: 'string' },
+      runnerFailed: { type: 'boolean' },
+    },
+  } as const
+}
+
+function checkOutputSchema() {
+  const stream = outputSummarySchema()
+  return {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      commands: { type: 'array', required: true, items: { type: 'string' } },
+      exitCode: { required: true, oneOf: [{ type: 'integer' }, { type: 'null' }] },
+      steps: {
+        type: 'array',
+        required: true,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            step: { type: 'string', required: true },
+            command: { type: 'string' },
+            status: { type: 'string', required: true, enum: ['passed', 'failed', 'skipped'] },
+            exitCode: { required: true, oneOf: [{ type: 'integer' }, { type: 'null' }] },
+            stdout: { ...stream, required: true },
+            stderr: { ...stream, required: true },
+            timedOut: { type: 'boolean', required: true },
+            aborted: { type: 'boolean', required: true },
+            signal: { required: true, oneOf: [{ type: 'string' }, { type: 'null' }] },
+            sandbox: sandboxSummarySchema(),
+            message: { type: 'string' },
+          },
+        },
+      },
+      failedStep: { required: true, oneOf: [{ type: 'string' }, { type: 'null' }] },
+      suggestedNextAction: { required: true, oneOf: [{ type: 'string' }, { type: 'null' }] },
+    },
+  } as const
+}
+
+function emptyOutput(): OutputSummary {
+  return { text: '', truncated: false }
+}
+
+function summarizeText(text: string, alreadyTruncated: boolean, spillPath: string | undefined, maxBytes: number): OutputSummary {
+  const bytes = Buffer.from(text, 'utf8')
+  if (bytes.length <= maxBytes) {
+    return {
+      text,
+      truncated: alreadyTruncated,
+      ...spillPath !== undefined ? { spillPath } : {},
+    }
+  }
+  const tail = bytes.subarray(bytes.length - maxBytes).toString('utf8').replace(/^\uFFFD/u, '')
+  return {
+    text: tail,
+    truncated: true,
+    ...spillPath !== undefined ? { spillPath } : {},
+  }
+}
+
+function summarizeStream(output: CollectedOutput, maxBytes: number): OutputSummary {
+  return summarizeText(output.text, output.truncated, output.spillPath, maxBytes)
+}
+
+function summarizeSandbox(sandbox: ShellSandboxInfo): SandboxSummary {
+  return {
+    mode: sandbox.mode,
+    denied: sandbox.denied,
+    ...sandbox.enforcement !== undefined ? { enforcement: sandbox.enforcement } : {},
+    ...sandbox.runnerFailed !== undefined ? { runnerFailed: sandbox.runnerFailed } : {},
+  }
+}
+
+function checkFailed(result: ShellRunResult): boolean {
+  return result.exitCode !== 0
+    || result.signal !== null
+    || result.timedOut
+    || result.aborted
+    || result.sandbox?.denied === true
+    || result.sandbox?.runnerFailed === true
+}
+
+function commandStep(step: string, command: string, result: ShellRunResult, config: ResolvedConfig): CheckStepResult {
+  return {
+    step,
+    command,
+    status: checkFailed(result) ? 'failed' : 'passed',
+    exitCode: result.exitCode,
+    stdout: summarizeStream(result.stdout, config.maxOutputSummaryBytes),
+    stderr: summarizeStream(result.stderr, config.maxOutputSummaryBytes),
+    timedOut: result.timedOut,
+    aborted: result.aborted,
+    signal: result.signal,
+    ...result.sandbox !== undefined ? { sandbox: summarizeSandbox(result.sandbox) } : {},
+  }
+}
+
+function failedStaticStep(step: string, message: string, detail: unknown, config: ResolvedConfig): CheckStepResult {
+  return {
+    step,
+    status: 'failed',
+    exitCode: null,
+    stdout: summarizeText(JSON.stringify(detail, null, 2), false, undefined, config.maxOutputSummaryBytes),
+    stderr: emptyOutput(),
+    timedOut: false,
+    aborted: false,
+    signal: null,
+    message,
+  }
+}
+
+function passedStaticStep(step: string, message: string): CheckStepResult {
+  return {
+    step,
+    status: 'passed',
+    exitCode: 0,
+    stdout: { text: message, truncated: false },
+    stderr: emptyOutput(),
+    timedOut: false,
+    aborted: false,
+    signal: null,
+    message,
+  }
+}
+
+function unavailableStep(step: string, message: string): CheckStepResult {
+  return {
+    step,
+    status: 'failed',
+    exitCode: null,
+    stdout: emptyOutput(),
+    stderr: { text: message, truncated: false },
+    timedOut: false,
+    aborted: false,
+    signal: null,
+    message,
+  }
+}
+
+async function gradleLauncher(ctx: Context, exec: ToolExecution, detected: DetectionResult): Promise<string | null> {
+  if (detected.inspected.gradleFiles.length === 0) return null
+  const hasPosixWrapper = (await optionalStat(ctx, exec, 'gradlew'))?.type === 'file'
+  const hasWindowsWrapper = (await optionalStat(ctx, exec, 'gradlew.bat'))?.type === 'file'
+  if (process.platform === 'win32') {
+    if (hasWindowsWrapper) return '.\\gradlew.bat'
+    if (hasPosixWrapper) return './gradlew'
+  } else {
+    if (hasPosixWrapper) return './gradlew'
+    if (hasWindowsWrapper) return './gradlew.bat'
+  }
+  return 'gradle'
+}
+
+function datagenTask(loader: Loader): string | undefined {
+  switch (loader) {
+    case 'fabric':
+    case 'quilt':
+      return 'runDatagen'
+    case 'forge':
+    case 'neoforge':
+      return 'runData'
+    case 'unknown':
+      return undefined
+  }
+}
+
+function addTargetPlans(plans: CommandPlan[], target: CheckTarget, detected: DetectionResult): string | undefined {
+  switch (target) {
+    case 'build':
+      plans.push({ step: 'build', task: 'build' })
+      return undefined
+    case 'test':
+      plans.push({ step: 'test', task: 'test' })
+      return undefined
+    case 'datagen': {
+      const task = datagenTask(detected.loader)
+      if (task === undefined) return 'datagen'
+      plans.push({ step: 'datagen', task })
+      return undefined
+    }
+    case 'resources':
+      plans.push({ step: 'resources:gradle', task: 'processResources' })
+      return undefined
+    case 'all': {
+      if (detected.datagenClues.length > 0) {
+        const task = datagenTask(detected.loader)
+        if (task === undefined) return 'datagen'
+        plans.push({ step: 'datagen', task })
+      }
+      plans.push(
+        { step: 'resources:gradle', task: 'processResources' },
+        { step: 'test', task: 'test' },
+        { step: 'build', task: 'build' },
+      )
+      return undefined
+    }
+  }
+}
+
+function suggestedNextAction(step: string, result?: CheckStepResult): string {
+  if (step === 'datagen' && result === undefined) {
+    return 'Inspect loader evidence with detect_mc_project before choosing a datagen task.'
+  }
+  if (step === 'resources:static') {
+    return 'Fix the reported Minecraft resource errors, then rerun run_mc_check with target "resources".'
+  }
+  if (step === 'gradle') {
+    return 'Add a Gradle wrapper or root Gradle build file, or run detect_mc_project to confirm this workspace is a Minecraft Gradle project.'
+  }
+  if (result?.sandbox?.denied === true) {
+    return 'The sandbox denied the Gradle command; review the denied access and retry through the approved shell permission path if the command is trusted.'
+  }
+  if (result?.timedOut === true) {
+    return `The ${step} command timed out; inspect partial output and rerun with a focused target or larger timeout.`
+  }
+  return `Inspect the ${step} output, fix the failing project issue, then rerun run_mc_check.`
+}
+
+function commandFor(launcher: string, task: string): string {
+  return `${launcher} ${task}`
+}
+
+async function runCommandStep(
+  ctx: Context,
+  exec: ToolExecution,
+  config: ResolvedConfig,
+  plan: CommandPlan,
+  launcher: string,
+  timeoutMs: number | undefined,
+): Promise<CheckStepResult> {
+  const command = commandFor(launcher, plan.task)
+  const result = await ctx.shell.run(ctx.shell.resolve({
+    command,
+    ...timeoutMs !== undefined ? { timeoutMs } : {},
+    signal: exec.signal,
+    ...exec.agent?.session.header.cwd !== undefined ? { workdir: exec.agent.session.header.cwd } : {},
+  }))
+  return commandStep(plan.step, command, result, config)
+}
+
+async function runStaticResourceStep(ctx: Context, exec: ToolExecution, config: ResolvedConfig): Promise<CheckStepResult> {
+  const validation = await validateResources(ctx, exec, config)
+  if (validation.errors.length > 0) {
+    return failedStaticStep(
+      'resources:static',
+      `Minecraft resource validation reported ${validation.errors.length} error(s).`,
+      {
+        errors: validation.errors,
+        warnings: validation.warnings,
+        checkedFiles: validation.checkedFiles,
+        detectedModId: validation.detectedModId,
+      },
+      config,
+    )
+  }
+  return passedStaticStep(
+    'resources:static',
+    `validated ${validation.checkedFiles.length} Minecraft resource file(s); warnings: ${validation.warnings.length}`,
+  )
 }
 
 function issueKey(issue: ResourceIssue): string {
@@ -1170,10 +1516,74 @@ async function validateResources(ctx: Context, exec: ToolExecution, config: Reso
   return sortValidation(result)
 }
 
+async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedConfig, args: RunCheckArgs): Promise<CheckResult> {
+  const detected = await detect(ctx, exec, config)
+  const plans: CommandPlan[] = []
+  const unsupportedStep = addTargetPlans(plans, args.target, detected)
+  if (unsupportedStep !== undefined) {
+    const step = unavailableStep(unsupportedStep, `Cannot infer a datagen Gradle task for loader ${detected.loader}.`)
+    return {
+      commands: [],
+      exitCode: null,
+      steps: [step],
+      failedStep: unsupportedStep,
+      suggestedNextAction: suggestedNextAction(unsupportedStep),
+    }
+  }
+
+  const launcher = await gradleLauncher(ctx, exec, detected)
+  const commands = launcher === null ? [] : plans.map(plan => commandFor(launcher, plan.task))
+  if (launcher === null) {
+    const step = unavailableStep('gradle', 'No root Gradle files were found; no Minecraft check command was executed.')
+    return {
+      commands: [],
+      exitCode: null,
+      steps: [step],
+      failedStep: 'gradle',
+      suggestedNextAction: suggestedNextAction('gradle'),
+    }
+  }
+
+  const steps: CheckStepResult[] = []
+  for (const plan of plans) {
+    if (plan.step === 'resources:gradle') {
+      const staticStep = await runStaticResourceStep(ctx, exec, config)
+      steps.push(staticStep)
+      if (staticStep.status === 'failed') {
+        return {
+          commands,
+          exitCode: null,
+          steps,
+          failedStep: 'resources:static',
+          suggestedNextAction: suggestedNextAction('resources:static'),
+        }
+      }
+    }
+    const step = await runCommandStep(ctx, exec, config, plan, launcher, args.timeoutMs)
+    steps.push(step)
+    if (step.status === 'failed') {
+      return {
+        commands,
+        exitCode: step.exitCode,
+        steps,
+        failedStep: step.step,
+        suggestedNextAction: suggestedNextAction(step.step, step),
+      }
+    }
+  }
+  return {
+    commands,
+    exitCode: 0,
+    steps,
+    failedStep: null,
+    suggestedNextAction: null,
+  }
+}
+
 /**
- * Register the Minecraft project detector.
+ * Register the Minecraft project tools.
  * @param ctx - plugin context carrying tool and filesystem services.
- * @param rawConfig - optional scan bounds.
+ * @param rawConfig - optional scan and output-summary bounds.
  */
 export function apply(ctx: Context, rawConfig: Config = {}): void {
   const config = resolveConfig(rawConfig)
@@ -1211,4 +1621,36 @@ export function apply(ctx: Context, rawConfig: Config = {}): void {
       content: result.content,
     }),
   }))
+  ctx.effect(() => {
+    const fiber = ctx.inject(['shell'], (shellCtx: Context) => {
+      shellCtx.tools.register(defineTool({
+        name: RUN_MC_CHECK,
+        description: 'Run the appropriate Minecraft Gradle validation for the current workspace. The tool first detects the project with detect_mc_project, chooses Gradle wrapper or gradle commands from the detected loader, runs each command through the mounted shell executor, and returns structured command results. Targets: build, test, datagen, resources, all.',
+        parameters: {
+          target: {
+            type: 'string',
+            required: true,
+            enum: ['build', 'test', 'datagen', 'resources', 'all'],
+            description: 'Check to run. resources performs static Minecraft resource validation before Gradle processResources. all stops at the first failed step.',
+          },
+          timeoutMs: {
+            type: 'number',
+            description: 'Optional timeout in milliseconds for each Gradle command. The shell executor applies its configured default and cap.',
+          },
+        },
+        output: {
+          schema: checkOutputSchema(),
+          render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+        },
+        execute: (args: RunCheckArgs, exec) => runMcCheck(shellCtx, exec, config, args),
+        presentCall: args => ({ card: 'generic', title: `Run Minecraft check: ${String((args as Partial<RunCheckArgs>).target ?? 'unknown')}`, kind: 'execute' }),
+        presentResult: (_args, result: ToolResult) => ({
+          card: 'generic',
+          title: 'Minecraft check result',
+          content: result.content,
+        }),
+      }))
+    })
+    return fiber.dispose
+  }, 'tool-mc-project.run_mc_check')
 }

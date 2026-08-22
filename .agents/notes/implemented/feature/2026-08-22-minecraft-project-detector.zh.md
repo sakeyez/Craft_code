@@ -20,7 +20,7 @@ Minecraft modding preset 要求模型在编辑前识别 loader、Minecraft 版�
 
 **只保留提示词检测。** 拒绝，因为模型可见请求仍只携带指令，而不是可重复的事实提取结果。提示词纪律不能把 loader 冲突、缺失 metadata 或扫描上限显式变成结构化数据。
 
-**运行 Gradle task 来发现项目状态。** 拒绝用于检测器，因为 Gradle 可能下载依赖、运行任意 build logic，并且远慢于廉价的首次读取。工具只推荐验证命令；agent 获得上下文后，再通过普通 shell 路径决定是否执行。
+**运行 Gradle task 来发现项目状态。** 拒绝用于检测器，因为 Gradle 可能下载依赖、运行任意 build logic，并且远慢于廉价的首次读取。工具只推荐验证命令；当 agent 需要执行验证时，基于 shell 的检查 runner 会使用检测到的事实。
 
 **冲突时选择最强 loader 线索。** 拒绝，因为混合证据正是选择 Fabric、Forge、NeoForge 或 Quilt API 最危险的时候。返回带冲突 loader 的 `unknown` 会迫使下一步继续检查或询问，而不是静默混用 API。
 

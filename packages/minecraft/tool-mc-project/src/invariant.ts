@@ -15,8 +15,9 @@ export const inject = ['invariants']
 
 /**
  * No runtime invariant: this package owns no durable events or mutable runtime
- * data. It registers read-only tools; the tool registry owns schema validation,
- * scoped registration, execution, presentation, and disposal.
+ * data. Its shell-backed check runner delegates process execution to the
+ * mounted shell service, while the tool registry owns schema validation, scoped
+ * registration, execution, presentation, and disposal.
  */
 const install: InvariantInstaller = () => {}
 

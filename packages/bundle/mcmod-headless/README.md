@@ -13,7 +13,7 @@ The patch keeps the `headless-runner` from `dsh-headless` and the base services 
 | Row | Package | Purpose |
 |---|---|---|
 | `mcmod-agent` | `@deepseek-ai/dsh-mcmod-agent` | Registers the Minecraft modding prompt sections on the global headless agent scope. |
-| `tool-mc-project` | `@deepseek-ai/dsh-tool-mc-project` | Exposes the read-only `detect_mc_project` and `validate_mc_resources` tools to the model. |
+| `tool-mc-project` | `@deepseek-ai/dsh-tool-mc-project` | Exposes Minecraft project detection, static resource validation, and shell-backed check orchestration tools to the model. |
 | `lsp` | `@deepseek-ai/dsh-lsp` | Provides the `ctx.lsp` registry. |
 | `lsp-stdio` | `@deepseek-ai/dsh-lsp-stdio` | Registers a Java provider for `.java` files with command `jdtls` and language id `java`. |
 | `tool-lsp` | `@deepseek-ai/dsh-tool-lsp` | Exposes the read-only `lsp` tool to the model. |
@@ -29,7 +29,7 @@ The patch disables web retrieval, workflow orchestration, Ralph, general subagen
 
 #### What the model sees
 
-The model sees the headless persona, the five Fabric-first Minecraft modding prompt sections from `@deepseek-ai/dsh-mcmod-agent`, the four bundled Minecraft skills (`fabric-mod-dev`, `minecraft-resources`, `minecraft-datagen`, and `mixin-debugging`) in the skill catalog, and the remaining model-facing tool schemas: filesystem read/write/edit/search, `detect_mc_project`, `validate_mc_resources`, one platform shell tool, `lsp`, and `skill`.
+The model sees the headless persona, the five Fabric-first Minecraft modding prompt sections from `@deepseek-ai/dsh-mcmod-agent`, the four bundled Minecraft skills (`fabric-mod-dev`, `minecraft-resources`, `minecraft-datagen`, and `mixin-debugging`) in the skill catalog, and the remaining model-facing tool schemas: filesystem read/write/edit/search, `detect_mc_project`, `validate_mc_resources`, `run_mc_check`, one platform shell tool, `lsp`, and `skill`.
 
 #### Token effect
 

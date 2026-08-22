@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-22-minecraft-check-runner.md
+2026-08-22-minecraft-check-runner.md: 5393a2a38e27d2c2a11cd876b08da63b800fe671
+2026-08-22-minecraft-check-runner.zh.md: f2acf2dbc2bf8443fa16f5b3de7e6d0eb4fa148c
