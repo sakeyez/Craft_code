@@ -2,15 +2,16 @@
 
 [English](README.md) | 中文
 
-只读的模型可见 Minecraft 项目检测工具。它注册 `detect_mc_project`，通过 `ctx.fs` 检查当前 session workspace，并以结构化 JSON 返回 Gradle 文件、mod metadata、source root、resource root、mixin、datagen 线索与验证命令事实。
+只读的模型可见 Minecraft 项目工具。该包注册 `detect_mc_project` 返回结构化项目事实，并注册 `validate_mc_resources` 报告 Gradle 编译不一定能抓到的确定性 Minecraft asset/data 资源问题。
 
-该工具提取证据，不求值 Gradle。缺失文件、解析失败、loader 线索冲突和未知字段都会进入 `warnings`；工具仍返回符合 schema 的结果。
+两个工具都通过 `ctx.fs` 读取当前 session workspace。它们提取证据，不求值 Gradle，不执行 shell 命令，不下载依赖，也不模拟 Minecraft 资源加载。缺失文件、解析失败、loader 线索冲突和未知字段会进入结构化 warning 或 error；工具仍返回符合 schema 的结果。
 
 ## Tool
 
 | Tool | 用途 |
 |---|---|
 | `detect_mc_project` | 检测 loader、Minecraft 版本、mappings、mod id 候选、Java/Kotlin 使用、source set、resource root、mixin config、datagen 线索、已检查文件、warning 与推荐 Gradle 验证命令。 |
+| `validate_mc_resources` | 校验 lang、model、blockstate、recipe 与 tag JSON 文件；检查本地 model texture 和 blockstate model 引用；报告可疑 namespace 以及 asset namespace 与 metadata mod id 不一致。 |
 
 ## Config
 
@@ -27,31 +28,25 @@
 
 #### What the model sees
 
-模型会看到 `detect_mc_project` 工具 schema。该工具没有参数，返回一个 JSON 对象：
-
-```json
-{
-  "workspace": "string",
-  "loader": "fabric|forge|neoforge|quilt|unknown",
-  "minecraftVersion": "string|null",
-  "mappings": { "type": "string", "version": "string|null", "evidence": ["string"] },
-  "modIdCandidates": [{ "id": "string", "source": "string", "confidence": "high|medium|low" }],
-  "languages": { "java": "boolean", "kotlin": "boolean" },
-  "mainSourceSets": [{ "name": "string", "java": ["string"], "kotlin": ["string"], "resources": ["string"] }],
-  "resourceRoots": ["string"],
-  "mixinConfigs": [{ "path": "string", "source": "string" }],
-  "datagenClues": [{ "kind": "string", "source": "string", "detail": "string" }],
-  "recommendedValidationCommands": ["string"],
-  "inspected": { "gradleFiles": ["string"], "metadataFiles": ["string"], "sourceRoots": ["string"], "resourceRoots": ["string"] },
-  "warnings": ["string"]
-}
-```
-
-Native render 是同一个对象的格式化 JSON。`presentCall` 把 pending card 标为 `Detect Minecraft project`；`presentResult` 在 generic result card 中展示渲染后的 JSON。
+模型会看到 [`detect_mc_project`](../../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-mc-project) 工具 schema。该工具没有参数；其规范结果包含 workspace、loader、Minecraft 版本、mappings、mod id 候选、语言标志、source/resource root、mixin config、datagen 线索、推荐验证命令、已检查路径和 warnings。Native render 是同一个对象的格式化 JSON。`presentCall` 把 pending card 标为 `Detect Minecraft project`；`presentResult` 在 generic result card 中展示渲染后的 JSON。
 
 #### Token effect
 
 每个挂载此包的 agent composition 请求都会增加一个工具 schema。工具结果包含当前 workspace 扫描得到的紧凑 JSON 事实和 warning 字符串。
+
+#### KV Cache effect
+
+挂载的 composition 生命周期内前缀稳定。结果内容是每次调用的 workspace 状态，不能作为前缀缓存。
+
+### Minecraft Resource Validation
+
+#### What the model sees
+
+模型会看到 [`validate_mc_resources`](../../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-mc-project) 工具 schema。该工具没有参数；其规范结果包含 `errors`、`warnings`、`checkedFiles` 和 `detectedModId`，每个 issue 都携带 `code`、`path`、`message`、`reference` 和 `expectedPath`。Native render 是同一个对象的格式化 JSON。`presentCall` 把 pending card 标为 `Validate Minecraft resources`；`presentResult` 在 generic result card 中展示渲染后的 JSON。
+
+#### Token effect
+
+每个挂载此包的 agent composition 请求都会增加一个工具 schema。工具结果包含当前 workspace 扫描得到的紧凑 JSON issue 数组和 checked-file 路径。
 
 #### KV Cache effect
 
@@ -62,3 +57,4 @@ Native render 是同一个对象的格式化 JSON。`presentCall` 把 pending ca
 - **不求值 Gradle** — 变量、convention plugin、included build 与生成的 source-set 声明，只有在文本里留下直接线索时才会被识别。
 - **证据冲突保持显式** — loader 证据冲突时返回 `loader: "unknown"` 并附 warning，而不是任选一个。
 - **验证命令只是建议** — 检测器会命名可能的 Gradle 命令，但不会通过执行 Gradle 来证明 task 存在。
+- **资源校验是静态检查** — `validate_mc_resources` 只检查检测到或约定资源根下的 workspace 文件。缺失的 vanilla、依赖、生成或运行时提供 asset 会被忽略，除非引用目标属于当前 mod namespace。

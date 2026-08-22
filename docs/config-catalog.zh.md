@@ -2672,6 +2672,31 @@ export interface Config {
 
 来源：[`packages/lsp/tool-lsp/src/index.ts:58`](../packages/lsp/tool-lsp/src/index.ts)
 
+<a id="deepseek-aidsh-tool-mc-project"></a>
+
+## `@deepseek-ai/dsh-tool-mc-project`
+
+需要：`tools` · `fs`
+
+```ts config-catalog
+/** Tool configuration. */
+export interface Config {
+  /**
+   * Maximum directory entries walked while discovering source/resource and
+   * metadata clues. When the limit is reached, the result carries a warning and
+   * returns the facts already found.
+   */
+  maxEntries?: number
+  /**
+   * Maximum bytes read from one candidate text file. Larger files are skipped
+   * with a warning instead of being partially parsed.
+   */
+  maxFileBytes?: number
+}
+```
+
+来源：[`packages/minecraft/tool-mc-project/src/index.ts:31`](../packages/minecraft/tool-mc-project/src/index.ts)
+
 <a id="deepseek-aidsh-tool-pwsh"></a>
 
 ## `@deepseek-ai/dsh-tool-pwsh`
@@ -3277,6 +3302,7 @@ export interface Config {
 - `@deepseek-ai/dsh-host-plugin-inventory` — 需要 `loader`（[`packages/host/plugin-inventory/src/index.ts`](../packages/host/plugin-inventory/src/index.ts)）
 - `@deepseek-ai/dsh-llm`（[`packages/llm/llm/src/index.ts`](../packages/llm/llm/src/index.ts)）
 - `@deepseek-ai/dsh-lsp`（[`packages/lsp/lsp/src/index.ts`](../packages/lsp/lsp/src/index.ts)）
+- `@deepseek-ai/dsh-mcmod-agent` — 需要 `systemPrompt`（[`packages/minecraft/mcmod-agent/src/index.ts`](../packages/minecraft/mcmod-agent/src/index.ts)）
 - `@deepseek-ai/dsh-schedule` — 需要 `agents` · `sessions` · `tools` · `sessionPersistence`（[`packages/schedule/schedule/src/index.ts`](../packages/schedule/schedule/src/index.ts)）
 - `@deepseek-ai/dsh-session`（[`packages/core/session/src/index.ts`](../packages/core/session/src/index.ts)）
 - `@deepseek-ai/dsh-session-checkpoint-policy` — 需要 `llm` · `sessionPersistence` · `sessions` · `tools`（[`packages/session/session-checkpoint-policy/src/index.ts`](../packages/session/session-checkpoint-policy/src/index.ts)）
@@ -3337,6 +3363,8 @@ export interface Config {
 - `@deepseek-ai/dsh-launch-environment`（[`packages/util/launch-environment/src/index.ts`](../packages/util/launch-environment/src/index.ts)）
 - `@deepseek-ai/dsh-llm-mock-server`（[`packages/test-support/llm-mock-server/src/index.ts`](../packages/test-support/llm-mock-server/src/index.ts)）
 - `@deepseek-ai/dsh-loader-smoke`（[`packages/test-support/loader-smoke/src/index.ts`](../packages/test-support/loader-smoke/src/index.ts)）
+- `@deepseek-ai/dsh-mcmod-bundle`（[`packages/bundle/mcmod/src/index.ts`](../packages/bundle/mcmod/src/index.ts)）
+- `@deepseek-ai/dsh-mcmod-headless-bundle`（[`packages/bundle/mcmod-headless/src/index.ts`](../packages/bundle/mcmod-headless/src/index.ts)）
 - `@deepseek-ai/dsh-native-command`（[`packages/util/native-command/src/index.ts`](../packages/util/native-command/src/index.ts)）
 - `@deepseek-ai/dsh-output-retention`（[`packages/util/output-retention/src/index.ts`](../packages/util/output-retention/src/index.ts)）
 - `@deepseek-ai/dsh-sandbox-windows-acl`（[`packages/sandbox/sandbox-windows-acl/src/index.ts`](../packages/sandbox/sandbox-windows-acl/src/index.ts)）

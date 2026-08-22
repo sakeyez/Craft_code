@@ -2670,6 +2670,31 @@ export interface Config {
 
 Source: [`packages/lsp/tool-lsp/src/index.ts:58`](../packages/lsp/tool-lsp/src/index.ts)
 
+<a id="deepseek-aidsh-tool-mc-project"></a>
+
+## `@deepseek-ai/dsh-tool-mc-project`
+
+Requires: `tools` · `fs`
+
+```ts config-catalog
+/** Tool configuration. */
+export interface Config {
+  /**
+   * Maximum directory entries walked while discovering source/resource and
+   * metadata clues. When the limit is reached, the result carries a warning and
+   * returns the facts already found.
+   */
+  maxEntries?: number
+  /**
+   * Maximum bytes read from one candidate text file. Larger files are skipped
+   * with a warning instead of being partially parsed.
+   */
+  maxFileBytes?: number
+}
+```
+
+Source: [`packages/minecraft/tool-mc-project/src/index.ts:31`](../packages/minecraft/tool-mc-project/src/index.ts)
+
 <a id="deepseek-aidsh-tool-pwsh"></a>
 
 ## `@deepseek-ai/dsh-tool-pwsh`

@@ -21,6 +21,8 @@ export const inject = ['tools', 'fs']
 
 /** Model-facing tool name. */
 export const DETECT_MC_PROJECT = 'detect_mc_project'
+/** Model-facing Minecraft resource validator tool name. */
+export const VALIDATE_MC_RESOURCES = 'validate_mc_resources'
 
 const DEFAULT_MAX_ENTRIES = 2_000
 const DEFAULT_MAX_FILE_BYTES = 512 * 1024
@@ -105,6 +107,21 @@ interface DetectionResult {
   warnings: string[]
 }
 
+interface ResourceIssue {
+  code: string
+  path: string
+  message: string
+  reference: string | null
+  expectedPath: string | null
+}
+
+interface ResourceValidationResult {
+  errors: ResourceIssue[]
+  warnings: ResourceIssue[]
+  checkedFiles: string[]
+  detectedModId: string | null
+}
+
 interface TextFile {
   path: string
   text: string
@@ -147,6 +164,10 @@ const LOADER_PATTERNS: ReadonlyArray<{ loader: Exclude<Loader, 'unknown'>; regex
   { loader: 'forge', regex: /\b(?:net\.minecraftforge\.gradle|net\.minecraftforge:forge|MinecraftForge)\b/u, label: 'Forge Gradle/dependency clue' },
   { loader: 'neoforge', regex: /\b(?:net\.neoforged\.gradle|net\.neoforged\.moddev|net\.neoforged:neoforge|NeoForge)\b/u, label: 'NeoForge Gradle/dependency clue' },
 ]
+
+const BUILTIN_RESOURCE_NAMESPACES = new Set(['minecraft', 'c', 'forge', 'neoforge', 'fabric', 'quilt'])
+const RESOURCE_LOCATION_PATTERN = /^([a-z0-9_.-]+:)?[a-z0-9/._-]+$/u
+const RESOURCE_LOCATION_SCAN_PATTERN = /#?([a-z0-9_.-]+):([a-z0-9/._-]+)/gu
 
 function resolveConfig(config: Config | undefined): ResolvedConfig {
   const maxEntries = config?.maxEntries ?? DEFAULT_MAX_ENTRIES
@@ -504,6 +525,198 @@ function validationCommands(loader: Loader, hasGradle: boolean, hasWrapper: bool
   return uniq(commands, command => command)
 }
 
+function issueKey(issue: ResourceIssue): string {
+  return `${issue.code}\0${issue.path}\0${issue.reference ?? ''}\0${issue.expectedPath ?? ''}\0${issue.message}`
+}
+
+function sortIssue(a: ResourceIssue, b: ResourceIssue): number {
+  return a.path.localeCompare(b.path)
+    || a.code.localeCompare(b.code)
+    || (a.reference ?? '').localeCompare(b.reference ?? '')
+    || (a.expectedPath ?? '').localeCompare(b.expectedPath ?? '')
+}
+
+function sortValidation(result: ResourceValidationResult): ResourceValidationResult {
+  return {
+    errors: uniq(result.errors, issueKey).sort(sortIssue),
+    warnings: uniq(result.warnings, issueKey).sort(sortIssue),
+    checkedFiles: [...new Set(result.checkedFiles)].sort(),
+    detectedModId: result.detectedModId,
+  }
+}
+
+function addResourceIssue(
+  list: ResourceIssue[],
+  code: string,
+  path: string,
+  message: string,
+  reference: string | null = null,
+  expectedPath: string | null = null,
+): void {
+  list.push({ code, path, message, reference, expectedPath })
+}
+
+function parseResourceLocation(reference: string, defaultNamespace: string): { namespace: string; path: string } | undefined {
+  if (reference.startsWith('#') || !RESOURCE_LOCATION_PATTERN.test(reference)) return undefined
+  const colon = reference.indexOf(':')
+  if (colon >= 0) return { namespace: reference.slice(0, colon), path: reference.slice(colon + 1) }
+  return { namespace: defaultNamespace, path: reference }
+}
+
+function shouldCheckLocalReference(namespace: string, currentNamespace: string, detectedModId: string | null): boolean {
+  return namespace === currentNamespace || namespace === detectedModId
+}
+
+function texturePath(root: string, namespace: string, path: string): string {
+  return relJoin(root, `assets/${namespace}/textures/${path}.png`)
+}
+
+function modelPath(root: string, namespace: string, path: string): string {
+  return relJoin(root, `assets/${namespace}/models/${path}.json`)
+}
+
+function parseJsonForValidation(result: ResourceValidationResult, path: string, text: string): unknown | undefined {
+  result.checkedFiles.push(path)
+  try {
+    return JSON.parse(text) as unknown
+  } catch (error) {
+    addResourceIssue(
+      result.errors,
+      'invalid_json',
+      path,
+      `JSON parse failed: ${error instanceof Error ? error.message : String(error)}`,
+    )
+    return undefined
+  }
+}
+
+async function readValidationText(
+  ctx: Context,
+  exec: ToolExecution,
+  path: string,
+  entry: FsDirEntry,
+  config: ResolvedConfig,
+  result: ResourceValidationResult,
+): Promise<string | undefined> {
+  if (entry.size !== undefined && entry.size > config.maxFileBytes) {
+    addResourceIssue(
+      result.warnings,
+      'file_too_large',
+      path,
+      `Skipped because file size ${entry.size} exceeds maxFileBytes ${config.maxFileBytes}`,
+    )
+    return undefined
+  }
+  try {
+    return await ctx.fs.readText(entry.target, exec.signal)
+  } catch (error) {
+    addResourceIssue(
+      result.warnings,
+      'read_failed',
+      path,
+      `Could not read text: ${error instanceof Error ? error.message : String(error)}`,
+    )
+    return undefined
+  }
+}
+
+function objectRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined
+}
+
+function collectObjectModels(value: unknown, out: string[]): void {
+  if (Array.isArray(value)) {
+    for (const item of value) collectObjectModels(item, out)
+    return
+  }
+  const record = objectRecord(value)
+  if (record === undefined) return
+  for (const [key, child] of Object.entries(record)) {
+    if (key === 'model' && typeof child === 'string') out.push(child)
+    collectObjectModels(child, out)
+  }
+}
+
+function collectNamespaceReferences(value: unknown, out: Set<string>): void {
+  if (typeof value === 'string') {
+    for (const match of value.matchAll(RESOURCE_LOCATION_SCAN_PATTERN)) {
+      const namespace = match[1]
+      const path = match[2]
+      if (namespace !== undefined && path !== undefined) out.add(`${namespace}:${path}`)
+    }
+    return
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) collectNamespaceReferences(item, out)
+    return
+  }
+  const record = objectRecord(value)
+  if (record === undefined) return
+  for (const [key, child] of Object.entries(record)) {
+    for (const match of key.matchAll(RESOURCE_LOCATION_SCAN_PATTERN)) {
+      const namespace = match[1]
+      const path = match[2]
+      if (namespace !== undefined && path !== undefined) out.add(`${namespace}:${path}`)
+    }
+    collectNamespaceReferences(child, out)
+  }
+}
+
+function detectedHighConfidenceModId(detected: DetectionResult, result: ResourceValidationResult): string | null {
+  const candidates = [...new Set(detected.modIdCandidates
+    .filter(candidate => candidate.confidence === 'high')
+    .map(candidate => candidate.id))]
+  if (candidates.length === 1) return candidates[0] ?? null
+  if (candidates.length > 1) {
+    addResourceIssue(
+      result.warnings,
+      'ambiguous_modid',
+      '',
+      `Multiple high-confidence mod ids were detected: ${candidates.join(', ')}`,
+    )
+  }
+  return null
+}
+
+async function fallbackResourceRoots(ctx: Context, exec: ToolExecution, warnings: ResourceIssue[]): Promise<string[]> {
+  const roots: string[] = []
+  const srcEntries = await listOptionalDir(ctx, exec, 'src', [])
+  for (const entry of srcEntries.filter(candidate => candidate.type === 'directory')) {
+    const path = `src/${entry.name}/resources`
+    if ((await optionalStat(ctx, exec, path))?.type === 'directory') pushUnique(roots, path)
+  }
+  if (roots.length > 0) return roots.sort()
+  const hasTopLevelAssets = (await optionalStat(ctx, exec, 'assets'))?.type === 'directory'
+  const hasTopLevelData = (await optionalStat(ctx, exec, 'data'))?.type === 'directory'
+  if (hasTopLevelAssets || hasTopLevelData) return ['']
+  addResourceIssue(warnings, 'no_resource_roots', '', 'No Minecraft resource roots were found')
+  return []
+}
+
+async function localFileExists(ctx: Context, exec: ToolExecution, path: string): Promise<boolean> {
+  return (await optionalStat(ctx, exec, path))?.type === 'file'
+}
+
+async function resourceNamespaces(ctx: Context, exec: ToolExecution, roots: readonly string[], kind: 'assets' | 'data'): Promise<string[]> {
+  const namespaces: string[] = []
+  for (const root of roots) {
+    const entries = await listOptionalDir(ctx, exec, relJoin(root, kind), [])
+    for (const entry of entries) {
+      if (entry.type === 'directory') pushUnique(namespaces, entry.name)
+    }
+  }
+  return namespaces.sort()
+}
+
+function namespaceAllowlist(detectedModId: string | null, namespaces: readonly string[]): Set<string> {
+  const allowed = new Set(BUILTIN_RESOURCE_NAMESPACES)
+  if (detectedModId !== null) allowed.add(detectedModId)
+  for (const namespace of namespaces) allowed.add(namespace)
+  return allowed
+}
+
 function projectOutputSchema() {
   const stringArray = { type: 'array', items: { type: 'string' } } as const
   return {
@@ -598,6 +811,30 @@ function projectOutputSchema() {
         },
       },
       warnings: { ...stringArray, required: true },
+    },
+  } as const
+}
+
+function resourceValidationOutputSchema() {
+  const issue = {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      code: { type: 'string', required: true },
+      path: { type: 'string', required: true },
+      message: { type: 'string', required: true },
+      reference: { oneOf: [{ type: 'string' }, { type: 'null' }], required: true },
+      expectedPath: { oneOf: [{ type: 'string' }, { type: 'null' }], required: true },
+    },
+  } as const
+  return {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      errors: { type: 'array', required: true, items: issue },
+      warnings: { type: 'array', required: true, items: issue },
+      checkedFiles: { type: 'array', required: true, items: { type: 'string' } },
+      detectedModId: { oneOf: [{ type: 'string' }, { type: 'null' }], required: true },
     },
   } as const
 }
@@ -729,6 +966,210 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
   }
 }
 
+async function resourceFileExists(
+  ctx: Context,
+  exec: ToolExecution,
+  roots: readonly string[],
+  expected: (root: string) => string,
+): Promise<boolean> {
+  for (const root of roots) {
+    if (await localFileExists(ctx, exec, expected(root))) return true
+  }
+  return false
+}
+
+async function readJsonResourceFiles(
+  ctx: Context,
+  exec: ToolExecution,
+  base: string,
+  config: ResolvedConfig,
+  result: ResourceValidationResult,
+): Promise<Array<{ path: string; document: unknown }>> {
+  const scanWarnings: string[] = []
+  const files = await walkFiles(
+    ctx,
+    exec,
+    base,
+    { entries: 0, warned: false },
+    config,
+    scanWarnings,
+    path => path.endsWith('.json'),
+  )
+  for (const warning of scanWarnings) addResourceIssue(result.warnings, 'scan_warning', base, warning)
+  const documents: Array<{ path: string; document: unknown }> = []
+  for (const file of files) {
+    const text = await readValidationText(ctx, exec, file.path, file.entry, config, result)
+    if (text === undefined) continue
+    const document = parseJsonForValidation(result, file.path, text)
+    if (document !== undefined) documents.push({ path: file.path, document })
+  }
+  return documents
+}
+
+async function validateModelTextures(
+  ctx: Context,
+  exec: ToolExecution,
+  roots: readonly string[],
+  root: string,
+  namespace: string,
+  folder: 'item' | 'block',
+  config: ResolvedConfig,
+  detectedModId: string | null,
+  result: ResourceValidationResult,
+): Promise<void> {
+  const documents = await readJsonResourceFiles(ctx, exec, relJoin(root, `assets/${namespace}/models/${folder}`), config, result)
+  for (const file of documents) {
+    const textures = objectRecord(file.document)?.textures
+    const textureRecord = objectRecord(textures)
+    if (textureRecord === undefined) continue
+    for (const texture of Object.values(textureRecord)) {
+      if (typeof texture !== 'string' || texture.startsWith('#')) continue
+      const parsed = parseResourceLocation(texture, namespace)
+      if (parsed === undefined) continue
+      if (!shouldCheckLocalReference(parsed.namespace, namespace, detectedModId)) continue
+      const expectedPath = texturePath(root, parsed.namespace, parsed.path)
+      if (!await resourceFileExists(ctx, exec, roots, candidateRoot => texturePath(candidateRoot, parsed.namespace, parsed.path))) {
+        addResourceIssue(
+          result.errors,
+          'missing_texture',
+          file.path,
+          `Model references missing texture ${texture}`,
+          texture,
+          expectedPath,
+        )
+      }
+    }
+  }
+}
+
+async function validateBlockstateModels(
+  ctx: Context,
+  exec: ToolExecution,
+  roots: readonly string[],
+  root: string,
+  namespace: string,
+  config: ResolvedConfig,
+  detectedModId: string | null,
+  result: ResourceValidationResult,
+): Promise<void> {
+  const documents = await readJsonResourceFiles(ctx, exec, relJoin(root, `assets/${namespace}/blockstates`), config, result)
+  for (const file of documents) {
+    const models: string[] = []
+    collectObjectModels(file.document, models)
+    for (const model of models) {
+      const parsed = parseResourceLocation(model, namespace)
+      if (parsed === undefined) continue
+      if (!shouldCheckLocalReference(parsed.namespace, namespace, detectedModId)) continue
+      const expectedPath = modelPath(root, parsed.namespace, parsed.path)
+      if (!await resourceFileExists(ctx, exec, roots, candidateRoot => modelPath(candidateRoot, parsed.namespace, parsed.path))) {
+        addResourceIssue(
+          result.errors,
+          'missing_model',
+          file.path,
+          `Blockstate references missing model ${model}`,
+          model,
+          expectedPath,
+        )
+      }
+    }
+  }
+}
+
+async function validateDataJson(
+  ctx: Context,
+  exec: ToolExecution,
+  root: string,
+  namespace: string,
+  folder: 'recipes' | 'tags',
+  config: ResolvedConfig,
+  allowedNamespaces: ReadonlySet<string>,
+  detectedModId: string | null,
+  result: ResourceValidationResult,
+): Promise<void> {
+  if (detectedModId !== null && namespace !== detectedModId && !BUILTIN_RESOURCE_NAMESPACES.has(namespace)) {
+    addResourceIssue(
+      result.warnings,
+      'suspicious_namespace',
+      relJoin(root, `data/${namespace}/${folder}`),
+      `Data namespace ${namespace} differs from detected mod id ${detectedModId}`,
+      namespace,
+    )
+  }
+
+  const documents = await readJsonResourceFiles(ctx, exec, relJoin(root, `data/${namespace}/${folder}`), config, result)
+  for (const file of documents) {
+    const references = new Set<string>()
+    collectNamespaceReferences(file.document, references)
+    for (const reference of references) {
+      const parsed = parseResourceLocation(reference, namespace)
+      if (parsed === undefined || allowedNamespaces.has(parsed.namespace)) continue
+      addResourceIssue(
+        result.warnings,
+        'suspicious_namespace',
+        file.path,
+        `Reference uses namespace ${parsed.namespace}, which was not detected in this project`,
+        reference,
+      )
+    }
+  }
+}
+
+async function validateResources(ctx: Context, exec: ToolExecution, config: ResolvedConfig): Promise<ResourceValidationResult> {
+  const result: ResourceValidationResult = {
+    errors: [],
+    warnings: [],
+    checkedFiles: [],
+    detectedModId: null,
+  }
+  const detected = await detect(ctx, exec, config)
+  for (const path of detected.inspected.metadataFiles) result.checkedFiles.push(path)
+  const detectedModId = detectedHighConfidenceModId(detected, result)
+  result.detectedModId = detectedModId
+
+  const roots = detected.resourceRoots.length > 0
+    ? [...detected.resourceRoots].sort()
+    : await fallbackResourceRoots(ctx, exec, result.warnings)
+  if (roots.length === 0) return sortValidation(result)
+
+  const assetNamespaces = await resourceNamespaces(ctx, exec, roots, 'assets')
+  const dataNamespaces = await resourceNamespaces(ctx, exec, roots, 'data')
+  const allNamespaces = [...new Set([...assetNamespaces, ...dataNamespaces])].sort()
+  const allowedNamespaces = namespaceAllowlist(detectedModId, allNamespaces)
+
+  for (const root of roots) {
+    const rootAssetNamespaces = (await listOptionalDir(ctx, exec, relJoin(root, 'assets'), []))
+      .filter(entry => entry.type === 'directory')
+      .map(entry => entry.name)
+      .sort()
+    for (const namespace of rootAssetNamespaces) {
+      if (detectedModId !== null && namespace !== detectedModId && namespace !== 'minecraft') {
+        addResourceIssue(
+          result.errors,
+          'modid_mismatch',
+          relJoin(root, `assets/${namespace}`),
+          `Asset namespace ${namespace} differs from detected mod id ${detectedModId}`,
+          namespace,
+        )
+      }
+      await readJsonResourceFiles(ctx, exec, relJoin(root, `assets/${namespace}/lang`), config, result)
+      await validateModelTextures(ctx, exec, roots, root, namespace, 'item', config, detectedModId, result)
+      await validateModelTextures(ctx, exec, roots, root, namespace, 'block', config, detectedModId, result)
+      await validateBlockstateModels(ctx, exec, roots, root, namespace, config, detectedModId, result)
+    }
+
+    const rootDataNamespaces = (await listOptionalDir(ctx, exec, relJoin(root, 'data'), []))
+      .filter(entry => entry.type === 'directory')
+      .map(entry => entry.name)
+      .sort()
+    for (const namespace of rootDataNamespaces) {
+      await validateDataJson(ctx, exec, root, namespace, 'recipes', config, allowedNamespaces, detectedModId, result)
+      await validateDataJson(ctx, exec, root, namespace, 'tags', config, allowedNamespaces, detectedModId, result)
+    }
+  }
+
+  return sortValidation(result)
+}
+
 /**
  * Register the Minecraft project detector.
  * @param ctx - plugin context carrying tool and filesystem services.
@@ -750,6 +1191,23 @@ export function apply(ctx: Context, rawConfig: Config = {}): void {
     presentResult: (_args, result: ToolResult) => ({
       card: 'generic',
       title: 'Minecraft project facts',
+      content: result.content,
+    }),
+  }))
+  ctx.tools.register(defineTool({
+    name: VALIDATE_MC_RESOURCES,
+    description: 'Validate the current Minecraft mod workspace resources with deterministic static checks: lang JSON syntax, item/block model texture references, blockstate model references, recipe/tag JSON syntax, suspicious namespaces, and mod id versus metadata consistency. This does not execute Gradle or emulate Minecraft resource loading.',
+    parameters: {},
+    output: {
+      schema: resourceValidationOutputSchema(),
+      render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+    },
+    isConcurrencySafe: () => true,
+    execute: (_args, exec) => validateResources(ctx, exec, config),
+    presentCall: () => ({ card: 'generic', title: 'Validate Minecraft resources', kind: 'read' }),
+    presentResult: (_args, result: ToolResult) => ({
+      card: 'generic',
+      title: 'Minecraft resource validation',
       content: result.content,
     }),
   }))
