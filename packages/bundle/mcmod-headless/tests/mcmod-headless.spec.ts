@@ -52,11 +52,12 @@ describe('dsh-mcmod-headless bundle', () => {
       '@deepseek-ai/dsh-lsp': 'workspace:^',
       '@deepseek-ai/dsh-lsp-stdio': 'workspace:^',
       '@deepseek-ai/dsh-mcmod-agent': 'workspace:^',
+      '@deepseek-ai/dsh-tool-mc-project': 'workspace:^',
       '@deepseek-ai/dsh-tool-lsp': 'workspace:^',
     })
   })
 
-  it('adds Minecraft modding prompt, bundled skill, Java LSP, and LSP tool rows', () => {
+  it('adds Minecraft modding prompt, detector, bundled skill, Java LSP, and LSP tool rows', () => {
     const rows = flatten(loadPatch())
     const byId = new Map(rows.map(row => [row.id, row]))
 
@@ -66,6 +67,7 @@ describe('dsh-mcmod-headless bundle', () => {
     expect(byId.get('mcmod-agent')).toMatchObject({
       name: '@deepseek-ai/dsh-mcmod-agent',
     })
+    expect(byId.get('tool-mc-project')).toMatchObject({ name: '@deepseek-ai/dsh-tool-mc-project' })
     expect(byId.get('lsp')).toMatchObject({ name: '@deepseek-ai/dsh-lsp' })
     expect(byId.get('lsp-stdio')).toMatchObject({
       name: '@deepseek-ai/dsh-lsp-stdio',
@@ -112,6 +114,7 @@ describe('dsh-mcmod-headless bundle', () => {
     expect(warnings).toEqual([])
     expect(byId.get('headless-runner')?.name).toBe('@deepseek-ai/dsh-headless')
     expect(byId.get('mcmod-agent')?.name).toBe('@deepseek-ai/dsh-mcmod-agent')
+    expect(byId.get('tool-mc-project')?.name).toBe('@deepseek-ai/dsh-tool-mc-project')
     expect(byId.get('tool-lsp')?.name).toBe('@deepseek-ai/dsh-tool-lsp')
     expect(byId.get('tool-web')?.disabled).toBe(true)
     expect(byId.get('tool-workflow')?.disabled).toBe(true)

@@ -12,6 +12,9 @@
     - id: mcmod-agent
       name: '@deepseek-ai/dsh-mcmod-agent'
 
+    - id: tool-mc-project
+      name: '@deepseek-ai/dsh-tool-mc-project'
+
     - id: lsp
       name: '@deepseek-ai/dsh-lsp'
 

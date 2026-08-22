@@ -252,6 +252,7 @@
     { "path": "./packages/acp/acp" },
     { "path": "./packages/examples/acp-demo" },
     { "path": "./packages/minecraft/mcmod-agent" },
+    { "path": "./packages/minecraft/tool-mc-project" },
     { "path": "./packages/bundle/base" },
     { "path": "./packages/bundle/headless" },
     { "path": "./packages/bundle/web-app" },

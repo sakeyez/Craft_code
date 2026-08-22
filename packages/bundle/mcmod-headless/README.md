@@ -13,6 +13,7 @@ The patch keeps the `headless-runner` from `dsh-headless` and the base services 
 | Row | Package | Purpose |
 |---|---|---|
 | `mcmod-agent` | `@deepseek-ai/dsh-mcmod-agent` | Registers the Minecraft modding prompt sections on the global headless agent scope. |
+| `tool-mc-project` | `@deepseek-ai/dsh-tool-mc-project` | Exposes the read-only `detect_mc_project` detector to the model. |
 | `lsp` | `@deepseek-ai/dsh-lsp` | Provides the `ctx.lsp` registry. |
 | `lsp-stdio` | `@deepseek-ai/dsh-lsp-stdio` | Registers a Java provider for `.java` files with command `jdtls` and language id `java`. |
 | `tool-lsp` | `@deepseek-ai/dsh-tool-lsp` | Exposes the read-only `lsp` tool to the model. |
@@ -20,7 +21,7 @@ The patch keeps the `headless-runner` from `dsh-headless` and the base services 
 
 The Java command is deliberately plain `jdtls`. A profile can replace the full `lsp-stdio` row in its own `cordis.patch.yml` when JDTLS lives at a machine-specific path or needs arguments.
 
-The patch disables web retrieval, workflow orchestration, Ralph, general subagents, jobs, goals, todos, plan mode, and the legacy str-replace editor row. Those rows are inherited from `dsh-base`; they stay available to other profiles and to user-authored copies that choose to re-enable them. The first version keeps only file/search tools, the platform shell tool, `lsp`, `skill`, compaction, permissions, and session persistence.
+The patch disables web retrieval, workflow orchestration, Ralph, general subagents, jobs, goals, todos, plan mode, and the legacy str-replace editor row. Those rows are inherited from `dsh-base`; they stay available to other profiles and to user-authored copies that choose to re-enable them. The first version keeps only file/search tools, the Minecraft project detector, the platform shell tool, `lsp`, `skill`, compaction, permissions, and session persistence.
 
 ## Model Experience
 
@@ -28,7 +29,7 @@ The patch disables web retrieval, workflow orchestration, Ralph, general subagen
 
 #### What the model sees
 
-The model sees the headless persona, the five Fabric-first Minecraft modding prompt sections from `@deepseek-ai/dsh-mcmod-agent`, and the remaining model-facing tool schemas: filesystem read/write/edit/search, one platform shell tool, `lsp`, and `skill`.
+The model sees the headless persona, the five Fabric-first Minecraft modding prompt sections from `@deepseek-ai/dsh-mcmod-agent`, and the remaining model-facing tool schemas: filesystem read/write/edit/search, `detect_mc_project`, one platform shell tool, `lsp`, and `skill`.
 
 #### Token effect
 

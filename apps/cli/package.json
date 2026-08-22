@@ -44,6 +44,7 @@
     "@deepseek-ai/dsh-mcmod-agent": "workspace:^",
     "@deepseek-ai/dsh-mcmod-bundle": "workspace:^",
     "@deepseek-ai/dsh-mcmod-headless-bundle": "workspace:^",
+    "@deepseek-ai/dsh-tool-mc-project": "workspace:^",
     "@deepseek-ai/dsh-home-paths": "workspace:^",
     "@deepseek-ai/dsh-lsp": "workspace:^",
     "@deepseek-ai/dsh-lsp-stdio": "workspace:^",

@@ -72,7 +72,7 @@ describe('the shipped shell composition (real bundle layers)', () => {
     // dependency closure into the profile's node_modules, so every bare
     // plugin name in the base patch must resolve from there.
     const cliManifest = JSON.parse(readFileSync(anchor, 'utf8')) as { dependencies?: Record<string, string> }
-    for (const name of ['@deepseek-ai/dsh-pwsh-sandbox', '@deepseek-ai/dsh-tool-pwsh']) {
+    for (const name of ['@deepseek-ai/dsh-pwsh-sandbox', '@deepseek-ai/dsh-tool-pwsh', '@deepseek-ai/dsh-tool-mc-project']) {
       expect(cliManifest.dependencies?.[name], `cold-start closure must reach ${name}`).toBeDefined()
     }
     expect(warnings).toEqual([])
@@ -120,6 +120,18 @@ describe('shipped agent presets gate both shell tools by platform', () => {
       expect(Boolean(evaluate({ process: { platform: 'win32' } }, expression)), `${id} on win32`).toBe(win32)
       expect(Boolean(evaluate({ process: { platform: 'linux' } }, expression)), `${id} on linux`).toBe(!win32)
     }
+  })
+
+  it('mcmod preset mounts the Minecraft project detector', () => {
+    const entries: unknown = yaml.load(
+      readFileSync(join(presetRoot, 'mcmod', 'agent.cordis.yml'), 'utf8'),
+      { schema: entryListSchema },
+    )
+    if (!Array.isArray(entries)) throw new TypeError('mcmod preset must parse to an entry array')
+    const row = entries.find((entry): entry is Record<string, unknown> => (
+      typeof entry === 'object' && entry !== null && (entry as Record<string, unknown>).id === 'tool-mc-project'
+    ))
+    expect(row).toMatchObject({ name: '@deepseek-ai/dsh-tool-mc-project' })
   })
 
   it('minimal mounts no shell tool row and gates its persistent shell stack by platform', () => {

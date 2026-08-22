@@ -285,6 +285,9 @@ importers:
       '@deepseek-ai/dsh-tool-lsp':
         specifier: workspace:^
         version: link:../../packages/lsp/tool-lsp
+      '@deepseek-ai/dsh-tool-mc-project':
+        specifier: workspace:^
+        version: link:../../packages/minecraft/tool-mc-project
       '@deepseek-ai/dsh-tool-pwsh':
         specifier: workspace:^
         version: link:../../packages/shell/tool-pwsh
@@ -1330,6 +1333,9 @@ importers:
       '@deepseek-ai/dsh-tool-lsp':
         specifier: workspace:^
         version: link:../../lsp/tool-lsp
+      '@deepseek-ai/dsh-tool-mc-project':
+        specifier: workspace:^
+        version: link:../../minecraft/tool-mc-project
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -5893,6 +5899,46 @@ importers:
       '@deepseek-ai/dsh-system-prompt':
         specifier: workspace:^
         version: link:../../core/system-prompt
+
+  packages/minecraft/tool-mc-project:
+    dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+      smol-toml:
+        specifier: ^1.7.1
+        version: 1.7.1
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/cordis-plugin-include':
+        specifier: workspace:^
+        version: link:../../../vendor/include
+      '@deepseek-ai/cordis-plugin-loader':
+        specifier: workspace:^
+        version: link:../../../vendor/loader
+      '@deepseek-ai/dsh-fs':
+        specifier: workspace:^
+        version: link:../../fs/fs
+      '@deepseek-ai/dsh-fs-local':
+        specifier: workspace:^
+        version: link:../../fs/fs-local
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-system-prompt':
+        specifier: workspace:^
+        version: link:../../core/system-prompt
+      '@deepseek-ai/dsh-tools':
+        specifier: workspace:^
+        version: link:../../core/tools
+      '@types/node':
+        specifier: ^22.20.0
+        version: 22.20.0
 
   packages/plan/plan-mode:
     dependencies:
