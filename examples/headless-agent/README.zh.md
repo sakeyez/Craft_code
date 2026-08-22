@@ -17,6 +17,16 @@ pnpm dsh --profile headless "fix the failing test in this workspace"
 
 快照套件通过 [`tests/fixtures/headless-driver.ts`](tests/fixtures/headless-driver.ts) 运行本目录的配置。这个未导出且仅供测试使用的进程会在结果记录之前，以 JSONL 发出规范会话事件。该事件流属于测试基础设施，不是受支持的 CLI（命令行界面）输出格式。子会话只通过父会话的工具事件和结果对外显示。
 
+## Minecraft mcmod E2E
+
+[`tests/mcmod.e2e.ts`](tests/mcmod.e2e.ts) 通过产品 CLI 证明 `dsh --profile mcmod`。无密钥用例挂载脚本化 LLM 适配器，但保留真实 profile、Loader 树、文件系统工具、`detect_mc_project`、`validate_mc_resources` 和 `run_mc_check`；两个用例只把部署自有的 Java LSP executable 替换成当前 Node binary，所以测试不要求 PATH 上存在 `jdtls`。有密钥用例在存在 `DEEPSEEK_API_KEY` 时，用真实 DeepSeek route 运行同一个 fixture。
+
+```sh
+pnpm exec vitest run examples/headless-agent/tests/mcmod.e2e.ts --config vitest.e2e.config.ts
+```
+
+Fabric fixture 会在测试的临时 cwd 中创建。它的 `gradlew` 和 `gradlew.bat` 是围绕 `gradle-fixture-check.mjs` 的小型本地 wrapper，因此该 e2e 不会下载 Gradle 或 Minecraft 依赖；这个 wrapper 是离线 build gate，用于检查 agent 产出的 item 注册、lang 条目、model 和占位 texture。需要真实 Gradle build 的项目，应在该无密钥 fixture 之外运行自己的缓存或凭据门控构建。
+
 ## E2B POC overlay
 
 [`e2b.cordis.yml`](e2b.cordis.yml) 使用一个共享 E2B 沙箱替换本地文件系统与子进程提供方，同时保留 `dsh-bash-local` 和相同的面向模型工具。请在 git 忽略的根目录 `.env` 中，将 `E2B_API_KEY` 与 `DEEPSEEK_API_KEY` 放在一起，然后运行凭据门控的实机组合测试；它在同一个沙箱中驱动 FS、Bash、PTY 和 LSP，并证明沙箱最终被删除：

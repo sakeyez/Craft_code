@@ -1,0 +1,8 @@
+- id: lsp-stdio
+  config:
+    servers:
+      java:
+        command: !!js process.execPath
+        args: ['-e', 'setInterval(() => {}, 1000)']
+        extensionToLanguage:
+          .java: java

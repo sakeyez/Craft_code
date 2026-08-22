@@ -1,0 +1,8 @@
+- id: agent-default-model
+  config:
+    provider: mcmod-scripted
+    model: mcmod-scripted
+
+- insert:
+    - id: mcmod-scripted-llm
+      name: './snapshot-fixtures/mcmod-scripted-llm.ts'
