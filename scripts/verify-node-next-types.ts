@@ -7,7 +7,7 @@
  */
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, globSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, globSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
@@ -80,11 +80,23 @@ function publicSpecifiers(pkg: WorkspacePackage): string[] {
   return [...specifiers].sort()
 }
 
-function linkPackage(pkg: WorkspacePackage, nodeModules: string): void {
+const directoryLinkType = process.platform === 'win32' ? 'junction' : 'dir'
+
+function linkPackage(pkg: WorkspacePackage, nodeModules: string, links: string[]): void {
   const parts = pkg.name.split('/')
   const link = resolve(nodeModules, ...parts)
   mkdirSync(dirname(link), { recursive: true })
-  symlinkSync(pkg.dir, link, 'dir')
+  symlinkSync(pkg.dir, link, directoryLinkType)
+  links.push(link)
+}
+
+function unlinkDirectoryLinks(links: readonly string[]): void {
+  for (const link of [...links].reverse()) {
+    if (!lstatSync(link).isSymbolicLink()) {
+      throw new Error(`verify-node-next-types: expected temporary package link at ${link}`)
+    }
+    unlinkSync(link)
+  }
 }
 
 const packages = workspacePackages()
@@ -106,18 +118,21 @@ if (missingOutputs.length > 0) {
 }
 
 const tmp = mkdtempSync(resolve(root, '.node-next-types-'))
+const directoryLinks: string[] = []
 let failed = false
 
 try {
   const nodeModules = resolve(tmp, 'node_modules')
   mkdirSync(nodeModules, { recursive: true })
-  for (const pkg of packages) linkPackage(pkg, nodeModules)
+  for (const pkg of packages) linkPackage(pkg, nodeModules, directoryLinks)
 
   const rootTypes = resolve(root, 'node_modules/@types/node')
   if (existsSync(rootTypes)) {
     const typesDir = resolve(nodeModules, '@types')
     mkdirSync(typesDir, { recursive: true })
-    symlinkSync(rootTypes, resolve(typesDir, 'node'), 'dir')
+    const nodeTypesLink = resolve(typesDir, 'node')
+    symlinkSync(rootTypes, nodeTypesLink, directoryLinkType)
+    directoryLinks.push(nodeTypesLink)
   }
 
   writeFileSync(resolve(tmp, 'package.json'), `${JSON.stringify({ type: 'module', private: true }, null, 2)}\n`)
@@ -155,9 +170,11 @@ try {
 } catch (error: unknown) {
   failed = true
   const output = error as { stdout?: Buffer; stderr?: Buffer }
+  const commandOutput = `${output.stdout?.toString() ?? ''}${output.stderr?.toString() ?? ''}`
   console.error('verify-node-next-types: NodeNext consumer typecheck failed.\n')
-  console.error(`${output.stdout?.toString() ?? ''}${output.stderr?.toString() ?? ''}`)
+  console.error(commandOutput === '' ? String(error) : commandOutput)
 } finally {
+  unlinkDirectoryLinks(directoryLinks)
   rmSync(tmp, { recursive: true, force: true })
 }
 

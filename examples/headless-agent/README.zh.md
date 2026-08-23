@@ -19,13 +19,21 @@ pnpm dsh --profile headless "fix the failing test in this workspace"
 
 ## Minecraft mcmod E2E
 
-[`tests/mcmod.e2e.ts`](tests/mcmod.e2e.ts) 通过产品 CLI 证明 `dsh --profile mcmod`。无密钥用例挂载脚本化 LLM 适配器，但保留真实 profile、Loader 树、文件系统工具、`detect_mc_project`、`validate_mc_resources` 和 `run_mc_check`；两个用例只把部署自有的 Java LSP executable 替换成当前 Node binary，所以测试不要求 PATH 上存在 `jdtls`。有密钥用例在存在 `DEEPSEEK_API_KEY` 时，用真实 DeepSeek route 运行同一个 fixture。
+[`tests/mcmod.e2e.ts`](tests/mcmod.e2e.ts) 通过产品 CLI 证明 Fabric 与 NeoForge wiring 下的 `dsh --profile mcmod`。无密钥用例挂载脚本化 LLM 适配器，但保留真实 profile、Loader 树、文件系统工具、`detect_mc_project`、`validate_mc_resources` 和 `run_mc_check`；每个用例只把部署自有的 Java LSP executable 替换成当前 Node binary，所以测试不要求 PATH 上存在 `jdtls`。有密钥用例在存在 `DEEPSEEK_API_KEY` 时，用真实 DeepSeek route 运行 Fabric fixture。
 
 ```sh
 pnpm exec vitest run examples/headless-agent/tests/mcmod.e2e.ts --config vitest.e2e.config.ts
 ```
 
-Fabric fixture 会在测试的临时 cwd 中创建。它的 `gradlew` 和 `gradlew.bat` 是围绕 `gradle-fixture-check.mjs` 的小型本地 wrapper，因此该 e2e 不会下载 Gradle 或 Minecraft 依赖；这个 wrapper 是离线 build gate，用于检查 agent 产出的 item 注册、lang 条目、model 和占位 texture。需要真实 Gradle build 的项目，应在该无密钥 fixture 之外运行自己的缓存或凭据门控构建。
+每个 fixture 都会在测试的临时 cwd 中创建。它们的 `gradlew` 和 `gradlew.bat` 是本地 wiring wrapper，而不是 Gradle 实现，因此该 e2e 不会下载 Gradle 或 Minecraft 依赖；每个 wrapper 会检查 loader metadata、对应 loader 的 Java wiring、lang 条目、model 和真实二进制 PNG，然后分别接受 Fabric 的 `build` 或 NeoForge 的 `runData`。需要真实 Gradle build 的项目，应运行明确受环境控制的 fixture，或在该无密钥测试之外运行自己的缓存构建。
+
+依赖驱动的 Fabric 与 NeoForge fixture 默认不运行；它们会在固定 plugin 与 dependency 版本上生成真实 Gradle wrapper：
+
+```sh
+DSH_MCMOD_REAL_GRADLE=1 pnpm exec vitest run --config vitest.e2e.config.ts examples/headless-agent/tests/mcmod-real-gradle.e2e.ts
+```
+
+宿主缺少 Gradle 或依赖解析不可用时，测试会打印缺失前置条件并 skip；不会把 wiring wrapper 的通过当成 Gradle 构建。
 
 ## E2B POC overlay
 

@@ -23,6 +23,7 @@ The `servers` record key is the stable provider id reserved on `ctx.lsp`; each v
 | Server key | Default | Meaning |
 |---|---|---|
 | `command` | (required) | Executable to spawn — absolute, or resolved on the child PATH at load. Launch uses no shell. |
+| `optional` | `false` | If `true`, an unavailable executable is reported at load and this provider is skipped; other tools and providers continue to load. |
 | `args` | `[]` | Arguments passed to the executable. |
 | `env` | `{}` | Extra env merged on top of the credential-scrubbed ambient env (vars matching `KEY`/`PASSWORD`/`SECRET`/`TOKEN` are not forwarded); an explicit `DSH_*` entry merges after the seam's scrub of ambient ones. |
 | `extensionToLanguage` | (required) | Lowercase leading-dot extension → LSP language id (e.g. `{ '.ts': 'typescript' }`). |

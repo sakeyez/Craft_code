@@ -257,6 +257,7 @@
     { "path": "./packages/bundle/headless" },
     { "path": "./packages/bundle/web-app" },
     { "path": "./packages/bundle/mcmod" },
+    { "path": "./packages/bundle/mcmod-headless" },
     { "path": "./packages/boot/app-boot" },
     { "path": "./packages/boot/cmdline" },
     { "path": "./packages/sdk/server" },

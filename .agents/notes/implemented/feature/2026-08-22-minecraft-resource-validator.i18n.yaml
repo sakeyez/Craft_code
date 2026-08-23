@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-22-minecraft-resource-validator.md
-2026-08-22-minecraft-resource-validator.md: 6a5400c3169e8d51141f65b07ba0a5c4466d9810
-2026-08-22-minecraft-resource-validator.zh.md: e24a3aa80c099e3be02574af45f89f3d3c0187ef
+2026-08-22-minecraft-resource-validator.md: ef7e4abf61474c5c7b15463fee6a4287b69498bd
+2026-08-22-minecraft-resource-validator.zh.md: b5c62480557a643ddf39f1ed8afd5381b8babb15

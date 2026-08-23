@@ -22,3 +22,5 @@
                   models:
                     - id: deepseek-v4-flash
                       contextWindow: 128000
+          - id: snapshot-shell-compat
+            name: './tests/fixtures/snapshot-shell-compat.ts'

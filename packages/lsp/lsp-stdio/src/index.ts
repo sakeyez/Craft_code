@@ -56,6 +56,8 @@ const DEFAULT_KILL_GRACE_MS = 2_000
 export interface LspLocalServerConfig {
   /** Executable to spawn (absolute, or resolved on PATH at load). */
   command: string
+  /** Skip this server when its executable is unavailable and emit a load-time diagnostic. */
+  optional?: boolean
   /** Lowercase leading-dot extension → LSP language id (e.g. `{ '.ts': 'typescript' }`). */
   extensionToLanguage: Record<string, string>
   /** Arguments passed to the executable (no shell). Default `[]`. */
@@ -90,6 +92,7 @@ type WorkspaceKey = HostWorkspace['target']['targetKey']
 
 const LspLocalServerConfig: z<LspLocalServerConfig> = z.object({
   command: z.string().required(),
+  optional: z.boolean().default(false),
   args: z.array(String).default([]),
   env: z.dict(String).default({}),
   extensionToLanguage: z.dict(String).required(),
@@ -143,11 +146,18 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
       if (providerId.trim() === '') throw new Error('lsp-stdio: server ids must be non-empty strings')
       const resolved = rawConfig as ResolvedServerConfig
       validateServerConfig(providerId, resolved)
-      const executable = await ctx.subprocess.resolveExecutable(
-        resolved.command,
-        resolved.env,
-        setupAbort.signal,
-      )
+      let executable: string
+      try {
+        executable = await ctx.subprocess.resolveExecutable(
+          resolved.command,
+          resolved.env,
+          setupAbort.signal,
+        )
+      } catch (error) {
+        if (!resolved.optional || setupAbort.signal.aborted) throw error
+        ctx.logger.warn(`lsp-stdio: optional server "${providerId}" is unavailable; provider disabled: ${error instanceof Error ? error.message : String(error)}`)
+        return undefined
+      }
       setupAbort.signal.throwIfAborted()
       return new LocalLspProvider(
         providerId,
@@ -158,7 +168,8 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
       )
     })
     try {
-      return await Promise.all(lookups)
+      const resolvedProviders = await Promise.all(lookups)
+      return resolvedProviders.filter((provider): provider is LocalLspProvider => provider !== undefined)
     } catch (error: unknown) {
       setupAbort.abort(error)
       await Promise.allSettled(lookups)

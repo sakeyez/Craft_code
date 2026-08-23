@@ -3,16 +3,26 @@ import {
   CallId,
   LlmAdapter,
   ReasoningEffortId,
+  resolveRetryPolicy,
   type GenerateOptions,
   type LlmResolvedModelInfo,
+  type ResolvedRetryPolicy,
   type StreamChunk,
 } from '@deepseek-ai/dsh-llm'
 
 const HIGH = ReasoningEffortId('high')
 const OFF = ReasoningEffortId('off')
+const MOCK_RETRY_POLICY = resolveRetryPolicy(
+  { mode: 'normal', maxRetries: 0 },
+  'cli-mock-llm: retryPolicy',
+)
 
 /** Keyless headless-agent adapter: one real bash call followed by a final answer. */
 class CliMockAdapter extends LlmAdapter {
+  override providerRetryPolicy(_provider: string): ResolvedRetryPolicy {
+    return MOCK_RETRY_POLICY
+  }
+
   override async resolveModel(provider: string, model: string): Promise<LlmResolvedModelInfo> {
     return {
       provider,

@@ -8,8 +8,10 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { collectAggregateMembershipViolations } from './aggregate-membership.ts'
 import { hasTypertRemoteNavigation, isForbiddenPublicationFile } from './publication-payload.ts'
 import { collectProjectReferenceFaceViolations } from './project-reference-faces.ts'
+import { collectSkillSyncViolations } from './sync-mcmod-skills.ts'
 
 const root = resolve(import.meta.dirname, '..')
 // vendor/* is single-level; packages/<group>/<pkg> nests one level deeper
@@ -160,6 +162,8 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-sandbox-windows-acl': ['lib/runner.js', 'lib/types-*.js'],
   // SQLite loads every statement from immutable package resources at runtime.
   '@deepseek-ai/dsh-session-persistence-sqlite': ['resources/sql/**/*.sql'],
+  // The profile patch resolves bundled Minecraft skills relative to its package.
+  '@deepseek-ai/dsh-mcmod-headless-bundle': ['skills'],
   '@deepseek-ai/dsh-skill-badge': ['assets'],
   '@deepseek-ai/dsh-subprocess-local': ['scripts/ensure-spawn-helper.mjs'],
 }
@@ -479,7 +483,12 @@ export function main(): void {
     ...checkWorkspaceProtocol(manifests),
     ...checkExperimentalDependencyIsolation(dependencyManifests),
     ...checkHierarchyShape(),
+    ...collectAggregateMembershipViolations(root),
     ...collectProjectReferenceFaceViolations(root),
+    ...collectSkillSyncViolations(
+      join(root, 'apps/cli/config/agent-presets/mcmod/skills'),
+      join(root, 'packages/bundle/mcmod-headless/skills'),
+    ),
   ]
   if (errors.length > 0) {
     console.error(errors.join('\n'))

@@ -6,3 +6,5 @@
 - insert:
     - id: cli-mock-llm
       name: './snapshot-fixtures/cli-mock-llm.ts'
+    - id: snapshot-shell-compat
+      name: './snapshot-fixtures/snapshot-shell-compat.ts'

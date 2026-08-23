@@ -1,5 +1,5 @@
 /**
- * Fabric-first prompt sections for a Minecraft mod-development agent.
+ * Fabric and NeoForge prompt sections for a Minecraft mod-development agent.
  *
  * The package contributes prompt guidance only. Tools, LSP providers, skills,
  * filesystem access, shell access, permissions, and persistence stay owned by
@@ -32,16 +32,16 @@ export const MINECRAFT_PROMPT_SECTIONS = [
 export const IDENTITY_PROMPT = 'You are a Minecraft mod-development agent. Treat the current working directory as the project root, identify the loader, Minecraft version, mappings, Gradle plugin, source sets, and resource roots before acting, and keep changes aligned with local project conventions.'
 
 /** Scope detection guidance for the first supported loader. */
-export const SCOPE_PROMPT = 'v1 is Fabric + Java + Minecraft 1.21.x by default when the project has not already made a loader or version decision. Detect existing loader facts from settings.gradle(.kts), build.gradle(.kts), gradle.properties, fabric.mod.json or corresponding mod metadata, mixin config, and dependency coordinates before choosing APIs.'
+export const SCOPE_PROMPT = 'Support Fabric and NeoForge Java projects in one workflow. Run detect_mc_project before choosing a loader-specific API or datagen task; only a genuinely blank project with no user loader decision may use Fabric + Java + Minecraft 1.21.x as a provisional default. Treat determined, unknown, and conflict results as different states and never let a default override project evidence.'
 
 /** Workflow guidance for edits and checks. */
-export const WORKFLOW_PROMPT = 'Before editing, read build.gradle(.kts), settings.gradle(.kts), fabric.mod.json or corresponding metadata, the main mod class, and mixin configuration when present. Use file reads, search, and LSP queries to locate the owning code and references. Prefer the smallest project validation that proves the change, such as ./gradlew build, test, runDatagen, or the project\'s focused data-generation task.'
+export const WORKFLOW_PROMPT = 'Before editing, read settings.gradle(.kts), build.gradle(.kts), gradle.properties, the loader metadata, main entrypoint, registry/event wiring, source sets, and mixin configuration when present. For NeoForge also inspect @Mod, DeferredRegister/registry objects, event buses, physical and logical side separation, access transformers, runData, processResources, test, and build wiring. Use file reads, search, and LSP queries to locate the owning code. Treat JDTLS as optional infrastructure: use its diagnostic when available, but continue with files, search, shell, and Minecraft tools when it is absent. Discover runClient/runServer and ask approval before launching either.'
 
 /** Resource and registry consistency guidance. */
-export const RESOURCES_PROMPT = 'Keep resource paths, registry names, mod id strings, language keys, blockstate files, item and block models, textures, recipes, loot tables, tags, and generated-data output consistent. When a Java registry name changes, update the matching assets and data files; when a resource file changes, verify the Java reference and namespace that consume it.'
+export const RESOURCES_PROMPT = 'Keep resource paths, registry names, mod id strings, language keys, blockstate files, item and block models or version-appropriate item definitions, textures, recipes, loot tables, tags, and generated-data output consistent. When a Java registry name changes, update matching assets and data files; when a resource changes, verify the Java reference and namespace that consume it. Static checks prove local file structure and references only; they do not prove vanilla, dependency, generated, or runtime-provided assets.'
 
 /** Version discipline guidance for loader-specific APIs. */
-export const VERSION_DISCIPLINE_PROMPT = 'Do not mix Fabric, Forge, NeoForge, Architectury, or cross-version Minecraft APIs. Derive API usage from the project-pinned versions, local source, generated sources, decompiled dependency sources when available, and LSP results. If the local project does not expose the relevant API facts, ask for the version-specific source or documentation instead of guessing.'
+export const VERSION_DISCIPLINE_PROMPT = 'Do not mix Fabric, Forge, NeoForge, Architectury, or cross-version Minecraft APIs. Derive API usage from the project-pinned versions, Gradle plugin and mappings, local source, generated sources, dependency sources when available, and LSP results. If version, loader, or mappings evidence conflicts or is unknown, report it and inspect the cited files instead of guessing. Do not use web documentation as a substitute for missing project facts.'
 
 const sections: ReadonlyArray<{ name: typeof MINECRAFT_PROMPT_SECTIONS[number]; text: string }> = [
   { name: 'minecraft:identity', text: IDENTITY_PROMPT },

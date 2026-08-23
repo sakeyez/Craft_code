@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-mcmod-agent",
-  "description": "Prompt-only Fabric-first Minecraft mod-development agent guidance for DeepSeek Harness presets",
+  "description": "Prompt-only Fabric and NeoForge Minecraft mod-development agent guidance for DeepSeek Harness presets",
   "version": "0.1.1-rc.2",
   "publishConfig": {
     "access": "public"

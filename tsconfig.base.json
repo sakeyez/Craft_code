@@ -104,8 +104,6 @@
       "@deepseek-ai/dsh-agent-loop/invariant": ["./packages/core/agent-loop/src/invariant.ts"],
       "@deepseek-ai/dsh-experimental-agent-team/invariant": ["./packages/experimental/agent-team/src/invariant.ts"],
       "@deepseek-ai/dsh-experimental-tool-agent-team/invariant": ["./packages/experimental/tool-agent-team/src/invariant.ts"],
-      "@deepseek-ai/dsh-minecraft-neoforge-agent/invariant": ["./packages/minecraft/neoforge-agent/src/invariant.ts"],
-      "@deepseek-ai/dsh-minecraft-neoforge-bundle/invariant": ["./packages/bundle/minecraft-neoforge/src/invariant.ts"],
       "@deepseek-ai/dsh-*/invariant": [
         "./packages/core/*/src/invariant.ts",
         "./packages/prompt/*/src/invariant.ts",
@@ -240,10 +238,6 @@
       "@deepseek-ai/dsh-sdk-jsonrpc-server": ["./packages/sdk/server/src"],
       "@deepseek-ai/dsh-experimental-agent-team": ["./packages/experimental/agent-team/src"],
       "@deepseek-ai/dsh-experimental-tool-agent-team": ["./packages/experimental/tool-agent-team/src"],
-      "@deepseek-ai/dsh-minecraft-neoforge-agent": ["./packages/minecraft/neoforge-agent/src"],
-      "@deepseek-ai/dsh-minecraft-neoforge-agent/*": ["./packages/minecraft/neoforge-agent/src/*"],
-      "@deepseek-ai/dsh-minecraft-neoforge-bundle": ["./packages/bundle/minecraft-neoforge/src"],
-      "@deepseek-ai/dsh-minecraft-neoforge-bundle/*": ["./packages/bundle/minecraft-neoforge/src/*"],
       "@deepseek-ai/dsh-*": [
         "./packages/core/*/src",
         "./packages/prompt/*/src",

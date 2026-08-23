@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-22-minecraft-project-detector.md
-2026-08-22-minecraft-project-detector.md: 75f63714b76c8795c95bff351cdfccdab3fb21a0
-2026-08-22-minecraft-project-detector.zh.md: 6dbd29e2853867e099bbb3732b0d4be30f4bf3ab
+2026-08-22-minecraft-project-detector.md: afbb1ed3fb6793303e5cb1251aa50834115997e8
+2026-08-22-minecraft-project-detector.zh.md: d4fb8f90950bc42a6abc57f696522cfe3be2572c

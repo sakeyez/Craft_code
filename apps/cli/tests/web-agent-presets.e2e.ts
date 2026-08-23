@@ -31,10 +31,12 @@ const CLAUDE_CODE_PACKAGE_DIR = join(REPO_ROOT, 'packages/subagent/subagent-clau
 const MCMOD_BUNDLE_PACKAGE_DIR = join(REPO_ROOT, 'packages/bundle/mcmod')
 const MCMOD_PRESET_SKILL_DIR = join(CONFIG_DIR, 'agent-presets/mcmod/skills')
 const MINECRAFT_SKILL_NAMES = [
+  'fabric-datagen',
   'fabric-mod-dev',
-  'minecraft-datagen',
   'minecraft-resources',
   'mixin-debugging',
+  'neoforge-datagen',
+  'neoforge-mod-dev',
 ].sort()
 /** The installation anchor whose dependency surface the preset module fallback mirrors. */
 const INSTALL_ANCHOR = join(REPO_ROOT, 'apps/cli/package.json')
@@ -341,7 +343,7 @@ describe('the shipped Web composition', () => {
         'tool:lsp',
       ]))
       expect(assembly.sections.find(section => section.name === 'minecraft:scope')?.text)
-        .toContain('v1 is Fabric + Java + Minecraft 1.21.x by default')
+        .toContain('Support Fabric and NeoForge Java projects')
       expect(assembly.tools.map(tool => tool.name)).toContain('lsp')
       const scopedSkills = (await minecraftCtx.skills.list({ scope: handle.agent })).map(skill => skill.name).sort()
       expect(scopedSkills).toEqual(expect.arrayContaining(MINECRAFT_SKILL_NAMES))

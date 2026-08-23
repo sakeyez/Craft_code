@@ -26,8 +26,8 @@ describe('the Minecraft modding prompt row', () => {
       'minecraft:version-discipline',
     ])
     expect(minecraftSections[0]?.text).toContain('identify the loader, Minecraft version, mappings')
-    expect(minecraftSections[1]?.text).toContain('v1 is Fabric + Java + Minecraft 1.21.x by default')
-    expect(minecraftSections[2]?.text).toContain('fabric.mod.json or corresponding metadata')
+    expect(minecraftSections[1]?.text).toContain('Support Fabric and NeoForge Java projects')
+    expect(minecraftSections[2]?.text).toContain('settings.gradle(.kts), build.gradle(.kts), gradle.properties')
     expect(minecraftSections[4]?.text).toContain('Do not mix Fabric, Forge, NeoForge')
     expect(assembly.tools).toEqual([])
   })

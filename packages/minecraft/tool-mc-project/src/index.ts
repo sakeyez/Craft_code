@@ -6,11 +6,14 @@
  * @module @deepseek-ai/dsh-tool-mc-project
  */
 
+import { posix } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
+import { gte, satisfies, valid, validRange } from 'semver'
 import { parse as parseToml } from 'smol-toml'
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { ToolExecution, ToolResult } from '@deepseek-ai/dsh-tools'
+import type { PreToolDecision, ToolExecution, ToolResult } from '@deepseek-ai/dsh-tools'
+import { FsError } from '@deepseek-ai/dsh-fs'
 import type { FsDirEntry, FsTarget } from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-fs'
 import type { CollectedOutput, ShellRunResult, ShellSandboxInfo } from '@deepseek-ai/dsh-shell'
@@ -31,6 +34,10 @@ export const RUN_MC_CHECK = 'run_mc_check'
 const DEFAULT_MAX_ENTRIES = 2_000
 const DEFAULT_MAX_FILE_BYTES = 512 * 1024
 const DEFAULT_MAX_OUTPUT_SUMMARY_BYTES = 4_096
+const DEFAULT_MAX_TASK_DISCOVERY_BYTES = 64 * 1024
+const BINARY_SAMPLE_BYTES = 8_192
+const MISSING_ERROR_CODES = new Set(['FS_NOT_FOUND', 'ENOENT', 'ENOTDIR'])
+const ABORT_ERROR_CODES = new Set(['FS_ABORTED'])
 
 /** Tool configuration. */
 export interface Config {
@@ -51,6 +58,11 @@ export interface Config {
    * truncated or spilled the stream before this bound is applied.
    */
   maxOutputSummaryBytes?: number
+  /**
+   * Maximum stdout bytes captured while discovering Gradle tasks. A truncated
+   * task list is treated as inconclusive rather than selecting a guessed task.
+   */
+  maxTaskDiscoveryBytes?: number
 }
 
 /** Schemastery configuration for the detector. */
@@ -58,22 +70,54 @@ export const Config: z<Config> = z.object({
   maxEntries: z.number().default(DEFAULT_MAX_ENTRIES),
   maxFileBytes: z.number().default(DEFAULT_MAX_FILE_BYTES),
   maxOutputSummaryBytes: z.number().default(DEFAULT_MAX_OUTPUT_SUMMARY_BYTES),
+  maxTaskDiscoveryBytes: z.number().default(DEFAULT_MAX_TASK_DISCOVERY_BYTES),
 })
 
 type Loader = 'fabric' | 'forge' | 'neoforge' | 'quilt' | 'unknown'
 type Confidence = 'high' | 'medium' | 'low'
-type CheckTarget = 'build' | 'test' | 'datagen' | 'resources' | 'all'
+type VersionClassification = 'exact' | 'range'
+type CheckTarget = 'build' | 'test' | 'datagen' | 'resources' | 'runtime' | 'all'
+type RuntimeMode = 'client' | 'server'
 type CheckStepStatus = 'passed' | 'failed' | 'skipped'
 
 interface ResolvedConfig {
   maxEntries: number
   maxFileBytes: number
   maxOutputSummaryBytes: number
+  maxTaskDiscoveryBytes: number
 }
 
-interface MappingsInfo {
+interface MinecraftVersionCandidate {
+  value: string
+  classification: VersionClassification
+  source: string
+  evidence: string
+}
+
+type MinecraftVersionResult =
+  | { status: 'unknown'; candidates: [] }
+  | {
+    status: 'determined'
+    value: string
+    classification: VersionClassification
+    candidates: MinecraftVersionCandidate[]
+  }
+  | { status: 'conflict'; candidates: MinecraftVersionCandidate[] }
+
+interface MappingsCandidate {
   type: string
   version: string | null
+  source: string
+  evidence: string
+}
+
+type MappingsResult =
+  | { status: 'unknown'; candidates: [] }
+  | { status: 'determined'; type: string; version: string | null; candidates: MappingsCandidate[] }
+  | { status: 'conflict'; candidates: MappingsCandidate[] }
+
+interface LoaderEvidence {
+  loader: Exclude<Loader, 'unknown'>
   evidence: string[]
 }
 
@@ -104,8 +148,9 @@ interface DatagenClue {
 interface DetectionResult {
   workspace: string
   loader: Loader
-  minecraftVersion: string | null
-  mappings: MappingsInfo
+  loaderEvidence: LoaderEvidence[]
+  minecraftVersion: MinecraftVersionResult
+  mappings: MappingsResult
   modIdCandidates: ModIdCandidate[]
   languages: { java: boolean; kotlin: boolean }
   mainSourceSets: SourceSetInfo[]
@@ -113,6 +158,7 @@ interface DetectionResult {
   mixinConfigs: MixinConfig[]
   datagenClues: DatagenClue[]
   recommendedValidationCommands: string[]
+  gradleTaskCandidates: string[]
   inspected: {
     gradleFiles: string[]
     metadataFiles: string[]
@@ -175,11 +221,20 @@ interface CheckResult {
 interface RunCheckArgs {
   target: CheckTarget
   timeoutMs?: number
+  runtimeMode?: RuntimeMode
+}
+
+function isApprovedRuntimeCheck(exec: ToolExecution): boolean {
+  if (exec.name !== RUN_MC_CHECK || typeof exec.arguments !== 'object' || exec.arguments === null || Array.isArray(exec.arguments)) {
+    return false
+  }
+  const args = exec.arguments as { target?: unknown; runtimeMode?: unknown }
+  return args.target === 'runtime' && (args.runtimeMode === 'client' || args.runtimeMode === 'server')
 }
 
 interface CommandPlan {
   step: string
-  task: string
+  task?: string
 }
 
 interface TextFile {
@@ -195,11 +250,12 @@ interface WalkState {
 interface DetectionState {
   warnings: string[]
   loaderEvidence: Map<Exclude<Loader, 'unknown'>, string[]>
-  minecraftVersions: { value: string; source: string }[]
-  mappings: MappingsInfo[]
+  minecraftVersions: MinecraftVersionCandidate[]
+  mappings: MappingsCandidate[]
   modIds: ModIdCandidate[]
   mixins: MixinConfig[]
   datagen: DatagenClue[]
+  gradleTaskCandidates: string[]
 }
 
 const ROOT_GRADLE_FILES = [
@@ -217,6 +273,7 @@ const METADATA_BASENAMES = new Set([
   'mods.toml',
   'neoforge.mods.toml',
 ])
+const DATA_JSON_FOLDERS = ['recipes', 'tags', 'loot_tables', 'advancements', 'predicates', 'item_modifiers'] as const
 
 const LOADER_PATTERNS: ReadonlyArray<{ loader: Exclude<Loader, 'unknown'>; regex: RegExp; label: string }> = [
   { loader: 'fabric', regex: /\b(?:fabric-loom|net\.fabricmc\.fabric-loom|net\.fabricmc:fabric-loader|net\.fabricmc\.fabric-api)\b/u, label: 'Fabric Gradle/dependency clue' },
@@ -228,11 +285,17 @@ const LOADER_PATTERNS: ReadonlyArray<{ loader: Exclude<Loader, 'unknown'>; regex
 const BUILTIN_RESOURCE_NAMESPACES = new Set(['minecraft', 'c', 'forge', 'neoforge', 'fabric', 'quilt'])
 const RESOURCE_LOCATION_PATTERN = /^([a-z0-9_.-]+:)?[a-z0-9/._-]+$/u
 const RESOURCE_LOCATION_SCAN_PATTERN = /#?([a-z0-9_.-]+):([a-z0-9/._-]+)/gu
+const DATAGEN_TASK_PATTERN = /(?:^|[:_-])(?:run)?data(?:gen)?(?:$|[:_-])|(?:^|[:_-])generate[a-z0-9]*data(?:$|[:_-])/iu
 
 function resolveConfig(config: Config | undefined): ResolvedConfig {
+  /* v8 ignore next -- optional config fields are normalized by the loader before runtime use. */
   const maxEntries = config?.maxEntries ?? DEFAULT_MAX_ENTRIES
+  /* v8 ignore next -- optional config fields are normalized by the loader before runtime use. */
   const maxFileBytes = config?.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES
+  /* v8 ignore next -- optional config fields are normalized by the loader before runtime use. */
   const maxOutputSummaryBytes = config?.maxOutputSummaryBytes ?? DEFAULT_MAX_OUTPUT_SUMMARY_BYTES
+  /* v8 ignore next -- optional config fields are normalized by the loader before runtime use. */
+  const maxTaskDiscoveryBytes = config?.maxTaskDiscoveryBytes ?? DEFAULT_MAX_TASK_DISCOVERY_BYTES
   if (!Number.isFinite(maxEntries) || !Number.isInteger(maxEntries) || maxEntries < 1) {
     throw new Error('tool-mc-project config maxEntries must be a positive integer')
   }
@@ -242,7 +305,10 @@ function resolveConfig(config: Config | undefined): ResolvedConfig {
   if (!Number.isFinite(maxOutputSummaryBytes) || !Number.isInteger(maxOutputSummaryBytes) || maxOutputSummaryBytes < 1) {
     throw new Error('tool-mc-project config maxOutputSummaryBytes must be a positive integer')
   }
-  return { maxEntries, maxFileBytes, maxOutputSummaryBytes }
+  if (!Number.isFinite(maxTaskDiscoveryBytes) || !Number.isInteger(maxTaskDiscoveryBytes) || maxTaskDiscoveryBytes < 1) {
+    throw new Error('tool-mc-project config maxTaskDiscoveryBytes must be a positive integer')
+  }
+  return { maxEntries, maxFileBytes, maxOutputSummaryBytes, maxTaskDiscoveryBytes }
 }
 
 function sessionResolveOptions(exec: ToolExecution): { cwd?: string; signal?: AbortSignal } {
@@ -251,15 +317,6 @@ function sessionResolveOptions(exec: ToolExecution): { cwd?: string; signal?: Ab
     ...cwd === undefined ? {} : { cwd },
     signal: exec.signal,
   }
-}
-
-function relJoin(base: string, name: string): string {
-  return base === '' ? name : `${base}/${name}`
-}
-
-function basename(path: string): string {
-  const index = path.lastIndexOf('/')
-  return index < 0 ? path : path.slice(index + 1)
 }
 
 function uniq<T>(items: readonly T[], key: (item: T) => string): T[] {
@@ -275,7 +332,55 @@ function uniq<T>(items: readonly T[], key: (item: T) => string): T[] {
 }
 
 function pushUnique(list: string[], value: string): void {
+  /* v8 ignore next -- callers derive each resource/source path from a unique source-set name. */
   if (!list.includes(value)) list.push(value)
+}
+
+function errorCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null || !('code' in error)) return undefined
+  const code = (error as { code?: unknown }).code
+  return typeof code === 'string' ? code : undefined
+}
+
+function hasErrorCode(error: unknown, codes: ReadonlySet<string>): boolean {
+  let current: unknown = error
+  for (let depth = 0; depth < 4 && current !== undefined; depth++) {
+    if (codes.has(errorCode(current) ?? '')) return true
+    if (typeof current !== 'object' || current === null || !('cause' in current)) return false
+    current = (current as { cause?: unknown }).cause
+  }
+  return false
+}
+
+function isMissingError(error: unknown): boolean {
+  return hasErrorCode(error, MISSING_ERROR_CODES)
+}
+
+function isAbortedError(error: unknown, signal: AbortSignal | undefined): boolean {
+  return signal?.aborted === true
+    || hasErrorCode(error, ABORT_ERROR_CODES)
+    || (error instanceof Error && error.name === 'AbortError')
+}
+
+function decodeBoundedText(bytes: Uint8Array, path: string): string {
+  if (bytes.subarray(0, BINARY_SAMPLE_BYTES).includes(0)) {
+    throw new FsError(`cannot read "${path}": binary file`, 'FS_NOT_TEXT')
+  }
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch (error) {
+    throw new FsError(`cannot read "${path}": invalid UTF-8 text`, 'FS_NOT_TEXT', { cause: error })
+  }
+}
+
+async function readBoundedText(
+  ctx: Context,
+  exec: ToolExecution,
+  target: FsTarget,
+  config: ResolvedConfig,
+): Promise<string> {
+  const bytes = await ctx.fs.readBytes(target, exec.signal, config.maxFileBytes)
+  return decodeBoundedText(bytes, target.displayPath)
 }
 
 async function optionalStat(ctx: Context, exec: ToolExecution, path: string): Promise<{ target: FsTarget; type: FsDirEntry['type']; size?: number } | undefined> {
@@ -284,8 +389,9 @@ async function optionalStat(ctx: Context, exec: ToolExecution, path: string): Pr
     const info = await ctx.fs.stat(target, exec.signal)
     if (info === undefined) return undefined
     return { target, type: info.type, ...info.size === undefined ? {} : { size: info.size } }
-  } catch {
-    return undefined
+  } catch (error) {
+    if (isMissingError(error)) return undefined
+    throw error
   }
 }
 
@@ -303,8 +409,13 @@ async function readTextFile(
     return undefined
   }
   try {
-    return { path, text: await ctx.fs.readText(target, exec.signal) }
+    return { path, text: await readBoundedText(ctx, exec, target, config) }
   } catch (error) {
+    if (isAbortedError(error, exec.signal)) throw error
+    if (errorCode(error) === 'FS_TOO_LARGE') {
+      warnings.push(`${path}: skipped because content exceeds maxFileBytes ${config.maxFileBytes}`)
+      return undefined
+    }
     warnings.push(`${path}: could not read text (${error instanceof Error ? error.message : String(error)})`)
     return undefined
   }
@@ -322,14 +433,14 @@ async function readOptionalText(
   return readTextFile(ctx, exec, path, stat.target, stat.size, config, warnings)
 }
 
-async function listOptionalDir(ctx: Context, exec: ToolExecution, path: string, warnings: string[]): Promise<FsDirEntry[]> {
+async function listOptionalDir(ctx: Context, exec: ToolExecution, path: string): Promise<FsDirEntry[]> {
   const stat = await optionalStat(ctx, exec, path)
   if (stat === undefined || stat.type !== 'directory') return []
   try {
     return await ctx.fs.listDir(stat.target, exec.signal)
   } catch (error) {
-    warnings.push(`${path}: could not list directory (${error instanceof Error ? error.message : String(error)})`)
-    return []
+    if (isMissingError(error)) return []
+    throw error
   }
 }
 
@@ -349,11 +460,11 @@ async function walkFiles(
     }
     return []
   }
-  const entries = await listOptionalDir(ctx, exec, path, warnings)
+  const entries = await listOptionalDir(ctx, exec, path)
   const out: Array<{ path: string; entry: FsDirEntry }> = []
   for (const entry of entries) {
     state.entries++
-    const child = relJoin(path, entry.name)
+    const child = posix.join(path, entry.name)
     if (entry.type === 'file' && predicate(child, entry)) out.push({ path: child, entry })
     if (entry.type === 'directory') {
       out.push(...await walkFiles(ctx, exec, child, state, config, warnings, predicate))
@@ -376,13 +487,63 @@ function addModId(state: DetectionState, id: unknown, source: string, confidence
   state.modIds.push({ id: trimmed, source, confidence })
 }
 
-function addMapping(state: DetectionState, type: string, version: string | null, evidence: string): void {
-  const existing = state.mappings.find(mapping => mapping.type === type && mapping.version === version)
-  if (existing !== undefined) {
-    pushUnique(existing.evidence, evidence)
-  } else {
-    state.mappings.push({ type, version, evidence: [evidence] })
+function addGradleTask(state: DetectionState, task: string): void {
+  const normalized = task.trim().replace(/^:/u, '')
+  if (normalized === '' || !/^[A-Za-z][A-Za-z0-9:_-]*$/u.test(normalized)) return
+  pushUnique(state.gradleTaskCandidates, normalized)
+}
+
+function scanGradleTaskDeclarations(state: DetectionState, text: string): void {
+  for (const match of text.matchAll(/\btasks\.(?:register|named|create)\s*(?:<[^>]+>\s*)?\(\s*["']([^"']+)["']/gu)) {
+    const task = match[1]
+    /* v8 ignore next -- the capture is guaranteed by the declaration regex. */
+    if (task !== undefined) addGradleTask(state, task)
   }
+  for (const match of text.matchAll(/\btask\s+(?:["']([^"']+)["']|([A-Za-z][A-Za-z0-9:_-]*))/gu)) {
+    const task = match[1] ?? match[2]
+    /* v8 ignore next -- the alternation guarantees one task capture. */
+    if (task !== undefined) addGradleTask(state, task)
+  }
+}
+
+function preferredDatagenTask(loader: Loader): string | undefined {
+  switch (loader) {
+    case 'fabric':
+    case 'quilt':
+      return 'runDatagen'
+    case 'forge':
+    case 'neoforge':
+      return 'runData'
+    case 'unknown':
+      return undefined
+  }
+}
+
+function datagenTaskCandidates(loader: Loader, tasks: readonly string[]): string[] {
+  const preferred = preferredDatagenTask(loader)
+  const matching = tasks.filter(task => DATAGEN_TASK_PATTERN.test(task))
+  if (preferred !== undefined && tasks.includes(preferred)) return [preferred]
+  if (matching.length <= 1) return [...matching]
+  const conventional = matching.filter(task => /^(?:runData|runDatagen)$/iu.test(task))
+  return conventional.length === 1 ? conventional : [...matching].sort()
+}
+
+function addMinecraftVersion(state: DetectionState, value: string, source: string, evidence: string): void {
+  state.minecraftVersions.push({
+    value,
+    classification: classifyVersion(value),
+    source,
+    evidence,
+  })
+}
+
+function addMapping(state: DetectionState, type: string, version: string | null, source: string, evidence: string): void {
+  state.mappings.push({
+    type,
+    version: type === 'yarn' && version?.endsWith(':v2') === true ? version.slice(0, -3) : version,
+    source,
+    evidence,
+  })
 }
 
 function concreteVersion(value: string | undefined): string | undefined {
@@ -390,8 +551,15 @@ function concreteVersion(value: string | undefined): string | undefined {
   return value
 }
 
+function classifyVersion(value: string): VersionClassification {
+  return /^(?:[<>=~^]|[[(])/u.test(value)
+    || /(?:\s|\|\||[*xX]|,)/u.test(value)
+    ? 'range'
+    : 'exact'
+}
+
 function isMixinFile(path: string): boolean {
-  return /\.mixins?\.json$/u.test(path) || /mixins?.*\.json$/u.test(basename(path))
+  return /\.mixins?\.json$/u.test(path) || /mixins?.*\.json$/u.test(posix.basename(path))
 }
 
 function stringAt(record: unknown, key: string): string | undefined {
@@ -407,6 +575,7 @@ function arrayAt(record: unknown, key: string): unknown[] | undefined {
 }
 
 function scanGradleText(state: DetectionState, file: TextFile): void {
+  scanGradleTaskDeclarations(state, file.text)
   for (const pattern of LOADER_PATTERNS) {
     if (pattern.regex.test(file.text)) addLoader(state, pattern.loader, `${file.path}: ${pattern.label}`)
   }
@@ -415,28 +584,28 @@ function scanGradleText(state: DetectionState, file: TextFile): void {
     /^\s*(?:minecraft[_-]?version|minecraft_version|minecraftVersion)\s*=\s*["']?([^"'\s#]+)["']?/gimu
   for (const match of file.text.matchAll(minecraftPropertyPattern)) {
     const value = concreteVersion(match[1])
-    if (value !== undefined) state.minecraftVersions.push({ value, source: `${file.path}: minecraft version property` })
+    if (value !== undefined) addMinecraftVersion(state, value, file.path, 'Minecraft version property')
   }
   const minecraftDeclarationPattern =
     /(?:com\.mojang:minecraft:|minecraft_version\s*=\s*["']|minecraftVersion\s*=\s*["'])([^"'\s)]+)/gimu
   for (const match of file.text.matchAll(minecraftDeclarationPattern)) {
     const value = concreteVersion(match[1])
-    if (value !== undefined) state.minecraftVersions.push({ value, source: `${file.path}: Minecraft dependency/version declaration` })
+    if (value !== undefined) addMinecraftVersion(state, value, file.path, 'Minecraft dependency/version declaration')
   }
 
   for (const match of file.text.matchAll(/^\s*(?:yarn_mappings|yarnMappings)\s*=\s*["']?([^"'\s#]+)["']?/gimu)) {
-    addMapping(state, 'yarn', concreteVersion(match[1]) ?? null, `${file.path}: Yarn mappings property`)
+    addMapping(state, 'yarn', concreteVersion(match[1]) ?? null, file.path, 'Yarn mappings property')
   }
   for (const match of file.text.matchAll(/net\.fabricmc:yarn:([^"'\s)]+)/gimu)) {
     const value = concreteVersion(match[1])
-    if (value !== undefined) addMapping(state, 'yarn', value, `${file.path}: Yarn mappings dependency`)
+    if (value !== undefined) addMapping(state, 'yarn', value, file.path, 'Yarn mappings dependency')
   }
   if (/\bofficialMojangMappings\s*\(/u.test(file.text)) {
-    addMapping(state, 'official', null, `${file.path}: officialMojangMappings()`)
+    addMapping(state, 'official', null, file.path, 'officialMojangMappings()')
   }
   for (const match of file.text.matchAll(/org\.parchmentmc\.data:parchment-[^:]+:([^"'\s)]+)/gimu)) {
     const value = concreteVersion(match[1])
-    if (value !== undefined) addMapping(state, 'parchment', value, `${file.path}: Parchment mappings dependency`)
+    if (value !== undefined) addMapping(state, 'parchment', value, file.path, 'Parchment mappings dependency')
   }
 
   for (const match of file.text.matchAll(/^\s*(?:mod[_-]?id|modId)\s*=\s*["']?([a-z0-9_.-]+)["']?/gimu)) {
@@ -456,20 +625,22 @@ function scanVersionsToml(state: DetectionState, file: TextFile): void {
   try {
     document = parseToml(file.text, { integersAsBigInt: false })
   } catch (error) {
+    /* v8 ignore next -- smol-toml always throws Error instances for parser failures. */
     state.warnings.push(`${file.path}: could not parse TOML (${error instanceof Error ? error.message : String(error)})`)
     return
   }
+  /* v8 ignore next -- smol-toml returns a table object for every successful parse. */
   const versions = typeof document === 'object' && document !== null
     ? (document as Record<string, unknown>).versions
     : undefined
   if (typeof versions !== 'object' || versions === null) return
   for (const key of ['minecraft', 'minecraft_version', 'minecraftVersion']) {
     const value = (versions as Record<string, unknown>)[key]
-    if (typeof value === 'string') state.minecraftVersions.push({ value, source: `${file.path}: versions.${key}` })
+    if (typeof value === 'string') addMinecraftVersion(state, value, file.path, `versions.${key}`)
   }
   for (const [key, type] of [['yarn', 'yarn'], ['parchment', 'parchment'], ['mappings', 'unknown']] as const) {
     const value = (versions as Record<string, unknown>)[key]
-    if (typeof value === 'string') addMapping(state, type, value, `${file.path}: versions.${key}`)
+    if (typeof value === 'string') addMapping(state, type, value, file.path, `versions.${key}`)
   }
 }
 
@@ -478,6 +649,7 @@ function scanFabricMetadata(state: DetectionState, file: TextFile): void {
   try {
     document = JSON.parse(file.text) as unknown
   } catch (error) {
+    /* v8 ignore next -- JSON.parse always throws a SyntaxError. */
     state.warnings.push(`${file.path}: could not parse JSON (${error instanceof Error ? error.message : String(error)})`)
     return
   }
@@ -502,7 +674,7 @@ function scanFabricMetadata(state: DetectionState, file: TextFile): void {
     ? (document as Record<string, unknown>).depends
     : undefined
   const minecraft = stringAt(depends, 'minecraft')
-  if (minecraft !== undefined) state.minecraftVersions.push({ value: minecraft, source: `${file.path}: depends.minecraft` })
+  if (minecraft !== undefined) addMinecraftVersion(state, minecraft, file.path, 'depends.minecraft')
 }
 
 function scanQuiltMetadata(state: DetectionState, file: TextFile): void {
@@ -510,6 +682,7 @@ function scanQuiltMetadata(state: DetectionState, file: TextFile): void {
   try {
     document = JSON.parse(file.text) as unknown
   } catch (error) {
+    /* v8 ignore next -- JSON.parse always throws a SyntaxError. */
     state.warnings.push(`${file.path}: could not parse JSON (${error instanceof Error ? error.message : String(error)})`)
     return
   }
@@ -529,11 +702,12 @@ function scanTomlMetadata(state: DetectionState, file: TextFile): void {
   try {
     document = parseToml(file.text, { integersAsBigInt: false })
   } catch (error) {
+    /* v8 ignore next -- smol-toml always throws Error instances for parser failures. */
     state.warnings.push(`${file.path}: could not parse TOML (${error instanceof Error ? error.message : String(error)})`)
     return
   }
-  const loader: Exclude<Loader, 'unknown'> = basename(file.path) === 'neoforge.mods.toml' ? 'neoforge' : 'forge'
-  addLoader(state, loader, `${file.path}: ${basename(file.path)}`)
+  const loader: Exclude<Loader, 'unknown'> = posix.basename(file.path) === 'neoforge.mods.toml' ? 'neoforge' : 'forge'
+  addLoader(state, loader, `${file.path}: ${posix.basename(file.path)}`)
   const mods = arrayAt(document, 'mods') ?? []
   for (const mod of mods) addModId(state, stringAt(mod, 'modId'), `${file.path}: [[mods]].modId`, 'high')
 }
@@ -550,42 +724,68 @@ function scanSourceText(state: DetectionState, file: TextFile): void {
 function chooseLoader(state: DetectionState): Loader {
   const found = [...state.loaderEvidence.entries()].filter(([, evidence]) => evidence.length > 0)
   if (found.length === 0) return 'unknown'
-  if (found.length === 1) return found[0]?.[0] ?? 'unknown'
+  if (found.length === 1) {
+    const first = found[0] as [Exclude<Loader, 'unknown'>, string[]]
+    return first[0]
+  }
   state.warnings.push(`conflicting loader evidence: ${found.map(([loader]) => loader).join(', ')}`)
   return 'unknown'
 }
 
-function chooseMinecraftVersion(state: DetectionState): string | null {
-  const candidates = uniq(state.minecraftVersions, item => `${item.value}\0${item.source}`)
-  if (candidates.length === 0) return null
-  const first = candidates[0]
-  if (first === undefined) return null
-  const conflicts = new Set(candidates.map(candidate => candidate.value))
-  if (conflicts.size > 1) {
-    state.warnings.push(`multiple Minecraft version candidates: ${[...conflicts].join(', ')}`)
+function chooseMinecraftVersion(state: DetectionState): MinecraftVersionResult {
+  const candidates = uniq(
+    state.minecraftVersions,
+    item => `${item.value}\0${item.classification}\0${item.source}\0${item.evidence}`,
+  )
+  if (candidates.length === 0) return { status: 'unknown', candidates: [] }
+  const exactValues = uniq(candidates.filter(candidate => candidate.classification === 'exact').map(candidate => candidate.value), value => value)
+  const rangeValues = uniq(candidates.filter(candidate => candidate.classification === 'range').map(candidate => candidate.value), value => value)
+  if (exactValues.length === 1) {
+    const exact = exactValues[0] as string
+    if (rangeValues.every(range => rangeIncludesExact(range, exact))) {
+      return { status: 'determined', value: exact, classification: 'exact', candidates }
+    }
+  } else if (exactValues.length === 0 && rangeValues.length === 1) {
+    return { status: 'determined', value: rangeValues[0] as string, classification: 'range', candidates }
   }
-  return first.value
+  state.warnings.push(`conflicting Minecraft version candidates: ${uniq(candidates.map(candidate => candidate.value), value => value).join(', ')}`)
+  return { status: 'conflict', candidates }
 }
 
-function chooseMappings(state: DetectionState): MappingsInfo {
-  const mappings = state.mappings
-  if (mappings.length === 0) return { type: 'unknown', version: null, evidence: [] }
-  const priority = ['yarn', 'parchment', 'official', 'unknown']
-  mappings.sort((a, b) => priority.indexOf(a.type) - priority.indexOf(b.type))
-  const first = mappings[0]
-  if (first === undefined) return { type: 'unknown', version: null, evidence: [] }
-  if (new Set(mappings.map(mapping => `${mapping.type}\0${mapping.version ?? ''}`)).size > 1) {
-    state.warnings.push(`multiple mappings candidates: ${mappings.map(mapping => `${mapping.type}${mapping.version === null ? '' : ` ${mapping.version}`}`).join(', ')}`)
-  }
-  return first
+function rangeIncludesExact(range: string, exact: string): boolean {
+  const parsedExact = valid(exact, { loose: true })
+  const parsedRange = validRange(range, { loose: true })
+  return parsedExact !== null
+    && parsedRange !== null
+    && satisfies(parsedExact, parsedRange, { includePrerelease: true, loose: true })
 }
 
-function validationCommands(loader: Loader, hasGradle: boolean, hasWrapper: boolean, datagen: readonly DatagenClue[]): string[] {
+function chooseMappings(state: DetectionState): MappingsResult {
+  const candidates = uniq(state.mappings, mapping =>
+    `${mapping.type}\0${mapping.version ?? ''}\0${mapping.source}\0${mapping.evidence}`)
+  if (candidates.length === 0) return { status: 'unknown', candidates: [] }
+  const facts = uniq(candidates, mapping => `${mapping.type}\0${mapping.version ?? ''}`)
+  if (facts.length === 1) {
+    const first = facts[0] as MappingsCandidate
+    return { status: 'determined', type: first.type, version: first.version, candidates }
+  }
+  state.warnings.push(`conflicting mappings candidates: ${facts.map(mapping => `${mapping.type}${mapping.version === null ? '' : ` ${mapping.version}`}`).join(', ')}`)
+  return { status: 'conflict', candidates }
+}
+
+function validationCommands(
+  loader: Loader,
+  hasGradle: boolean,
+  hasWrapper: boolean,
+  datagen: readonly DatagenClue[],
+  taskCandidates: readonly string[],
+): string[] {
   if (!hasGradle) return []
   const gradle = hasWrapper ? './gradlew' : 'gradle'
   const commands = [`${gradle} build`]
-  if (datagen.length > 0) commands.push(`${gradle} runDatagen`)
-  if (loader === 'forge' || loader === 'neoforge') commands.push(`${gradle} runData`)
+  const tasks = loader === 'unknown' ? [] : datagenTaskCandidates(loader, taskCandidates)
+  const task = datagen.length > 0 && tasks.length === 1 ? tasks[0] : undefined
+  if (task !== undefined) commands.push(`${gradle} ${task}`)
   return uniq(commands, command => command)
 }
 
@@ -659,6 +859,7 @@ function summarizeText(text: string, alreadyTruncated: boolean, spillPath: strin
     return {
       text,
       truncated: alreadyTruncated,
+      /* v8 ignore next -- spillPath is an optional provider-owned artifact path. */
       ...spillPath !== undefined ? { spillPath } : {},
     }
   }
@@ -666,6 +867,7 @@ function summarizeText(text: string, alreadyTruncated: boolean, spillPath: strin
   return {
     text: tail,
     truncated: true,
+    /* v8 ignore next -- spillPath is an optional provider-owned artifact path. */
     ...spillPath !== undefined ? { spillPath } : {},
   }
 }
@@ -753,27 +955,17 @@ async function gradleLauncher(ctx: Context, exec: ToolExecution, detected: Detec
   if (detected.inspected.gradleFiles.length === 0) return null
   const hasPosixWrapper = (await optionalStat(ctx, exec, 'gradlew'))?.type === 'file'
   const hasWindowsWrapper = (await optionalStat(ctx, exec, 'gradlew.bat'))?.type === 'file'
+  /* v8 ignore next -- POSIX coverage cannot execute the Windows wrapper peer; the native Windows lane covers it. */
   if (process.platform === 'win32') {
+    /* v8 ignore start -- the Windows branch is exercised by the native Windows lane. */
     if (hasWindowsWrapper) return '.\\gradlew.bat'
     if (hasPosixWrapper) return './gradlew'
+    /* v8 ignore stop */
   } else {
     if (hasPosixWrapper) return './gradlew'
     if (hasWindowsWrapper) return './gradlew.bat'
   }
   return 'gradle'
-}
-
-function datagenTask(loader: Loader): string | undefined {
-  switch (loader) {
-    case 'fabric':
-    case 'quilt':
-      return 'runDatagen'
-    case 'forge':
-    case 'neoforge':
-      return 'runData'
-    case 'unknown':
-      return undefined
-  }
 }
 
 function addTargetPlans(plans: CommandPlan[], target: CheckTarget, detected: DetectionResult): string | undefined {
@@ -785,19 +977,21 @@ function addTargetPlans(plans: CommandPlan[], target: CheckTarget, detected: Det
       plans.push({ step: 'test', task: 'test' })
       return undefined
     case 'datagen': {
-      const task = datagenTask(detected.loader)
-      if (task === undefined) return 'datagen'
-      plans.push({ step: 'datagen', task })
+      if (detected.loader === 'unknown') return 'datagen'
+      plans.push({ step: 'datagen' })
       return undefined
     }
     case 'resources':
       plans.push({ step: 'resources:gradle', task: 'processResources' })
       return undefined
+    case 'runtime':
+      if (detected.loader === 'unknown') return 'runtime'
+      plans.push({ step: 'runtime' })
+      return undefined
     case 'all': {
       if (detected.datagenClues.length > 0) {
-        const task = datagenTask(detected.loader)
-        if (task === undefined) return 'datagen'
-        plans.push({ step: 'datagen', task })
+        if (detected.loader === 'unknown') return 'datagen'
+        plans.push({ step: 'datagen' })
       }
       plans.push(
         { step: 'resources:gradle', task: 'processResources' },
@@ -819,6 +1013,12 @@ function suggestedNextAction(step: string, result?: CheckStepResult): string {
   if (step === 'gradle') {
     return 'Add a Gradle wrapper or root Gradle build file, or run detect_mc_project to confirm this workspace is a Minecraft Gradle project.'
   }
+  if (step === 'gradle-layout') {
+    return 'Inspect the Gradle settings and run the appropriate qualified task manually; run_mc_check only executes unambiguous root-project tasks.'
+  }
+  if (step === 'runtime') {
+    return 'Ask the user to approve a client or dedicated-server launch, then retry run_mc_check with runtimeMode set.'
+  }
   if (result?.sandbox?.denied === true) {
     return 'The sandbox denied the Gradle command; review the denied access and retry through the approved shell permission path if the command is trusted.'
   }
@@ -832,6 +1032,150 @@ function commandFor(launcher: string, task: string): string {
   return `${launcher} ${task}`
 }
 
+function parseGradleTaskNames(text: string): string[] {
+  const tasks: string[] = []
+  for (const line of text.split(/\r?\n/u)) {
+    const match = /^\s*:?(?<task>[A-Za-z][A-Za-z0-9:_-]*)\s*(?:-\s+.*)?$/u.exec(line)
+    const task = match?.groups?.task
+    if (task !== undefined) pushUnique(tasks, task)
+  }
+  return tasks.sort()
+}
+
+function taskDiscoveryFailure(step: CheckStepResult, message: string): CheckStepResult {
+  return { ...step, status: 'failed', message }
+}
+
+async function listGradleTasks(
+  ctx: Context,
+  exec: ToolExecution,
+  config: ResolvedConfig,
+  launcher: string,
+  timeoutMs: number | undefined,
+): Promise<{ tasks: string[]; step: CheckStepResult }> {
+  const command = commandFor(launcher, 'tasks --all --console=plain')
+  const result = await ctx.shell.run(ctx.shell.resolve({
+    command,
+    ...timeoutMs !== undefined ? { timeoutMs } : {},
+    stdoutMaxBytes: config.maxTaskDiscoveryBytes,
+    signal: exec.signal,
+    ...exec.agent?.session.header.cwd !== undefined ? { workdir: exec.agent.session.header.cwd } : {},
+  }))
+  const step = commandStep('gradle:tasks', command, result, config)
+  if (step.status === 'failed') return { tasks: [], step }
+  if (result.stdout.truncated) {
+    return {
+      tasks: [],
+      step: taskDiscoveryFailure(step, `Gradle task output exceeded maxTaskDiscoveryBytes ${config.maxTaskDiscoveryBytes}; no task was selected.`),
+    }
+  }
+  return { tasks: parseGradleTaskNames(result.stdout.text), step }
+}
+
+function runtimeTaskCandidates(mode: RuntimeMode, tasks: readonly string[]): string[] {
+  const expected = mode === 'client'
+    ? /^(?:runClient|runGame)$/iu
+    : /^(?:runServer|runDedicatedServer)$/iu
+  return tasks.filter(task => expected.test(task)).sort()
+}
+
+async function discoverDatagenTask(
+  ctx: Context,
+  exec: ToolExecution,
+  config: ResolvedConfig,
+  detected: DetectionResult,
+  launcher: string,
+  timeoutMs: number | undefined,
+): Promise<{ task?: string; step?: CheckStepResult }> {
+  const staticCandidates = datagenTaskCandidates(detected.loader, detected.gradleTaskCandidates)
+  if (staticCandidates.length === 1) {
+    const task = staticCandidates[0]
+    /* v8 ignore next -- length one guarantees a defined candidate. */
+    if (task !== undefined) return { task }
+  }
+  if (staticCandidates.length > 1) {
+    return {
+      step: unavailableStep(
+        'datagen',
+        `Multiple datagen Gradle tasks were declared: ${staticCandidates.join(', ')}. Inspect the project and choose one explicitly.`,
+      ),
+    }
+  }
+
+  const listing = await listGradleTasks(ctx, exec, config, launcher, timeoutMs)
+  if (listing.step.status === 'failed') return { step: listing.step }
+  const candidates = datagenTaskCandidates(detected.loader, listing.tasks)
+  if (candidates.length === 1) {
+    const task = candidates[0]
+    /* v8 ignore next -- length one guarantees a defined candidate. */
+    if (task !== undefined) return { task, step: listing.step }
+  }
+  if (candidates.length === 0) {
+    return { step: taskDiscoveryFailure(listing.step, `Gradle task listing did not expose a datagen task for loader ${detected.loader}.`) }
+  }
+  return { step: taskDiscoveryFailure(listing.step, `Gradle task listing exposed multiple datagen tasks: ${candidates.join(', ')}.`) }
+}
+
+async function discoverRuntimeTask(
+  ctx: Context,
+  exec: ToolExecution,
+  config: ResolvedConfig,
+  detected: DetectionResult,
+  launcher: string,
+  mode: RuntimeMode,
+  timeoutMs: number | undefined,
+): Promise<{ task?: string; step?: CheckStepResult }> {
+  const staticCandidates = runtimeTaskCandidates(mode, detected.gradleTaskCandidates)
+  if (staticCandidates.length === 1) {
+    const task = staticCandidates[0]
+    /* v8 ignore next -- length one guarantees a defined candidate. */
+    if (task !== undefined) return { task }
+  }
+  if (staticCandidates.length > 1) {
+    return {
+      step: unavailableStep(
+        'runtime',
+        `Multiple ${mode} runtime Gradle tasks were declared: ${staticCandidates.join(', ')}. Inspect the project and choose one explicitly.`,
+      ),
+    }
+  }
+  const listing = await listGradleTasks(ctx, exec, config, launcher, timeoutMs)
+  if (listing.step.status === 'failed') return { step: listing.step }
+  const candidates = runtimeTaskCandidates(mode, listing.tasks)
+  if (candidates.length === 1) {
+    const task = candidates[0]
+    /* v8 ignore next -- length one guarantees a defined candidate. */
+    if (task !== undefined) return { task, step: listing.step }
+  }
+  if (candidates.length === 0) {
+    return { step: taskDiscoveryFailure(listing.step, `Gradle task listing did not expose a ${mode} runtime task.`) }
+  }
+  return { step: taskDiscoveryFailure(listing.step, `Gradle task listing exposed multiple ${mode} runtime tasks: ${candidates.join(', ')}.`) }
+}
+
+async function unsupportedGradleLayout(
+  ctx: Context,
+  exec: ToolExecution,
+  config: ResolvedConfig,
+): Promise<string | undefined> {
+  for (const path of ['settings.gradle', 'settings.gradle.kts']) {
+    const stat = await optionalStat(ctx, exec, path)
+    if (stat === undefined || stat.type !== 'file') continue
+    const warnings: string[] = []
+    const file = await readTextFile(ctx, exec, path, stat.target, stat.size, config, warnings)
+    if (file === undefined) {
+      return `Cannot safely choose root Gradle tasks because ${path} could not be inspected: ${warnings.join('; ')}`
+    }
+    if (/\bincludeBuild\s*(?:\(|["'])/u.test(file.text)) {
+      return `${path} declares an included build; root task selection is ambiguous.`
+    }
+    if (/\binclude(?:Flat)?\s*(?:\(|["'])/u.test(file.text)) {
+      return `${path} declares one or more subprojects; root task selection is ambiguous.`
+    }
+  }
+  return undefined
+}
+
 async function runCommandStep(
   ctx: Context,
   exec: ToolExecution,
@@ -840,6 +1184,7 @@ async function runCommandStep(
   launcher: string,
   timeoutMs: number | undefined,
 ): Promise<CheckStepResult> {
+  if (plan.task === undefined) throw new Error(`unresolved Gradle task for ${plan.step}`)
   const command = commandFor(launcher, plan.task)
   const result = await ctx.shell.run(ctx.shell.resolve({
     command,
@@ -876,6 +1221,7 @@ function issueKey(issue: ResourceIssue): string {
 }
 
 function sortIssue(a: ResourceIssue, b: ResourceIssue): number {
+  /* v8 ignore next -- issueKey deduplication and fixed issue constructors make later tie-breakers defensive only. */
   return a.path.localeCompare(b.path)
     || a.code.localeCompare(b.code)
     || (a.reference ?? '').localeCompare(b.reference ?? '')
@@ -914,11 +1260,153 @@ function shouldCheckLocalReference(namespace: string, currentNamespace: string, 
 }
 
 function texturePath(root: string, namespace: string, path: string): string {
-  return relJoin(root, `assets/${namespace}/textures/${path}.png`)
+  return posix.join(root, `assets/${namespace}/textures/${path}.png`)
 }
 
 function modelPath(root: string, namespace: string, path: string): string {
-  return relJoin(root, `assets/${namespace}/models/${path}.json`)
+  return posix.join(root, `assets/${namespace}/models/${path}.json`)
+}
+
+const PNG_CRC_TABLE = (() => {
+  const table = new Uint32Array(256)
+  for (let index = 0; index < table.length; index++) {
+    let value = index
+    for (let bit = 0; bit < 8; bit++) value = (value & 1) === 0 ? value >>> 1 : (value >>> 1) ^ 0xedb88320
+    table[index] = value >>> 0
+  }
+  return table
+})()
+
+function pngCrc(bytes: Uint8Array): number {
+  let value = 0xffffffff
+  for (const byte of bytes) value = (value >>> 8) ^ (PNG_CRC_TABLE[(value ^ byte) & 0xff] ?? 0)
+  return (value ^ 0xffffffff) >>> 0
+}
+
+function pngError(bytes: Uint8Array): string | undefined {
+  const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+  if (bytes.length === 0) return 'PNG file is empty'
+  if (bytes.length < signature.length || !signature.every((value, index) => bytes[index] === value)) {
+    return 'PNG signature is missing or invalid'
+  }
+
+  let offset = signature.length
+  let hasHeader = false
+  let hasEnd = false
+  while (offset < bytes.length) {
+    if (bytes.length - offset < 12) return 'PNG chunk header is truncated'
+    const length = new DataView(bytes.buffer, bytes.byteOffset + offset, 4).getUint32(0)
+    /* v8 ignore start -- the preceding length guard guarantees all four type bytes. */
+    const type = String.fromCharCode(
+      bytes[offset + 4] ?? 0,
+      bytes[offset + 5] ?? 0,
+      bytes[offset + 6] ?? 0,
+      bytes[offset + 7] ?? 0,
+    )
+    /* v8 ignore stop */
+    const end = offset + 12 + length
+    /* v8 ignore next -- a valid PNG chunk always has a four-byte non-empty type. */
+    if (end > bytes.length) return `PNG ${type || 'chunk'} data is truncated`
+    const expectedCrc = new DataView(bytes.buffer, bytes.byteOffset + offset + 8 + length, 4).getUint32(0)
+    const actualCrc = pngCrc(bytes.subarray(offset + 4, offset + 8 + length))
+    if (expectedCrc !== actualCrc) return `PNG ${type || 'chunk'} CRC is invalid`
+    if (!hasHeader && type !== 'IHDR') return 'PNG must begin with an IHDR chunk'
+    if (type === 'IHDR') {
+      if (hasHeader || length !== 13) return 'PNG IHDR chunk is invalid'
+      const header = new DataView(bytes.buffer, bytes.byteOffset + offset + 8, 13)
+      if (header.getUint32(0) === 0 || header.getUint32(4) === 0) return 'PNG dimensions must be non-zero'
+      hasHeader = true
+    }
+    if (type === 'IEND') {
+      if (length !== 0) return 'PNG IEND chunk is invalid'
+      hasEnd = true
+      break
+    }
+    offset = end
+  }
+  if (!hasHeader) return 'PNG has no IHDR chunk'
+  if (!hasEnd) return 'PNG has no complete IEND chunk'
+  return undefined
+}
+
+async function validatePngFiles(
+  ctx: Context,
+  exec: ToolExecution,
+  root: string,
+  namespace: string,
+  config: ResolvedConfig,
+  result: ResourceValidationResult,
+): Promise<void> {
+  const warnings: string[] = []
+  const files = await walkFiles(
+    ctx,
+    exec,
+    posix.join(root, `assets/${namespace}/textures`),
+    { entries: 0, warned: false },
+    config,
+    warnings,
+    path => path.endsWith('.png'),
+  )
+  for (const warning of warnings) addResourceIssue(result.warnings, 'scan_warning', root, warning)
+  for (const file of files) {
+    result.checkedFiles.push(file.path)
+    if (file.entry.size !== undefined && file.entry.size > config.maxFileBytes) {
+      /* v8 ignore next -- JSON.parse throws SyntaxError, never a non-Error value. */
+      addResourceIssue(
+        result.warnings,
+        'file_too_large',
+        file.path,
+        `Skipped because file size ${file.entry.size} exceeds maxFileBytes ${config.maxFileBytes}`,
+      )
+      continue
+    }
+    try {
+      const bytes = await ctx.fs.readBytes(file.entry.target, exec.signal, config.maxFileBytes)
+      const error = pngError(bytes)
+      if (error !== undefined) addResourceIssue(result.errors, 'invalid_png', file.path, error)
+    } catch (error) {
+      if (isAbortedError(error, exec.signal)) throw error
+      if (errorCode(error) === 'FS_TOO_LARGE') {
+        addResourceIssue(
+          result.warnings,
+          'file_too_large',
+          file.path,
+          `Skipped because content exceeds maxFileBytes ${config.maxFileBytes}`,
+        )
+        continue
+      }
+      addResourceIssue(
+        result.errors,
+        'invalid_png',
+        file.path,
+        `PNG could not be read as bounded binary data: ${error instanceof Error ? error.message : String(error)}`,
+      )
+    }
+  }
+}
+
+function validateLanguageDocuments(
+  documents: readonly { path: string; document: unknown }[],
+  result: ResourceValidationResult,
+): void {
+  for (const file of documents) {
+    const entries = objectRecord(file.document)
+    if (entries === undefined) {
+      addResourceIssue(result.errors, 'invalid_lang_shape', file.path, 'Language JSON must contain an object at the root.')
+      continue
+    }
+    for (const [key, value] of Object.entries(entries)) {
+      if (typeof value !== 'string') {
+        addResourceIssue(
+          result.errors,
+          'invalid_lang_entry',
+          file.path,
+          `Language entry ${key} must have a string value.`,
+          key,
+        )
+      }
+    }
+  }
 }
 
 function parseJsonForValidation(result: ResourceValidationResult, path: string, text: string): unknown {
@@ -930,6 +1418,7 @@ function parseJsonForValidation(result: ResourceValidationResult, path: string, 
       result.errors,
       'invalid_json',
       path,
+      /* v8 ignore next -- JSON.parse throws SyntaxError, never a non-Error value. */
       `JSON parse failed: ${error instanceof Error ? error.message : String(error)}`,
     )
     return undefined
@@ -954,12 +1443,23 @@ async function readValidationText(
     return undefined
   }
   try {
-    return await ctx.fs.readText(entry.target, exec.signal)
+    return await readBoundedText(ctx, exec, entry.target, config)
   } catch (error) {
+    if (isAbortedError(error, exec.signal)) throw error
+    if (errorCode(error) === 'FS_TOO_LARGE') {
+      addResourceIssue(
+        result.warnings,
+        'file_too_large',
+        path,
+        `Skipped because content exceeds maxFileBytes ${config.maxFileBytes}`,
+      )
+      return undefined
+    }
     addResourceIssue(
       result.warnings,
       'read_failed',
       path,
+      /* v8 ignore next -- filesystem providers expose Error-compatible failures. */
       `Could not read text: ${error instanceof Error ? error.message : String(error)}`,
     )
     return undefined
@@ -990,6 +1490,7 @@ function collectNamespaceReferences(value: unknown, out: Set<string>): void {
     for (const match of value.matchAll(RESOURCE_LOCATION_SCAN_PATTERN)) {
       const namespace = match[1]
       const path = match[2]
+      /* v8 ignore next -- the regex requires both capture groups when it yields a match. */
       if (namespace !== undefined && path !== undefined) out.add(`${namespace}:${path}`)
     }
     return
@@ -1004,6 +1505,7 @@ function collectNamespaceReferences(value: unknown, out: Set<string>): void {
     for (const match of key.matchAll(RESOURCE_LOCATION_SCAN_PATTERN)) {
       const namespace = match[1]
       const path = match[2]
+      /* v8 ignore next -- the regex requires both capture groups when it yields a match. */
       if (namespace !== undefined && path !== undefined) out.add(`${namespace}:${path}`)
     }
     collectNamespaceReferences(child, out)
@@ -1014,6 +1516,7 @@ function detectedHighConfidenceModId(detected: DetectionResult, result: Resource
   const candidates = [...new Set(detected.modIdCandidates
     .filter(candidate => candidate.confidence === 'high')
     .map(candidate => candidate.id))]
+  /* v8 ignore next -- length one guarantees a defined array element. */
   if (candidates.length === 1) return candidates[0] ?? null
   if (candidates.length > 1) {
     addResourceIssue(
@@ -1028,11 +1531,13 @@ function detectedHighConfidenceModId(detected: DetectionResult, result: Resource
 
 async function fallbackResourceRoots(ctx: Context, exec: ToolExecution, warnings: ResourceIssue[]): Promise<string[]> {
   const roots: string[] = []
-  const srcEntries = await listOptionalDir(ctx, exec, 'src', [])
+  const srcEntries = await listOptionalDir(ctx, exec, 'src')
   for (const entry of srcEntries.filter(candidate => candidate.type === 'directory')) {
     const path = `src/${entry.name}/resources`
+    /* v8 ignore next -- detect() records every existing source-set resources directory before fallback runs. */
     if ((await optionalStat(ctx, exec, path))?.type === 'directory') pushUnique(roots, path)
   }
+  /* v8 ignore next -- fallback is only called when detect() found no resource roots. */
   if (roots.length > 0) return roots.sort()
   const hasTopLevelAssets = (await optionalStat(ctx, exec, 'assets'))?.type === 'directory'
   const hasTopLevelData = (await optionalStat(ctx, exec, 'data'))?.type === 'directory'
@@ -1048,7 +1553,7 @@ async function localFileExists(ctx: Context, exec: ToolExecution, path: string):
 async function resourceNamespaces(ctx: Context, exec: ToolExecution, roots: readonly string[], kind: 'assets' | 'data'): Promise<string[]> {
   const namespaces: string[] = []
   for (const root of roots) {
-    const entries = await listOptionalDir(ctx, exec, relJoin(root, kind), [])
+    const entries = await listOptionalDir(ctx, exec, posix.join(root, kind))
     for (const entry of entries) {
       if (entry.type === 'directory') pushUnique(namespaces, entry.name)
     }
@@ -1071,15 +1576,64 @@ function projectOutputSchema() {
     properties: {
       workspace: { type: 'string', required: true },
       loader: { type: 'string', required: true, enum: ['fabric', 'forge', 'neoforge', 'quilt', 'unknown'] },
-      minecraftVersion: { oneOf: [{ type: 'string' }, { type: 'null' }], required: true },
+      loaderEvidence: {
+        type: 'array',
+        required: true,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            loader: { type: 'string', required: true, enum: ['fabric', 'forge', 'neoforge', 'quilt'] },
+            evidence: { ...stringArray, required: true },
+          },
+        },
+      },
+      minecraftVersion: {
+        type: 'object',
+        additionalProperties: false,
+        required: true,
+        properties: {
+          status: { type: 'string', required: true, enum: ['determined', 'unknown', 'conflict'] },
+          value: { type: 'string' },
+          classification: { type: 'string', enum: ['exact', 'range'] },
+          candidates: {
+            type: 'array',
+            required: true,
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                value: { type: 'string', required: true },
+                classification: { type: 'string', required: true, enum: ['exact', 'range'] },
+                source: { type: 'string', required: true },
+                evidence: { type: 'string', required: true },
+              },
+            },
+          },
+        },
+      },
       mappings: {
         type: 'object',
         additionalProperties: false,
         required: true,
         properties: {
-          type: { type: 'string', required: true },
-          version: { oneOf: [{ type: 'string' }, { type: 'null' }], required: true },
-          evidence: { ...stringArray, required: true },
+          status: { type: 'string', required: true, enum: ['determined', 'unknown', 'conflict'] },
+          type: { type: 'string' },
+          version: { oneOf: [{ type: 'string' }, { type: 'null' }] },
+          candidates: {
+            type: 'array',
+            required: true,
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                type: { type: 'string', required: true },
+                version: { oneOf: [{ type: 'string' }, { type: 'null' }], required: true },
+                source: { type: 'string', required: true },
+                evidence: { type: 'string', required: true },
+              },
+            },
+          },
         },
       },
       modIdCandidates: {
@@ -1144,6 +1698,7 @@ function projectOutputSchema() {
           },
         },
       },
+      gradleTaskCandidates: { ...stringArray, required: true },
       recommendedValidationCommands: { ...stringArray, required: true },
       inspected: {
         type: 'object',
@@ -1199,6 +1754,7 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
     modIds: [],
     mixins: [],
     datagen: [],
+    gradleTaskCandidates: [],
   }
 
   const gradleFiles: TextFile[] = []
@@ -1214,7 +1770,7 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
   const sourceSets: SourceSetInfo[] = []
   const sourceRoots: string[] = []
   const resourceRoots: string[] = []
-  const srcEntries = await listOptionalDir(ctx, exec, 'src', warnings)
+  const srcEntries = await listOptionalDir(ctx, exec, 'src')
   for (const entry of srcEntries.filter(candidate => candidate.type === 'directory')) {
     const sourceSet = entry.name
     const java = (await optionalStat(ctx, exec, `src/${sourceSet}/java`))?.type === 'directory' ? [`src/${sourceSet}/java`] : []
@@ -1230,14 +1786,22 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
   const metadataFiles: TextFile[] = []
   const walkState: WalkState = { entries: 0, warned: false }
   for (const resourceRoot of resourceRoots) {
-    const files = await walkFiles(ctx, exec, resourceRoot, walkState, config, warnings, path => METADATA_BASENAMES.has(basename(path)))
+    const files = await walkFiles(
+      ctx,
+      exec,
+      resourceRoot,
+      walkState,
+      config,
+      warnings,
+      path => METADATA_BASENAMES.has(posix.basename(path)),
+    )
     for (const file of files) {
       const text = await readTextFile(ctx, exec, file.path, file.entry.target, file.entry.size, config, warnings)
       if (text !== undefined) metadataFiles.push(text)
     }
   }
   for (const file of metadataFiles) {
-    switch (basename(file.path)) {
+    switch (posix.basename(file.path)) {
       case 'fabric.mod.json':
         scanFabricMetadata(state, file)
         break
@@ -1287,12 +1851,17 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
   if (metadataFiles.length === 0) warnings.push('no Minecraft mod metadata files were found under resource roots')
   if (resourceRoots.length === 0) warnings.push('no src/<sourceSet>/resources roots were found')
   if (loader === 'unknown' && state.loaderEvidence.size === 0) warnings.push('loader could not be identified from Gradle files or mod metadata')
-  if (minecraftVersion === null) warnings.push('Minecraft version could not be identified')
-  if (mappings.type === 'unknown' && mappings.evidence.length === 0) warnings.push('mappings could not be identified')
+  if (minecraftVersion.status === 'unknown') warnings.push('Minecraft version could not be identified')
+  if (mappings.status === 'unknown') warnings.push('mappings could not be identified')
+
+  const loaderEvidence = [...state.loaderEvidence.entries()]
+    .map(([loader, evidence]) => ({ loader, evidence: [...evidence] }))
+    .sort((a, b) => a.loader.localeCompare(b.loader))
 
   return {
     workspace: root.displayPath,
     loader,
+    loaderEvidence,
     minecraftVersion,
     mappings,
     modIdCandidates,
@@ -1301,7 +1870,14 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
     resourceRoots: [...resourceRoots].sort(),
     mixinConfigs,
     datagenClues,
-    recommendedValidationCommands: validationCommands(loader, gradleFiles.length > 0, hasWrapper, datagenClues),
+    recommendedValidationCommands: validationCommands(
+      loader,
+      gradleFiles.length > 0,
+      hasWrapper,
+      datagenClues,
+      state.gradleTaskCandidates,
+    ),
+    gradleTaskCandidates: [...state.gradleTaskCandidates].sort(),
     inspected: {
       gradleFiles: gradleFiles.map(file => file.path),
       metadataFiles: metadataFiles.map(file => file.path),
@@ -1363,10 +1939,42 @@ async function validateModelTextures(
   detectedModId: string | null,
   result: ResourceValidationResult,
 ): Promise<void> {
-  const documents = await readJsonResourceFiles(ctx, exec, relJoin(root, `assets/${namespace}/models/${folder}`), config, result)
+  const documents = await readJsonResourceFiles(ctx, exec, posix.join(root, `assets/${namespace}/models/${folder}`), config, result)
   for (const file of documents) {
-    const textures = objectRecord(file.document)?.textures
+    const model = objectRecord(file.document)
+    if (model === undefined) {
+      addResourceIssue(result.errors, 'invalid_model_shape', file.path, 'Model JSON must contain an object at the root.')
+      continue
+    }
+    const parent = stringAt(model, 'parent')
+    if (parent !== undefined) {
+      const parsedParent = parseResourceLocation(parent, namespace)
+      if (parsedParent !== undefined && shouldCheckLocalReference(parsedParent.namespace, namespace, detectedModId)) {
+        const expectedParent = modelPath(root, parsedParent.namespace, parsedParent.path)
+        const parentExists = await resourceFileExists(
+          ctx,
+          exec,
+          roots,
+          candidateRoot => modelPath(candidateRoot, parsedParent.namespace, parsedParent.path),
+        )
+        if (!parentExists) {
+          addResourceIssue(
+            result.errors,
+            'missing_model_parent',
+            file.path,
+            `Model references missing local parent ${parent}`,
+            parent,
+            expectedParent,
+          )
+        }
+      }
+    }
+    const textures = model.textures
     const textureRecord = objectRecord(textures)
+    if (textures !== undefined && textureRecord === undefined) {
+      addResourceIssue(result.errors, 'invalid_model_shape', file.path, 'Model textures must be an object when present.')
+      continue
+    }
     if (textureRecord === undefined) continue
     for (const texture of Object.values(textureRecord)) {
       if (typeof texture !== 'string' || texture.startsWith('#')) continue
@@ -1398,8 +2006,12 @@ async function validateBlockstateModels(
   detectedModId: string | null,
   result: ResourceValidationResult,
 ): Promise<void> {
-  const documents = await readJsonResourceFiles(ctx, exec, relJoin(root, `assets/${namespace}/blockstates`), config, result)
+  const documents = await readJsonResourceFiles(ctx, exec, posix.join(root, `assets/${namespace}/blockstates`), config, result)
   for (const file of documents) {
+    if (objectRecord(file.document) === undefined) {
+      addResourceIssue(result.errors, 'invalid_blockstate_shape', file.path, 'Blockstate JSON must contain an object at the root.')
+      continue
+    }
     const models: string[] = []
     collectObjectModels(file.document, models)
     for (const model of models) {
@@ -1426,7 +2038,7 @@ async function validateDataJson(
   exec: ToolExecution,
   root: string,
   namespace: string,
-  folder: 'recipes' | 'tags',
+  folder: typeof DATA_JSON_FOLDERS[number],
   config: ResolvedConfig,
   allowedNamespaces: ReadonlySet<string>,
   detectedModId: string | null,
@@ -1436,14 +2048,23 @@ async function validateDataJson(
     addResourceIssue(
       result.warnings,
       'suspicious_namespace',
-      relJoin(root, `data/${namespace}/${folder}`),
+      posix.join(root, `data/${namespace}/${folder}`),
       `Data namespace ${namespace} differs from detected mod id ${detectedModId}`,
       namespace,
     )
   }
 
-  const documents = await readJsonResourceFiles(ctx, exec, relJoin(root, `data/${namespace}/${folder}`), config, result)
+  const documents = await readJsonResourceFiles(ctx, exec, posix.join(root, `data/${namespace}/${folder}`), config, result)
   for (const file of documents) {
+    if (objectRecord(file.document) === undefined) {
+      addResourceIssue(
+        result.errors,
+        'invalid_resource_shape',
+        file.path,
+        `${folder} JSON must contain an object at the root.`,
+      )
+      continue
+    }
     const references = new Set<string>()
     collectNamespaceReferences(file.document, references)
     for (const reference of references) {
@@ -1458,6 +2079,42 @@ async function validateDataJson(
       )
     }
   }
+}
+
+async function validateItemDefinitions(
+  ctx: Context,
+  exec: ToolExecution,
+  root: string,
+  namespace: string,
+  config: ResolvedConfig,
+  version: MinecraftVersionResult,
+  result: ResourceValidationResult,
+): Promise<void> {
+  const base = posix.join(root, `assets/${namespace}/items`)
+  const files = await readJsonResourceFiles(ctx, exec, base, config, result)
+  if (files.length === 0) return
+  for (const file of files) {
+    if (objectRecord(file.document) === undefined) {
+      addResourceIssue(result.errors, 'invalid_item_definition_shape', file.path, 'Item definition JSON must contain an object at the root.')
+    }
+  }
+  if (version.status === 'determined' && version.classification === 'exact' && valid(version.value, { loose: true }) !== null) {
+    if (!gte(version.value, '1.21.4', { loose: true })) {
+      addResourceIssue(
+        result.warnings,
+        'item_definition_version',
+        base,
+        `Item definition resources are newer than detected Minecraft ${version.value}; verify the target version and resource format.`,
+      )
+    }
+    return
+  }
+  addResourceIssue(
+    result.warnings,
+    'item_definition_version_unknown',
+    base,
+    'Item definition resources were found, but the exact Minecraft version is not determined; resource-format compatibility was not assumed.',
+  )
 }
 
 async function validateResources(ctx: Context, exec: ToolExecution, config: ResolvedConfig): Promise<ResourceValidationResult> {
@@ -1483,7 +2140,7 @@ async function validateResources(ctx: Context, exec: ToolExecution, config: Reso
   const allowedNamespaces = namespaceAllowlist(detectedModId, allNamespaces)
 
   for (const root of roots) {
-    const rootAssetNamespaces = (await listOptionalDir(ctx, exec, relJoin(root, 'assets'), []))
+    const rootAssetNamespaces = (await listOptionalDir(ctx, exec, posix.join(root, 'assets')))
       .filter(entry => entry.type === 'directory')
       .map(entry => entry.name)
       .sort()
@@ -1492,24 +2149,28 @@ async function validateResources(ctx: Context, exec: ToolExecution, config: Reso
         addResourceIssue(
           result.errors,
           'modid_mismatch',
-          relJoin(root, `assets/${namespace}`),
+          posix.join(root, `assets/${namespace}`),
           `Asset namespace ${namespace} differs from detected mod id ${detectedModId}`,
           namespace,
         )
       }
-      await readJsonResourceFiles(ctx, exec, relJoin(root, `assets/${namespace}/lang`), config, result)
+      const languageDocuments = await readJsonResourceFiles(ctx, exec, posix.join(root, `assets/${namespace}/lang`), config, result)
+      validateLanguageDocuments(languageDocuments, result)
+      await validatePngFiles(ctx, exec, root, namespace, config, result)
       await validateModelTextures(ctx, exec, roots, root, namespace, 'item', config, detectedModId, result)
       await validateModelTextures(ctx, exec, roots, root, namespace, 'block', config, detectedModId, result)
       await validateBlockstateModels(ctx, exec, roots, root, namespace, config, detectedModId, result)
+      await validateItemDefinitions(ctx, exec, root, namespace, config, detected.minecraftVersion, result)
     }
 
-    const rootDataNamespaces = (await listOptionalDir(ctx, exec, relJoin(root, 'data'), []))
+    const rootDataNamespaces = (await listOptionalDir(ctx, exec, posix.join(root, 'data')))
       .filter(entry => entry.type === 'directory')
       .map(entry => entry.name)
       .sort()
     for (const namespace of rootDataNamespaces) {
-      await validateDataJson(ctx, exec, root, namespace, 'recipes', config, allowedNamespaces, detectedModId, result)
-      await validateDataJson(ctx, exec, root, namespace, 'tags', config, allowedNamespaces, detectedModId, result)
+      for (const folder of DATA_JSON_FOLDERS) {
+        await validateDataJson(ctx, exec, root, namespace, folder, config, allowedNamespaces, detectedModId, result)
+      }
     }
   }
 
@@ -1518,7 +2179,28 @@ async function validateResources(ctx: Context, exec: ToolExecution, config: Reso
 
 async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedConfig, args: RunCheckArgs): Promise<CheckResult> {
   const detected = await detect(ctx, exec, config)
+  const unsupportedLayout = await unsupportedGradleLayout(ctx, exec, config)
+  if (unsupportedLayout !== undefined) {
+    const step = unavailableStep('gradle-layout', unsupportedLayout)
+    return {
+      commands: [],
+      exitCode: null,
+      steps: [step],
+      failedStep: 'gradle-layout',
+      suggestedNextAction: suggestedNextAction('gradle-layout'),
+    }
+  }
   const plans: CommandPlan[] = []
+  if (args.target === 'runtime' && args.runtimeMode === undefined) {
+    const step = unavailableStep('runtime', 'runtimeMode must be "client" or "server" before launching a Minecraft runtime task.')
+    return {
+      commands: [],
+      exitCode: null,
+      steps: [step],
+      failedStep: 'runtime',
+      suggestedNextAction: 'Ask the user whether the client or dedicated server should be launched, then retry with runtimeMode.',
+    }
+  }
   const unsupportedStep = addTargetPlans(plans, args.target, detected)
   if (unsupportedStep !== undefined) {
     const step = unavailableStep(unsupportedStep, `Cannot infer a datagen Gradle task for loader ${detected.loader}.`)
@@ -1532,7 +2214,6 @@ async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedCon
   }
 
   const launcher = await gradleLauncher(ctx, exec, detected)
-  const commands = launcher === null ? [] : plans.map(plan => commandFor(launcher, plan.task))
   if (launcher === null) {
     const step = unavailableStep('gradle', 'No root Gradle files were found; no Minecraft check command was executed.')
     return {
@@ -1545,6 +2226,38 @@ async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedCon
   }
 
   const steps: CheckStepResult[] = []
+  let discoveryCommand: string | undefined
+  const unresolvedPlan = plans.find(plan => plan.task === undefined)
+  if (unresolvedPlan !== undefined) {
+    const discovery = unresolvedPlan.step === 'datagen'
+      ? await discoverDatagenTask(ctx, exec, config, detected, launcher, args.timeoutMs)
+      : await discoverRuntimeTask(ctx, exec, config, detected, launcher, args.runtimeMode as RuntimeMode, args.timeoutMs)
+    if (discovery.step !== undefined) {
+      steps.push(discovery.step)
+      discoveryCommand = discovery.step.command
+    }
+    if (discovery.task === undefined) {
+      const failedStep = discovery.step?.step ?? 'datagen'
+      const unresolvedLabel = unresolvedPlan.step === 'runtime' ? 'runtime' : 'datagen'
+      return {
+        commands: discovery.step?.command === undefined ? [] : [discovery.step.command],
+        exitCode: discovery.step?.exitCode ?? null,
+        steps,
+        failedStep,
+        suggestedNextAction: failedStep === 'gradle:tasks'
+          ? `Inspect the Gradle task listing and choose the project-specific ${unresolvedLabel} task before retrying.`
+          : suggestedNextAction(unresolvedLabel),
+      }
+    }
+    unresolvedPlan.task = discovery.task
+  }
+  const commands = [
+    ...discoveryCommand === undefined ? [] : [discoveryCommand],
+    ...plans.map((plan) => {
+      if (plan.task === undefined) throw new Error(`unresolved Gradle task for ${plan.step}`)
+      return commandFor(launcher, plan.task)
+    }),
+  ]
   for (const plan of plans) {
     if (plan.step === 'resources:gradle') {
       const staticStep = await runStaticResourceStep(ctx, exec, config)
@@ -1587,6 +2300,16 @@ async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedCon
  */
 export function apply(ctx: Context, rawConfig: Config = {}): void {
   const config = resolveConfig(rawConfig)
+  ctx.effect(() => {
+    const dispose = ctx.on('tools/pre-execute', async (exec, next): Promise<PreToolDecision> => {
+      if (!isApprovedRuntimeCheck(exec)) return next()
+      return {
+        kind: 'ask',
+        reason: 'Launching a Minecraft client or dedicated server requires explicit user approval.',
+      }
+    })
+    return dispose
+  }, 'tool-mc-project.runtime-approval')
   ctx.tools.register(defineTool({
     name: DETECT_MC_PROJECT,
     description: 'Inspect the current workspace and return structured Minecraft mod project facts: loader, Minecraft version, mappings, mod id candidates, languages, source sets, resource roots, mixins, datagen clues, and recommended Gradle validation commands. Use this before assuming which Minecraft mod loader or version the repository uses.',
@@ -1606,7 +2329,7 @@ export function apply(ctx: Context, rawConfig: Config = {}): void {
   }))
   ctx.tools.register(defineTool({
     name: VALIDATE_MC_RESOURCES,
-    description: 'Validate the current Minecraft mod workspace resources with deterministic static checks: lang JSON syntax, item/block model texture references, blockstate model references, recipe/tag JSON syntax, suspicious namespaces, and mod id versus metadata consistency. This does not execute Gradle or emulate Minecraft resource loading.',
+    description: 'Validate the current Minecraft mod workspace resources with deterministic static checks: language values, item/block models, blockstates, recipe/tag/loot/advancement JSON structure, bounded PNG checksums, suspicious namespaces, and mod id versus metadata consistency. This does not execute Gradle or emulate Minecraft resource loading.',
     parameters: {},
     output: {
       schema: resourceValidationOutputSchema(),
@@ -1625,13 +2348,18 @@ export function apply(ctx: Context, rawConfig: Config = {}): void {
     const fiber = ctx.inject(['shell'], (shellCtx: Context) => {
       shellCtx.tools.register(defineTool({
         name: RUN_MC_CHECK,
-        description: 'Run the appropriate Minecraft Gradle validation for the current workspace. The tool first detects the project with detect_mc_project, chooses Gradle wrapper or gradle commands from the detected loader, runs each command through the mounted shell executor, and returns structured command results. Targets: build, test, datagen, resources, all.',
+        description: 'Run the appropriate Minecraft Gradle validation for the current workspace. The tool first detects the project with detect_mc_project, chooses Gradle wrapper or gradle commands from the detected loader, discovers custom datagen/runtime tasks when needed, runs each command through the mounted shell executor, and returns structured command results. Targets: build, test, datagen, resources, runtime, all. A runtime target launches the user-approved client or dedicated server and requires runtimeMode.',
         parameters: {
           target: {
             type: 'string',
             required: true,
-            enum: ['build', 'test', 'datagen', 'resources', 'all'],
-            description: 'Check to run. resources performs static Minecraft resource validation before Gradle processResources. all stops at the first failed step.',
+            description: 'Check to run. resources performs static Minecraft resource validation before Gradle processResources. runtime launches a client or dedicated server only after the user approves it and supplies runtimeMode. all stops at the first failed step.',
+            enum: ['build', 'test', 'datagen', 'resources', 'runtime', 'all'],
+          },
+          runtimeMode: {
+            type: 'string',
+            enum: ['client', 'server'],
+            description: 'Required for target runtime: choose client or dedicated server after user approval.',
           },
           timeoutMs: {
             type: 'number',

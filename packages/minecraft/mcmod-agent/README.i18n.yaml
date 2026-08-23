@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/minecraft/mcmod-agent/README.md
-README.md: d2dfde37efe0b7b746d25ccd483395d30e273232
-README.zh.md: 8d4828a4c765294ea5cd1ab32a4c1b5fc02c6cf7
+README.md: c085d3f9fa941fbb92ab4b1ecf871c633046d7f2
+README.zh.md: e18ff4330988768736ec104633806d04dd646218

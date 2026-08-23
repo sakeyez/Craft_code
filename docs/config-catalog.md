@@ -1341,6 +1341,8 @@ export interface Config {
 export interface LspLocalServerConfig {
   /** Executable to spawn (absolute, or resolved on PATH at load). */
   command: string
+  /** Skip this server when its executable is unavailable and emit a load-time diagnostic. */
+  optional?: boolean
   /** Lowercase leading-dot extension → LSP language id (e.g. `{ '.ts': 'typescript' }`). */
   extensionToLanguage: Record<string, string>
   /** Arguments passed to the executable (no shell). Default `[]`. */
@@ -1364,7 +1366,7 @@ export interface LspLocalServerConfig {
 }
 ```
 
-Source: [`packages/lsp/lsp-stdio/src/index.ts:82`](../packages/lsp/lsp-stdio/src/index.ts)
+Source: [`packages/lsp/lsp-stdio/src/index.ts:84`](../packages/lsp/lsp-stdio/src/index.ts)
 
 <a id="deepseek-aidsh-mcp-client"></a>
 
@@ -2696,10 +2698,15 @@ export interface Config {
    * truncated or spilled the stream before this bound is applied.
    */
   maxOutputSummaryBytes?: number
+  /**
+   * Maximum stdout bytes captured while discovering Gradle tasks. A truncated
+   * task list is treated as inconclusive rather than selecting a guessed task.
+   */
+  maxTaskDiscoveryBytes?: number
 }
 ```
 
-Source: [`packages/minecraft/tool-mc-project/src/index.ts:36`](../packages/minecraft/tool-mc-project/src/index.ts)
+Source: [`packages/minecraft/tool-mc-project/src/index.ts:43`](../packages/minecraft/tool-mc-project/src/index.ts)
 
 <a id="deepseek-aidsh-tool-pwsh"></a>
 

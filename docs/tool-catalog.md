@@ -1226,7 +1226,7 @@ Source: [`packages/minecraft/tool-mc-project/src/index.ts`](../packages/minecraf
 
 ### `run_mc_check`
 
-Run the appropriate Minecraft Gradle validation for the current workspace. The tool first detects the project with detect_mc_project, chooses Gradle wrapper or gradle commands from the detected loader, runs each command through the mounted shell executor, and returns structured command results. Targets: build, test, datagen, resources, all.
+Run the appropriate Minecraft Gradle validation for the current workspace. The tool first detects the project with detect_mc_project, chooses Gradle wrapper or gradle commands from the detected loader, discovers custom datagen/runtime tasks when needed, runs each command through the mounted shell executor, and returns structured command results. Targets: build, test, datagen, resources, runtime, all. A runtime target launches the user-approved client or dedicated server and requires runtimeMode.
 
 ```json
 {
@@ -1234,13 +1234,22 @@ Run the appropriate Minecraft Gradle validation for the current workspace. The t
   "properties": {
     "target": {
       "type": "string",
-      "description": "Check to run. resources performs static Minecraft resource validation before Gradle processResources. all stops at the first failed step.",
+      "description": "Check to run. resources performs static Minecraft resource validation before Gradle processResources. runtime launches a client or dedicated server only after the user approves it and supplies runtimeMode. all stops at the first failed step.",
       "enum": [
         "build",
         "test",
         "datagen",
         "resources",
+        "runtime",
         "all"
+      ]
+    },
+    "runtimeMode": {
+      "type": "string",
+      "description": "Required for target runtime: choose client or dedicated server after user approval.",
+      "enum": [
+        "client",
+        "server"
       ]
     },
     "timeoutMs": {
@@ -1258,7 +1267,7 @@ Source: [`packages/minecraft/tool-mc-project/src/index.ts`](../packages/minecraf
 
 ### `validate_mc_resources`
 
-Validate the current Minecraft mod workspace resources with deterministic static checks: lang JSON syntax, item/block model texture references, blockstate model references, recipe/tag JSON syntax, suspicious namespaces, and mod id versus metadata consistency. This does not execute Gradle or emulate Minecraft resource loading.
+Validate the current Minecraft mod workspace resources with deterministic static checks: language values, item/block models, blockstates, recipe/tag/loot/advancement JSON structure, bounded PNG checksums, suspicious namespaces, and mod id versus metadata consistency. This does not execute Gradle or emulate Minecraft resource loading.
 
 ```json
 {

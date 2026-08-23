@@ -22,9 +22,11 @@ interface PatchRow {
 
 const MINECRAFT_SKILL_NAMES = [
   'fabric-mod-dev',
-  'minecraft-datagen',
+  'fabric-datagen',
   'minecraft-resources',
   'mixin-debugging',
+  'neoforge-datagen',
+  'neoforge-mod-dev',
 ].sort()
 
 function bundleRoot(): string {
@@ -93,7 +95,7 @@ describe('dsh-mcmod-headless bundle', () => {
     const byId = new Map(rows.map(row => [row.id, row]))
 
     expect(byId.get('system-prompt')?.config).toMatchObject({
-      persona: expect.stringContaining('Fabric + Java + Minecraft 1.21.x') as string,
+      persona: expect.stringContaining('Fabric or NeoForge') as string,
     })
     expect(byId.get('mcmod-agent')).toMatchObject({
       name: '@deepseek-ai/dsh-mcmod-agent',
@@ -106,6 +108,7 @@ describe('dsh-mcmod-headless bundle', () => {
         servers: {
           java: {
             command: 'jdtls',
+            optional: true,
             extensionToLanguage: { '.java': 'java' },
           },
         },

@@ -19,13 +19,21 @@ Snapshot suites run this directory's configuration through [`tests/fixtures/head
 
 ## Minecraft mcmod E2E
 
-[`tests/mcmod.e2e.ts`](tests/mcmod.e2e.ts) proves `dsh --profile mcmod` through the product CLI. The keyless case mounts a scripted LLM adapter but keeps the real profile, Loader tree, filesystem tools, `detect_mc_project`, `validate_mc_resources`, and `run_mc_check`; both cases replace only the deployment-owned Java LSP executable with the current Node binary so the test does not require `jdtls` on PATH. The with-key case runs the same fixture with the real DeepSeek route when `DEEPSEEK_API_KEY` is present.
+[`tests/mcmod.e2e.ts`](tests/mcmod.e2e.ts) proves `dsh --profile mcmod` through the product CLI for both Fabric and NeoForge wiring. The keyless cases mount a scripted LLM adapter but keep the real profile, Loader tree, filesystem tools, `detect_mc_project`, `validate_mc_resources`, and `run_mc_check`; each replaces only the deployment-owned Java LSP executable with the current Node binary so the test does not require `jdtls` on PATH. The with-key case runs the Fabric fixture with the real DeepSeek route when `DEEPSEEK_API_KEY` is present.
 
 ```sh
 pnpm exec vitest run examples/headless-agent/tests/mcmod.e2e.ts --config vitest.e2e.config.ts
 ```
 
-The Fabric fixture is created in the test's temporary cwd. Its `gradlew` and `gradlew.bat` are tiny local wrappers around `gradle-fixture-check.mjs`, so the e2e does not download Gradle or Minecraft dependencies; the wrapper is an offline build gate that checks the item registration, lang entry, model, and placeholder texture produced by the agent. A project that needs a real Gradle build should run its own cached or credentialed build outside this keyless fixture.
+The fixtures are created in each test's temporary cwd. Their `gradlew` and `gradlew.bat` are local wiring wrappers, not Gradle implementations, so the e2e does not download Gradle or Minecraft dependencies; each wrapper checks loader metadata, loader-specific Java wiring, lang entry, model, and a real binary PNG before accepting `build` (Fabric) or `runData` (NeoForge). A project that needs a real Gradle build should run the explicit environment-gated fixture or its own cached build outside this keyless test.
+
+The dependency-backed Fabric and NeoForge fixtures are opt-in and use a real generated Gradle wrapper with pinned plugin and dependency versions:
+
+```sh
+DSH_MCMOD_REAL_GRADLE=1 pnpm exec vitest run --config vitest.e2e.config.ts examples/headless-agent/tests/mcmod-real-gradle.e2e.ts
+```
+
+When Gradle or dependency resolution is unavailable, the tests print the missing prerequisite and skip; they do not treat a wiring wrapper as a Gradle build.
 
 ## E2B POC overlay
 

@@ -23,6 +23,7 @@ Namespace 插件（`name`／`inject`／`Config`／`apply`，无默认导出）�
 | 服务器 key | 默认值 | 含义 |
 |---|---|---|
 | `command` | （必填） | 要 spawn 的可执行文件：绝对路径，或在加载时从子进程 PATH 解析。不使用 shell 启动。 |
+| `optional` | `false` | 为 `true` 时，在加载阶段报告不可用的可执行文件并跳过该 provider；其他工具和 provider 继续加载。 |
 | `args` | `[]` | 传给可执行文件的参数。 |
 | `env` | `{}` | 合并到已清理 credential 的环境之上的额外 env（匹配 `KEY`／`PASSWORD`／`SECRET`／`TOKEN` 的变量不会转发）；显式 `DSH_*` 条目在 seam 清除环境中同名值之后合并。 |
 | `extensionToLanguage` | （必填） | 小写、以点开头的扩展名 → LSP language id（例如 `{ '.ts': 'typescript' }`）。 |

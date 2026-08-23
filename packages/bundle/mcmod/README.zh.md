@@ -22,7 +22,7 @@ Java 命令刻意使用普通的 `jdtls`。安装该 bundle 的 profile 可以�
 
 #### What the model sees
 
-间接可见：此 profile 中的新会话默认从随包 `mcmod` preset 组装。模型会看到该 preset 的 Fabric-first Minecraft 模组开发提示词段落、四个 scoped Minecraft skills，以及剩余工具 schema：文件系统 read/write/edit/search、`detect_mc_project`、`validate_mc_resources`、`run_mc_check`、一个只前台执行的平台 shell 工具、`lsp`、`skill` 和 `ask_user_question`。bundle 本身不贡献提示词文本、skill 正文或工具 schema。
+间接可见：此 profile 中的新会话默认从随包 `mcmod` preset 组装。模型会看到该 preset 的 Fabric 与 NeoForge Minecraft 模组开发提示词段落、六个 scoped Minecraft skills，以及剩余工具 schema：文件系统 read/write/edit/search、`detect_mc_project`、`validate_mc_resources`、`run_mc_check`、一个只前台执行的平台 shell 工具、`lsp`、`skill` 和 `ask_user_question`。bundle 本身不贡献提示词文本、skill 正文或工具 schema。
 
 #### Token effect
 

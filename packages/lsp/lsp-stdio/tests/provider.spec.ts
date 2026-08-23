@@ -69,6 +69,23 @@ describe('lsp-stdio provider resolution', () => {
     await ctx.fiber.dispose()
   })
 
+  it('skips an unavailable optional server and leaves the registry usable', async () => {
+    const ctx = new Context()
+    await ctx.plugin(Lsp)
+    await ctx.plugin(LocalSubprocessRuntime)
+    await ctx.plugin(LocalFileSystem, { cwd: process.cwd() })
+    const warning = vi.spyOn(ctx.logger, 'warn').mockImplementation(() => ctx.logger)
+
+    await expect(ctx.plugin(LspLocal, config('optional-missing', {
+      command: 'definitely-not-a-real-lsp-binary-optional',
+      optional: true,
+      extensionToLanguage: { '.ts': 'typescript' },
+    }))).resolves.toBeDefined()
+    expect(warning).toHaveBeenCalledWith(expect.stringContaining('optional server "optional-missing" is unavailable'))
+    await expect(ctx.lsp.query(query())).rejects.toThrow(expect.objectContaining({ code: 'LSP_UNAVAILABLE' }))
+    await ctx.fiber.dispose()
+  })
+
   it('rejects a query after the provider is disposed', async () => {
     // Use a server that never emits results and dispose the plugin, then confirm queries are refused.
     const ctx = new Context()

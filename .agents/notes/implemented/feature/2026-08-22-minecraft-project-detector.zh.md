@@ -12,7 +12,7 @@ Minecraft modding preset 要求模型在编辑前识别 loader、Minecraft 版�
 
 `@deepseek-ai/dsh-tool-mc-project` 注册只读 `detect_mc_project` 工具。它通过 `ctx.fs` 扫描当前 session workspace，读取有界的 Gradle 与 metadata 文件，遍历有界的 source/resource root，并返回一个结构化 JSON 对象，包含 loader、Minecraft 版本、mappings、mod id 候选、Java/Kotlin 使用、source set、resource root、mixin config、datagen 线索、推荐验证命令、已检查路径与 warnings。
 
-检测器提取证据；它不求值 Gradle，也不执行命令。缺失文件、解析失败、过大的候选文件、扫描上限、未知事实和 loader 证据冲突都会产生 warning，同时工具仍返回符合 schema 的结果。loader 证据冲突时，`loader` 设为 `unknown`，而不是选择某个 API family。
+检测器提取证据；它不求值 Gradle，也不执行命令。缺失文件、解析失败、过大的候选文件、扫描上限和未知事实都会产生 warning，同时工具仍返回符合 schema 的结果。`minecraftVersion` 与 `mappings` 保留 `determined`、`unknown` 或 `conflict` 状态及候选 source/evidence；已确定的版本会标记为 `exact` 或 `range`。loader 证据冲突时，`loader` 设为 `unknown`，而不是选择某个 API family；loader 未知时也不会生成 loader 专属 datagen task。
 
 随包 `mcmod` Web preset 与 `mcmod-headless` profile 会把检测器挂在既有 file/search/shell/LSP/skill 工具旁边，因此两个 Minecraft 入口都能在编辑前取得同一份项目事实摘要。
 

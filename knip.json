@@ -5,6 +5,7 @@
   ],
   "ignoreBinaries": [
     "bwrap",
+    "cmd.exe",
     "icacls",
     "musl-gcc",
     "python3",
@@ -658,6 +659,21 @@
     "packages/bundle/headless": {
       "ignoreDependencies": [
         "@deepseek-ai/dsh-code-runtime-worker-thread"
+      ]
+    },
+    "packages/bundle/mcmod": {
+      "ignoreDependencies": [
+        "@deepseek-ai/dsh-lsp",
+        "@deepseek-ai/dsh-lsp-stdio"
+      ]
+    },
+    "packages/bundle/mcmod-headless": {
+      "ignoreDependencies": [
+        "@deepseek-ai/dsh-lsp",
+        "@deepseek-ai/dsh-lsp-stdio",
+        "@deepseek-ai/dsh-mcmod-agent",
+        "@deepseek-ai/dsh-tool-lsp",
+        "@deepseek-ai/dsh-tool-mc-project"
       ]
     },
     "packages/bundle/web-app": {

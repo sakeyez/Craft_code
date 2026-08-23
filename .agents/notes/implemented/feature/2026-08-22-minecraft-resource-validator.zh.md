@@ -12,9 +12,9 @@ Minecraft 模组资源错误经常躲过 TypeScript/Java 编译和普通项目�
 
 `@deepseek-ai/dsh-tool-mc-project` 在 `detect_mc_project` 旁边注册只读 `validate_mc_resources` 工具。校验器通过 `ctx.fs` 使用同一组有界 workspace 扫描，尊重检测到的 resource root 与 mod id metadata；只有当项目检测找不到 resource root 时，才回退到约定的 `src/*/resources` 或顶层 `assets`/`data`。
 
-校验器返回一个结构化 JSON 对象，包含 `errors`、`warnings`、`checkedFiles` 和 `detectedModId`。它解析 `assets/<modid>/lang/**/*.json`、`assets/<modid>/models/item/**/*.json`、`assets/<modid>/models/block/**/*.json`、`assets/<modid>/blockstates/**/*.json`、`data/<namespace>/recipes/**/*.json` 和 `data/<namespace>/tags/**/*.json`。它报告格式错误的 JSON、本地 model texture 引用缺少 `assets/<namespace>/textures/<path>.png` 文件、本地 blockstate model 引用缺少 `assets/<namespace>/models/<path>.json` 文件、可疑 data namespace、可疑显式 `namespace:path` 引用，以及 asset namespace 与唯一高置信 metadata mod id 不一致。
+校验器返回一个结构化 JSON 对象，包含 `errors`、`warnings`、`checkedFiles` 和 `detectedModId`。它解析 `assets/<modid>/lang/**/*.json`、`assets/<modid>/models/item/**/*.json`、`assets/<modid>/models/block/**/*.json`、`assets/<modid>/blockstates/**/*.json`、`data/<namespace>/recipes/**/*.json`、`data/<namespace>/tags/**/*.json` 和 `assets/<namespace>/items/**/*.json`。它报告格式错误的 JSON、空或结构无效的 PNG、本地 model parent 引用缺少 `assets/<namespace>/models/<path>.json` 文件、本地 model texture 引用缺少 `assets/<namespace>/textures/<path>.png` 文件、本地 blockstate model 引用缺少 `assets/<namespace>/models/<path>.json` 文件、可疑 data namespace、可疑显式 `namespace:path` 引用、已知低于 1.21.4 版本却使用新 item-definition 路径，或版本未知/只有范围/存在冲突时无法确定格式的 item-definition warning，以及 asset namespace 与唯一高置信 metadata mod id 不一致。
 
-该检查刻意保持静态和保守。它不执行 Gradle，不运行 datagen，不检查 Minecraft jar，不读取依赖资源包，不跟随 resource-pack 优先级规则，不解析生成的运行时资源，也不校验每一种 Minecraft JSON schema。缺失的 vanilla 或第三方 namespace 引用会被忽略，除非引用目标属于当前 mod namespace。
+该检查刻意保持静态和保守。它只读取有界二进制数据检查 PNG 结构，不执行 Gradle，不运行 datagen，不检查 Minecraft jar，不读取依赖资源包，不跟随 resource-pack 优先级规则，不解析生成的运行时资源，也不校验每一种 Minecraft JSON schema。缺失的 vanilla 或第三方 namespace 引用会被忽略，除非引用目标属于当前 mod namespace。
 
 ## Alternatives considered
 

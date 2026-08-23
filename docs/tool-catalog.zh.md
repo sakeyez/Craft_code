@@ -1232,7 +1232,7 @@ lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，�
 
 ### `run_mc_check`
 
-为当前 workspace 运行合适的 Minecraft Gradle 校验。该工具先用 detect_mc_project 检测项目，再从检测到的 loader 选择 Gradle wrapper 或 gradle 命令，通过已挂载的 shell executor 逐条执行，并返回结构化命令结果。目标：build、test、datagen、resources、all。
+为当前 workspace 运行合适的 Minecraft Gradle 校验。该工具先用 detect_mc_project 检测项目，再从检测到的 loader 选择 Gradle wrapper 或 gradle 命令；必要时发现自定义 datagen/runtime task，通过已挂载的 shell executor 逐条执行，并返回结构化命令结果。目标：build、test、datagen、resources、runtime、all。runtime target 会启动用户批准的客户端或专用服务端，并要求提供 runtimeMode。
 
 ```json
 {
@@ -1240,13 +1240,22 @@ lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，�
   "properties": {
     "target": {
       "type": "string",
-      "description": "Check to run. resources performs static Minecraft resource validation before Gradle processResources. all stops at the first failed step.",
+      "description": "Check to run. resources performs static Minecraft resource validation before Gradle processResources. runtime launches a client or dedicated server only after the user approves it and supplies runtimeMode. all stops at the first failed step.",
       "enum": [
         "build",
         "test",
         "datagen",
         "resources",
+        "runtime",
         "all"
+      ]
+    },
+    "runtimeMode": {
+      "type": "string",
+      "description": "Required for target runtime: choose client or dedicated server after user approval.",
+      "enum": [
+        "client",
+        "server"
       ]
     },
     "timeoutMs": {

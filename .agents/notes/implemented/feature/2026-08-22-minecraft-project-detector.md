@@ -12,7 +12,7 @@ The Minecraft modding preset asks the model to identify loader, Minecraft versio
 
 `@deepseek-ai/dsh-tool-mc-project` registers the read-only `detect_mc_project` tool. It scans the current session workspace through `ctx.fs`, reads bounded Gradle and metadata files, walks bounded source/resource roots, and returns one structured JSON object with loader, Minecraft version, mappings, mod id candidates, Java/Kotlin use, source sets, resource roots, mixin configs, datagen clues, recommended validation commands, inspected paths, and warnings.
 
-The detector extracts evidence; it does not evaluate Gradle or execute commands. Missing files, parse failures, oversized candidate files, scan caps, unknown facts, and conflicting loader evidence produce warnings while the tool still returns a schema-valid result. Conflicting loader evidence sets `loader` to `unknown` rather than selecting one API family.
+The detector extracts evidence; it does not evaluate Gradle or execute commands. Missing files, parse failures, oversized candidate files, scan caps, and unknown facts produce warnings while the tool still returns a schema-valid result. `minecraftVersion` and `mappings` preserve `determined`, `unknown`, or `conflict` status and retain candidate source/evidence; a determined version is classified as `exact` or `range`. Conflicting loader evidence sets `loader` to `unknown` rather than selecting one API family, and unknown loader evidence does not produce a loader-specific datagen task.
 
 The shipped `mcmod` Web preset and `mcmod-headless` profile mount the detector beside the existing file/search/shell/LSP/skill tools, so both Minecraft entrypoints can ask for the same project fact summary before edits.
 

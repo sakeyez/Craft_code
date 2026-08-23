@@ -20,6 +20,11 @@ import {
   scanZstdFrames,
 } from '@deepseek-ai/dsh-session-persistence-jsonl/src/zstd.ts'
 import { describe, expect, it } from 'vitest'
+import {
+  assertFabricFixture,
+  createMinimalFabricFixture,
+  prepareScriptedProfile,
+} from './mcmod-harness.ts'
 
 const snapshotsDir = join(dirname(fileURLToPath(import.meta.url)), 'snapshots')
 const advancedScenarioDir = join(snapshotsDir, 'advanced-toolchain')
@@ -59,7 +64,11 @@ const deepseekDefaultsConfigPath = fileURLToPath(new URL('./fixtures/deepseek-de
 const headlessOverlayPath = fileURLToPath(new URL('./fixtures/headless-profile.cordis.yml', import.meta.url))
 const headlessSessionExpected = join(snapshotsDir, 'headless-profile', 'session.expected.jsonl')
 const headlessFailureExpected = join(snapshotsDir, 'headless-profile', 'stderr.expected.txt')
+const mcmodScenarioDir = join(snapshotsDir, 'mcmod-profile')
+const mcmodSessionExpected = join(mcmodScenarioDir, 'session.expected.jsonl')
 const cliMockLlmPluginPath = fileURLToPath(new URL('./fixtures/cli-mock-llm.ts', import.meta.url))
+const mcmodLspPatchPath = fileURLToPath(new URL('./fixtures/mcmod-e2e-lsp.cordis.yml', import.meta.url))
+const mcmodScriptedPatchPath = fileURLToPath(new URL('./fixtures/mcmod-scripted-profile.cordis.yml', import.meta.url))
 const refreshing = process.env.DSH_SNAPSHOT === 'refresh'
 
 interface JsonObject {
@@ -238,6 +247,7 @@ async function prepareCliMockFixture(cwd: string): Promise<void> {
   await mkdir(fixtureDir, { recursive: true })
   await Promise.all([
     copyFile(cliMockLlmPluginPath, join(fixtureDir, 'cli-mock-llm.ts')),
+    copyFile(fileURLToPath(new URL('./fixtures/snapshot-shell-compat.ts', import.meta.url)), join(fixtureDir, 'snapshot-shell-compat.ts')),
     writeFile(join(fixtureDir, 'package.json'), '{"type":"module"}\n'),
   ])
 }
@@ -273,6 +283,56 @@ describe('headless stream-json snapshots', () => {
     })
 
     expect(result.stdout).toBe('CLI tool round trip complete: CLI_TOOL_ROUND_TRIP\n')
+    expect(result.stderr).toBe('')
+  }, LOADER_SMOKE_TEST_TIMEOUT_MS)
+
+  it('records the Fabric mcmod profile transcript through the product CLI', async () => {
+    const task = [
+      'Add a simple item named codex_gear to this minimal Fabric project.',
+      'Inspect the project, keep its loader APIs and resources consistent, and run the focused check.',
+    ].join(' ')
+    const result = await runLoaderSmoke({
+      label: 'product mcmod profile snapshot',
+      tempDirPrefix: 'mcmod-snapshot-profile-',
+      binScript: dshBinScript,
+      configPath: mcmodScriptedPatchPath,
+      binArgs: [
+        '--profile', 'mcmod',
+        '--patch', mcmodLspPatchPath,
+        '--patch', mcmodScriptedPatchPath,
+        task,
+      ],
+      tsconfigPath,
+      env: {
+        DSH_PERMISSION_MODE: 'danger-full-access',
+        DSH_TELEMETRY_DISABLED: '1',
+        NODE_OPTIONS: [process.env.NODE_OPTIONS, '--disable-warning=ExperimentalWarning'].filter(Boolean).join(' '),
+      },
+      prepare: async (cwd) => {
+        await createMinimalFabricFixture(cwd)
+        await prepareScriptedProfile(cwd)
+      },
+      inspect: async (cwd) => {
+        await assertFabricFixture(cwd)
+        const logs = await persistedLogs(cwd, join(cwd, '.dsh', 'sessions'))
+        expect(logs).toHaveLength(1)
+        const actual = logs[0]
+        if (actual === undefined) throw new Error('the mcmod profile did not persist its session')
+        const context = contextFromLogs([actual.content])
+        const session = normalizeSessionSnapshot(tokenizeSessionFixtureCwd(actual.content), context)
+        if (refreshing) {
+          await mkdir(mcmodScenarioDir, { recursive: true })
+          await writeFile(mcmodSessionExpected, session)
+        }
+        await expect(session).toMatchFileSnapshot(mcmodSessionExpected)
+        expect(actual.content).toContain('Support Fabric and NeoForge Java projects')
+        expect(session).toContain('detect_mc_project')
+        expect(session).toContain('validate_mc_resources')
+        expect(session).toContain('run_mc_check')
+      },
+    })
+
+    expect(result.stdout).toBe('MCMOD_E2E_OK\n')
     expect(result.stderr).toBe('')
   }, LOADER_SMOKE_TEST_TIMEOUT_MS)
 
