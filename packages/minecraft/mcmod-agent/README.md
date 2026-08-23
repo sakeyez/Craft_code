@@ -34,7 +34,7 @@ The model sees the fixed prompt guidance below.
 
 ```markdown
 minecraft:identity — Identify loader, Minecraft version, mappings, Gradle plugin, source sets, and resource roots before acting.
-minecraft:scope — Detect Fabric or NeoForge and report determined, unknown, or conflicting loader/version/mappings evidence before choosing APIs; only a genuinely blank project may use a provisional Fabric + Java + Minecraft 1.21.x default.
+minecraft:scope — Detect Fabric or NeoForge and report determined, unknown, conflicting, or unsupported loader/version/mappings evidence before choosing APIs; Forge, Quilt, Architectury, and other loaders are diagnostic-only in this profile, and only a genuinely blank project may use a provisional Fabric + Java + Minecraft 1.21.x default.
 minecraft:workflow — Read Gradle files, loader metadata, entrypoint, registries, event wiring, side configuration, and mixin config before edits; verify with focused loader-appropriate Gradle tasks.
 minecraft:resources — Keep Java registry names, namespaces, assets, data files, language keys, and generated data aligned.
 minecraft:version-discipline — Do not mix Fabric, Forge, NeoForge, Architectury, or cross-version Minecraft APIs.

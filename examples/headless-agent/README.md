@@ -30,7 +30,7 @@ The fixtures are created in each test's temporary cwd. Their `gradlew` and `grad
 The dependency-backed Fabric and NeoForge fixtures are opt-in and use a real generated Gradle wrapper with pinned plugin and dependency versions:
 
 ```sh
-DSH_MCMOD_REAL_GRADLE=1 pnpm exec vitest run --config vitest.e2e.config.ts examples/headless-agent/tests/mcmod-real-gradle.e2e.ts
+pnpm run test:e2e:mcmod:gradle
 ```
 
 When Gradle or dependency resolution is unavailable, the tests print the missing prerequisite and skip; they do not treat a wiring wrapper as a Gradle build.

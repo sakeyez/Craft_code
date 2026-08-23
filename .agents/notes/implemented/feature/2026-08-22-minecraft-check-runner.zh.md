@@ -12,7 +12,7 @@ Minecraft 模组开发 agent 在项目检测之后需要可重复的验证选择
 
 当已挂载的 composition 提供 `ctx.shell` 时，`@deepseek-ai/dsh-tool-mc-project` 注册 `run_mc_check`。该工具先调用包内检测逻辑，根据 workspace 证据选择 Gradle wrapper 或 `gradle`，把请求的 target 映射为 loader-aware task，并通过 `ctx.shell.run(ctx.shell.resolve(...))` 逐条运行 Gradle 命令。
 
-runner 支持 `build`、`test`、`datagen`、`resources` 和 `all`。Fabric 与 Quilt datagen 使用 `runDatagen`；Forge 与 NeoForge 使用 `runData`；loader 证据未知时会在执行前失败。`resources` 在 Gradle `processResources` 前运行静态 `validate_mc_resources` 检查；`all` 仅在检测发现 datagen 线索时运行 datagen，然后运行 resources、test 与 build，并在第一处失败后停止。
+runner 支持 `build`、`test`、`datagen`、`resources`、`runtime` 和 `all`。Fabric 与 NeoForge 支持 loader-specific datagen/runtime task 选择；Forge 与 Quilt 仅用于诊断，并会在这些 task 执行前安全失败。loader 证据未知或冲突时同样会在 loader-specific 执行前失败。`resources` 在 Gradle `processResources` 前运行静态 `validate_mc_resources` 检查；`all` 仅在支持范围内且检测到 datagen 线索时运行 datagen，然后运行 resources、test 与 build，并在第一处失败后停止。支持分类由[loader 范围 note](2026-08-23-minecraft-loader-support-scope.zh.md)维护。
 
 结果是一个结构化 JSON 对象，包含计划中的 `commands`、每个 step 的退出与 sandbox facts、stdout/stderr 摘要、`failedStep` 和 `suggestedNextAction`。shell-level timeout、sandbox、subprocess 与 spill 行为仍由已挂载的 shell executor 拥有；`run_mc_check` 只用自己的内联字节上限摘要已经收集到的 stream tail。
 

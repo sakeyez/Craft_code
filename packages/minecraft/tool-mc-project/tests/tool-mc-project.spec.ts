@@ -19,6 +19,7 @@ import * as ToolMcProject from '@deepseek-ai/dsh-tool-mc-project'
 interface DetectionResult {
   workspace: string
   loader: string
+  loaderSupport: 'supported' | 'unsupported' | 'unknown'
   loaderEvidence: Array<{ loader: string; evidence: string[] }>
   minecraftVersion: {
     status: 'determined' | 'unknown' | 'conflict'
@@ -346,6 +347,31 @@ async function createForgeProject(loader: 'forge' | 'neoforge' = 'forge'): Promi
   return dir
 }
 
+async function createArchitecturyProject(mode: 'pure' | 'fabric' | 'neoforge' = 'pure'): Promise<string> {
+  dir = await mkdtemp(join(tmpdir(), `dsh-mc-project-architectury-${mode}-`))
+  await write('settings.gradle', 'rootProject.name = "ArchitecturyExample"\n')
+  await write('build.gradle', [
+    'plugins {',
+    '  id "dev.architectury.loom" version "1.7-SNAPSHOT"',
+    mode === 'fabric' ? '  id "fabric-loom" version "1.8-SNAPSHOT"' : '',
+    mode === 'neoforge' ? '  id "net.neoforged.moddev" version "2.0.0"' : '',
+    '}',
+    'architectury { minecraft = "1.21.1" }',
+    'tasks.register("runDatagen") {}',
+    'tasks.register("runClient") {}',
+    '',
+  ].join('\n'))
+  await write('gradlew', '#!/bin/sh\n')
+  await write('gradlew.bat', '@echo off\r\n')
+  if (mode === 'fabric') {
+    await write('src/main/resources/fabric.mod.json', JSON.stringify({ id: 'architecturyexample', depends: { minecraft: '1.21.1' } }))
+  }
+  if (mode === 'neoforge') {
+    await write('src/main/resources/META-INF/neoforge.mods.toml', 'modLoader="javafml"\n[[mods]]\nmodId="architecturyexample"\n')
+  }
+  return dir
+}
+
 function expectedGradle(task: string): string {
   return `${process.platform === 'win32' ? '.\\gradlew.bat' : './gradlew'} ${task}`
 }
@@ -640,6 +666,7 @@ describe('detect_mc_project', () => {
     const detected = await callDetect(context, workspace)
 
     expect(detected.loader).toBe('quilt')
+    expect(detected.loaderSupport).toBe('unsupported')
     expect(detected.languages).toEqual({ java: true, kotlin: true })
     expect(detected.mixinConfigs).toEqual(expect.arrayContaining([
       expect.objectContaining({ path: 'quilt.mixins.json' }),
@@ -749,6 +776,44 @@ describe('detect_mc_project', () => {
     expect(detected.loader).toBe('unknown')
     expect(detected.loaderEvidence.map(item => item.loader)).toEqual(['fabric', 'neoforge'])
     expect(detected.warnings).toContain('conflicting loader evidence: fabric, neoforge')
+  })
+
+  it('reports Architectury as an unsupported loader', async () => {
+    const workspace = await createArchitecturyProject()
+    const context = await bootDirect(workspace)
+    const detected = await callDetect(context, workspace)
+
+    expect(detected.loader).toBe('architectury')
+    expect(detected.loaderSupport).toBe('unsupported')
+    expect(detected.loaderEvidence).toEqual([
+      expect.objectContaining({
+        loader: 'architectury',
+        evidence: [expect.stringContaining('Architectury Gradle/plugin/dependency clue')],
+      }),
+    ])
+    expect(detected.warnings).toContain('loader architectury is detected but unsupported by this profile; only Fabric and NeoForge are supported')
+    expect(detected.recommendedValidationCommands).toEqual(['./gradlew build'])
+  })
+
+  it('does not let fabric metadata hide Architectury evidence', async () => {
+    const workspace = await createArchitecturyProject('fabric')
+    const context = await bootDirect(workspace)
+    const detected = await callDetect(context, workspace)
+
+    expect(detected.loader).toBe('unknown')
+    expect(detected.loaderSupport).toBe('unknown')
+    expect(detected.loaderEvidence.map(item => item.loader)).toEqual(['architectury', 'fabric'])
+    expect(detected.warnings).toContain('conflicting loader evidence: architectury, fabric')
+  })
+
+  it('keeps Architectury and NeoForge mixed evidence fail-closed', async () => {
+    const workspace = await createArchitecturyProject('neoforge')
+    const context = await bootDirect(workspace)
+    const detected = await callDetect(context, workspace)
+
+    expect(detected.loader).toBe('unknown')
+    expect(detected.loaderSupport).toBe('unknown')
+    expect(detected.loaderEvidence.map(item => item.loader)).toEqual(['architectury', 'neoforge'])
   })
 
   it('reports mappings candidates instead of choosing a priority winner', async () => {
@@ -866,14 +931,17 @@ describe('detect_mc_project', () => {
     expect(detected.warnings).toContain('build.gradle: skipped because content exceeds maxFileBytes 64')
   })
 
-  it.each(['forge', 'neoforge'] as const)('recommends runData for a detected %s project', async (loader) => {
+  it.each(['forge', 'neoforge'] as const)('reports support status for a detected %s project', async (loader) => {
     const workspace = await createForgeProject(loader)
     const context = await bootDirect(workspace)
     const detected = await callDetect(context, workspace)
 
     expect(detected.loader).toBe(loader)
     expect(detected.datagenClues).not.toEqual([])
-    expect(detected.recommendedValidationCommands).toEqual(['./gradlew build', './gradlew runData'])
+    expect(detected.loaderSupport).toBe(loader === 'neoforge' ? 'supported' : 'unsupported')
+    expect(detected.recommendedValidationCommands).toEqual(loader === 'neoforge'
+      ? ['./gradlew build', './gradlew runData']
+      : ['./gradlew build'])
     expect(detected.recommendedValidationCommands).not.toContain('./gradlew runDatagen')
   })
 
@@ -884,6 +952,7 @@ describe('detect_mc_project', () => {
     const detected = await callDetect(context, dir)
 
     expect(detected.loader).toBe('unknown')
+    expect(detected.loaderSupport).toBe('unknown')
     expect(detected.datagenClues).not.toEqual([])
     expect(detected.recommendedValidationCommands).toEqual(['gradle build'])
   })
@@ -1474,19 +1543,75 @@ describe('run_mc_check', () => {
     expect(approval.requests).toHaveLength(0)
   })
 
-  it('selects runData for Forge and NeoForge datagen', async () => {
-    const forge = await createForgeProject('forge')
-    const forgeHarness = await bootWithShell(forge)
-    const forgeResult = await callRunCheck(forgeHarness.context, forge, { target: 'datagen' })
-    await forgeHarness.context.fiber.dispose()
-    await rm(forge, { recursive: true, force: true })
-
+  it('selects runData for NeoForge datagen', async () => {
     const neoforge = await createForgeProject('neoforge')
     const neoHarness = await bootWithShell(neoforge)
     const neoResult = await callRunCheck(neoHarness.context, neoforge, { target: 'datagen' })
 
-    expect(forgeResult.commands).toEqual([expectedGradle('runData')])
     expect(neoResult.commands).toEqual([expectedGradle('runData')])
+  })
+
+  it('refuses loader-specific datagen checks for unsupported Forge projects', async () => {
+    const forge = await createForgeProject('forge')
+    const forgeHarness = await bootWithShell(forge)
+    const result = await callRunCheck(forgeHarness.context, forge, { target: 'datagen' })
+
+    expect(result.commands).toEqual([])
+    expect(result.failedStep).toBe('datagen')
+    expect(result.steps[0]?.message).toContain('Loader forge')
+    expect(forgeHarness.shell.commands).toEqual([])
+  })
+
+  it('keeps generic checks available in all mode for unsupported Forge projects', async () => {
+    const forge = await createForgeProject('forge')
+    const forgeHarness = await bootWithShell(forge)
+    const result = await callRunCheck(forgeHarness.context, forge, { target: 'all' })
+
+    expect(result.failedStep).toBeNull()
+    expect(result.steps.map(step => step.step)).toEqual(['resources:static', 'resources:gradle', 'test', 'build'])
+    expect(result.commands).toEqual([
+      expectedGradle('processResources'),
+      expectedGradle('test'),
+      expectedGradle('build'),
+    ])
+    expect(forgeHarness.shell.commands).toEqual(result.commands)
+  })
+
+  it('refuses loader-specific datagen and runtime checks for unsupported Quilt projects', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'dsh-mc-project-quilt-'))
+    await write('settings.gradle', 'rootProject.name = "quilt"\n')
+    await write('build.gradle', 'plugins { id "org.quiltmc.loom" version "1.6-SNAPSHOT" }\ntasks.register("runDatagen") {}\ntasks.register("runClient") {}\n')
+    await write('src/main/resources/quilt.mod.json', JSON.stringify({ quilt_loader: { id: 'quiltmod' } }))
+    const quiltHarness = await bootWithShell(dir)
+
+    const datagen = await callRunCheck(quiltHarness.context, dir, { target: 'datagen' })
+    const runtime = await callRunCheck(quiltHarness.context, dir, { target: 'runtime', runtimeMode: 'client' })
+
+    expect(datagen.failedStep).toBe('datagen')
+    expect(datagen.steps[0]?.message).toContain('Loader quilt')
+    expect(runtime.failedStep).toBe('runtime')
+    expect(runtime.steps[0]?.message).toContain('Loader quilt')
+    expect(quiltHarness.shell.commands).toEqual([])
+  })
+
+  it('refuses loader-specific checks for Architectury and keeps all generic checks', async () => {
+    const architectury = await createArchitecturyProject()
+    const harness = await bootWithShell(architectury)
+
+    const datagen = await callRunCheck(harness.context, architectury, { target: 'datagen' })
+    const runtime = await callRunCheck(harness.context, architectury, { target: 'runtime', runtimeMode: 'client' })
+    const all = await callRunCheck(harness.context, architectury, { target: 'all' })
+
+    expect(datagen.failedStep).toBe('datagen')
+    expect(runtime.failedStep).toBe('runtime')
+    expect(all.failedStep).toBeNull()
+    expect(all.steps.map(step => step.step)).toEqual(['resources:static', 'resources:gradle', 'test', 'build'])
+    expect(all.commands).toEqual([
+      expectedGradle('processResources'),
+      expectedGradle('test'),
+      expectedGradle('build'),
+    ])
+    expect(harness.shell.commands).toEqual(all.commands)
   })
 
   it('fails datagen when loader detection is unknown', async () => {

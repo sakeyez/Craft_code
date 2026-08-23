@@ -1213,7 +1213,7 @@ The lsp tool keeps provider selection and language-server subprocesses behind ct
 
 ### `detect_mc_project`
 
-Inspect the current workspace and return structured Minecraft mod project facts: loader, Minecraft version, mappings, mod id candidates, languages, source sets, resource roots, mixins, datagen clues, and recommended Gradle validation commands. Use this before assuming which Minecraft mod loader or version the repository uses.
+Inspect the current workspace and return structured Minecraft mod project facts: loader, loader support status, Minecraft version, mappings, mod id candidates, languages, source sets, resource roots, mixins, datagen clues, and recommended Gradle validation commands. Fabric and NeoForge are supported; Forge, Quilt, and Architectury are diagnostic-only. Use this before assuming which Minecraft mod loader or version the repository uses.
 
 ```json
 {

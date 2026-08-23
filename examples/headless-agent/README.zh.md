@@ -30,7 +30,7 @@ pnpm exec vitest run examples/headless-agent/tests/mcmod.e2e.ts --config vitest.
 依赖驱动的 Fabric 与 NeoForge fixture 默认不运行；它们会在固定 plugin 与 dependency 版本上生成真实 Gradle wrapper：
 
 ```sh
-DSH_MCMOD_REAL_GRADLE=1 pnpm exec vitest run --config vitest.e2e.config.ts examples/headless-agent/tests/mcmod-real-gradle.e2e.ts
+pnpm run test:e2e:mcmod:gradle
 ```
 
 宿主缺少 Gradle 或依赖解析不可用时，测试会打印缺失前置条件并 skip；不会把 wiring wrapper 的通过当成 Gradle 构建。

@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-23-minecraft-loader-support-scope.md
+2026-08-23-minecraft-loader-support-scope.md: 3740a0b3d9ed02b1667f6e8a993e6f7b1cc7d7cb
+2026-08-23-minecraft-loader-support-scope.zh.md: b2ef854fac9e7f1cfe6d333b1c92589962a2d100

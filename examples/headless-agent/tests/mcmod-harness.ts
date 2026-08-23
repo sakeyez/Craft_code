@@ -4,14 +4,14 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /** Stable mod id used by the keyless Fabric fixture. */
-export const MOD_ID = 'minimalmod'
+const MOD_ID = 'minimalmod'
 /** Stable registry id used by both keyless fixtures. */
-export const ITEM_ID = 'codex_gear'
+const ITEM_ID = 'codex_gear'
 /** Stable mod id used by the keyless NeoForge fixture. */
-export const NEO_MOD_ID = 'minimalneo'
+const NEO_MOD_ID = 'minimalneo'
 
 /** A real one-pixel PNG used by wiring and resource-validation tests. */
-export const VALID_PNG = Buffer.from(
+const VALID_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   'base64',
 )

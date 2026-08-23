@@ -21,6 +21,12 @@ The patch keeps the `headless-runner` from `dsh-headless` and the base services 
 
 The Java command is deliberately plain `jdtls` and marked optional. Startup logs report the unavailable command; files, search, shell, and Minecraft tools remain usable. A profile can replace the full `lsp-stdio` row in its own `cordis.patch.yml` when JDTLS lives at a machine-specific path or needs arguments.
 
+## Loader Scope and Validation
+
+The profile supports Fabric Java and NeoForge Java. Forge and Quilt are detected for diagnostics only; they do not receive loader-specific edits, datagen, or runtime task execution. Architectury, mixed-loader, multi-module, convention-plugin-heavy, and non-mod projects are outside the complete profile scope. Generic `build`, `test`, and resource checks remain available when their Gradle layout is unambiguous.
+
+`validate_mc_resources` is a bounded static file check, not Minecraft runtime verification. Gradle text inspection is also evidence extraction, not complete Gradle semantic evaluation; variables, convention plugins, included builds, and generated task wiring may require manual inspection. The dependency-backed real Gradle fixtures live in `examples/headless-agent/tests/mcmod-real-gradle.e2e.ts` and run only when explicitly enabled with `pnpm run test:e2e:mcmod:gradle`. They are environment-gated because Gradle, network access, and dependency caches are deployment prerequisites, and are distinct from the keyless wiring E2E.
+
 The patch disables web retrieval, workflow orchestration, Ralph, general subagents, jobs, goals, todos, plan mode, and the legacy str-replace editor row. Those rows are inherited from `dsh-base`; they stay available to other profiles and to user-authored copies that choose to re-enable them. The first version keeps only file/search tools, the Minecraft project tools, one foreground-only platform shell tool, `lsp`, `skill`, compaction, permissions, and session persistence.
 
 ## Model Experience

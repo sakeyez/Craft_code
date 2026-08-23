@@ -1219,7 +1219,7 @@ lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，�
 
 ### `detect_mc_project`
 
-检查当前 workspace，并返回结构化 Minecraft mod 项目事实：loader、Minecraft 版本、mappings、mod id 候选、语言、source set、resource root、mixin、datagen 线索和推荐 Gradle 验证命令。在假设当前仓库使用哪个 Minecraft mod loader 或版本之前使用它。
+检查当前 workspace，并返回结构化 Minecraft mod 项目事实：loader、loader 支持状态、Minecraft 版本、mappings、mod id 候选、语言、source set、resource root、mixin、datagen 线索和推荐 Gradle 验证命令。Fabric 与 NeoForge 属于支持范围；Forge、Quilt 和 Architectury 仅用于诊断。在假设当前仓库使用哪个 Minecraft mod loader 或版本之前使用它。
 
 ```json
 {

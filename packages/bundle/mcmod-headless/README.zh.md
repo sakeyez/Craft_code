@@ -21,6 +21,12 @@
 
 Java 命令刻意保持为普通的 `jdtls` 并标记为可选。启动日志会报告不可用命令；文件、搜索、shell 与 Minecraft 工具仍可用。如果 JDTLS 位于机器特定路径或需要参数，profile 可以在自己的 `cordis.patch.yml` 中替换完整的 `lsp-stdio` 行。
 
+## Loader 范围与验证
+
+该 profile 支持 Fabric Java 与 NeoForge Java。Forge 与 Quilt 只用于诊断，不会获得 loader-specific 编辑、datagen 或 runtime task 执行。Architectury、混合 loader、多模块、重度 convention plugin 与非模组项目不在当前 profile 的完整支持范围内；当 Gradle 布局明确时，通用 `build`、`test` 与资源检查仍可用。
+
+`validate_mc_resources` 是有界的静态文件检查，不是 Minecraft runtime 验证。Gradle 文本检测同样只是证据提取，不是完整 Gradle 语义解析；变量、convention plugin、included build 与生成的 task wiring 可能需要手动检查。依赖驱动的真实 Gradle fixture 位于 `examples/headless-agent/tests/mcmod-real-gradle.e2e.ts`，只有显式运行 `pnpm run test:e2e:mcmod:gradle` 才会启用。该测试受 Gradle、网络与依赖缓存等环境前置条件控制，与无密钥 wiring E2E 不同。
+
 这份 patch 禁用 web retrieval、workflow orchestration、Ralph、通用 subagent、jobs、goals、todos、plan mode 与旧的 str-replace editor 行。这些行继承自 `dsh-base`；其他 profile 以及用户自定义副本仍可选择重新启用。第一版只保留 file/search 工具、Minecraft 项目工具、一个只前台执行的平台 shell 工具、`lsp`、`skill`、压缩、权限与 session persistence。
 
 ## 模型体验

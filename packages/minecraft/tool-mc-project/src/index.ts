@@ -13,11 +13,24 @@ import { gte, satisfies, valid, validRange } from 'semver'
 import { parse as parseToml } from 'smol-toml'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { PreToolDecision, ToolExecution, ToolResult } from '@deepseek-ai/dsh-tools'
-import { FsError } from '@deepseek-ai/dsh-fs'
-import type { FsDirEntry, FsTarget } from '@deepseek-ai/dsh-fs'
+import type { FsDirEntry } from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-fs'
 import type { CollectedOutput, ShellRunResult, ShellSandboxInfo } from '@deepseek-ai/dsh-shell'
 import type {} from '@deepseek-ai/dsh-shell'
+import { datagenTaskCandidates, loaderSupport, validationCommands } from './loader-support.ts'
+import type { Loader, LoaderSupport } from './loader-support.ts'
+import {
+  errorCode,
+  isAbortedError,
+  listOptionalDir,
+  optionalStat,
+  readBoundedText,
+  readOptionalText,
+  readTextFile,
+  sessionResolveOptions,
+  walkFiles,
+} from './fs-support.ts'
+import type { TextFile, WalkState } from './fs-support.ts'
 
 /** Cordis plugin name. */
 export const name = 'tool-mc-project'
@@ -35,10 +48,6 @@ const DEFAULT_MAX_ENTRIES = 2_000
 const DEFAULT_MAX_FILE_BYTES = 512 * 1024
 const DEFAULT_MAX_OUTPUT_SUMMARY_BYTES = 4_096
 const DEFAULT_MAX_TASK_DISCOVERY_BYTES = 64 * 1024
-const BINARY_SAMPLE_BYTES = 8_192
-const MISSING_ERROR_CODES = new Set(['FS_NOT_FOUND', 'ENOENT', 'ENOTDIR'])
-const ABORT_ERROR_CODES = new Set(['FS_ABORTED'])
-
 /** Tool configuration. */
 export interface Config {
   /**
@@ -73,7 +82,6 @@ export const Config: z<Config> = z.object({
   maxTaskDiscoveryBytes: z.number().default(DEFAULT_MAX_TASK_DISCOVERY_BYTES),
 })
 
-type Loader = 'fabric' | 'forge' | 'neoforge' | 'quilt' | 'unknown'
 type Confidence = 'high' | 'medium' | 'low'
 type VersionClassification = 'exact' | 'range'
 type CheckTarget = 'build' | 'test' | 'datagen' | 'resources' | 'runtime' | 'all'
@@ -148,6 +156,7 @@ interface DatagenClue {
 interface DetectionResult {
   workspace: string
   loader: Loader
+  loaderSupport: LoaderSupport
   loaderEvidence: LoaderEvidence[]
   minecraftVersion: MinecraftVersionResult
   mappings: MappingsResult
@@ -237,16 +246,6 @@ interface CommandPlan {
   task?: string
 }
 
-interface TextFile {
-  path: string
-  text: string
-}
-
-interface WalkState {
-  entries: number
-  warned: boolean
-}
-
 interface DetectionState {
   warnings: string[]
   loaderEvidence: Map<Exclude<Loader, 'unknown'>, string[]>
@@ -276,6 +275,7 @@ const METADATA_BASENAMES = new Set([
 const DATA_JSON_FOLDERS = ['recipes', 'tags', 'loot_tables', 'advancements', 'predicates', 'item_modifiers'] as const
 
 const LOADER_PATTERNS: ReadonlyArray<{ loader: Exclude<Loader, 'unknown'>; regex: RegExp; label: string }> = [
+  { loader: 'architectury', regex: /\b(?:architectury-loom|architectury-plugin|dev\.architectury(?::|[./])|net\.architectury(?::|[./]))\b/iu, label: 'Architectury Gradle/plugin/dependency clue' },
   { loader: 'fabric', regex: /\b(?:fabric-loom|net\.fabricmc\.fabric-loom|net\.fabricmc:fabric-loader|net\.fabricmc\.fabric-api)\b/u, label: 'Fabric Gradle/dependency clue' },
   { loader: 'quilt', regex: /\b(?:org\.quiltmc\.loom|org\.quiltmc:quilt-loader|org\.quiltmc\.quilted-fabric-api)\b/u, label: 'Quilt Gradle/dependency clue' },
   { loader: 'forge', regex: /\b(?:net\.minecraftforge\.gradle|net\.minecraftforge:forge|MinecraftForge)\b/u, label: 'Forge Gradle/dependency clue' },
@@ -285,8 +285,6 @@ const LOADER_PATTERNS: ReadonlyArray<{ loader: Exclude<Loader, 'unknown'>; regex
 const BUILTIN_RESOURCE_NAMESPACES = new Set(['minecraft', 'c', 'forge', 'neoforge', 'fabric', 'quilt'])
 const RESOURCE_LOCATION_PATTERN = /^([a-z0-9_.-]+:)?[a-z0-9/._-]+$/u
 const RESOURCE_LOCATION_SCAN_PATTERN = /#?([a-z0-9_.-]+):([a-z0-9/._-]+)/gu
-const DATAGEN_TASK_PATTERN = /(?:^|[:_-])(?:run)?data(?:gen)?(?:$|[:_-])|(?:^|[:_-])generate[a-z0-9]*data(?:$|[:_-])/iu
-
 function resolveConfig(config: Config | undefined): ResolvedConfig {
   /* v8 ignore next -- optional config fields are normalized by the loader before runtime use. */
   const maxEntries = config?.maxEntries ?? DEFAULT_MAX_ENTRIES
@@ -311,14 +309,6 @@ function resolveConfig(config: Config | undefined): ResolvedConfig {
   return { maxEntries, maxFileBytes, maxOutputSummaryBytes, maxTaskDiscoveryBytes }
 }
 
-function sessionResolveOptions(exec: ToolExecution): { cwd?: string; signal?: AbortSignal } {
-  const cwd = exec.agent?.session.header.cwd
-  return {
-    ...cwd === undefined ? {} : { cwd },
-    signal: exec.signal,
-  }
-}
-
 function uniq<T>(items: readonly T[], key: (item: T) => string): T[] {
   const seen = new Set<string>()
   const out: T[] = []
@@ -334,144 +324,6 @@ function uniq<T>(items: readonly T[], key: (item: T) => string): T[] {
 function pushUnique(list: string[], value: string): void {
   /* v8 ignore next -- callers derive each resource/source path from a unique source-set name. */
   if (!list.includes(value)) list.push(value)
-}
-
-function errorCode(error: unknown): string | undefined {
-  if (typeof error !== 'object' || error === null || !('code' in error)) return undefined
-  const code = (error as { code?: unknown }).code
-  return typeof code === 'string' ? code : undefined
-}
-
-function hasErrorCode(error: unknown, codes: ReadonlySet<string>): boolean {
-  let current: unknown = error
-  for (let depth = 0; depth < 4 && current !== undefined; depth++) {
-    if (codes.has(errorCode(current) ?? '')) return true
-    if (typeof current !== 'object' || current === null || !('cause' in current)) return false
-    current = (current as { cause?: unknown }).cause
-  }
-  return false
-}
-
-function isMissingError(error: unknown): boolean {
-  return hasErrorCode(error, MISSING_ERROR_CODES)
-}
-
-function isAbortedError(error: unknown, signal: AbortSignal | undefined): boolean {
-  return signal?.aborted === true
-    || hasErrorCode(error, ABORT_ERROR_CODES)
-    || (error instanceof Error && error.name === 'AbortError')
-}
-
-function decodeBoundedText(bytes: Uint8Array, path: string): string {
-  if (bytes.subarray(0, BINARY_SAMPLE_BYTES).includes(0)) {
-    throw new FsError(`cannot read "${path}": binary file`, 'FS_NOT_TEXT')
-  }
-  try {
-    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
-  } catch (error) {
-    throw new FsError(`cannot read "${path}": invalid UTF-8 text`, 'FS_NOT_TEXT', { cause: error })
-  }
-}
-
-async function readBoundedText(
-  ctx: Context,
-  exec: ToolExecution,
-  target: FsTarget,
-  config: ResolvedConfig,
-): Promise<string> {
-  const bytes = await ctx.fs.readBytes(target, exec.signal, config.maxFileBytes)
-  return decodeBoundedText(bytes, target.displayPath)
-}
-
-async function optionalStat(ctx: Context, exec: ToolExecution, path: string): Promise<{ target: FsTarget; type: FsDirEntry['type']; size?: number } | undefined> {
-  try {
-    const target = await ctx.fs.resolve(path, sessionResolveOptions(exec))
-    const info = await ctx.fs.stat(target, exec.signal)
-    if (info === undefined) return undefined
-    return { target, type: info.type, ...info.size === undefined ? {} : { size: info.size } }
-  } catch (error) {
-    if (isMissingError(error)) return undefined
-    throw error
-  }
-}
-
-async function readTextFile(
-  ctx: Context,
-  exec: ToolExecution,
-  path: string,
-  target: FsTarget,
-  size: number | undefined,
-  config: ResolvedConfig,
-  warnings: string[],
-): Promise<TextFile | undefined> {
-  if (size !== undefined && size > config.maxFileBytes) {
-    warnings.push(`${path}: skipped because file size ${size} exceeds maxFileBytes ${config.maxFileBytes}`)
-    return undefined
-  }
-  try {
-    return { path, text: await readBoundedText(ctx, exec, target, config) }
-  } catch (error) {
-    if (isAbortedError(error, exec.signal)) throw error
-    if (errorCode(error) === 'FS_TOO_LARGE') {
-      warnings.push(`${path}: skipped because content exceeds maxFileBytes ${config.maxFileBytes}`)
-      return undefined
-    }
-    warnings.push(`${path}: could not read text (${error instanceof Error ? error.message : String(error)})`)
-    return undefined
-  }
-}
-
-async function readOptionalText(
-  ctx: Context,
-  exec: ToolExecution,
-  path: string,
-  config: ResolvedConfig,
-  warnings: string[],
-): Promise<TextFile | undefined> {
-  const stat = await optionalStat(ctx, exec, path)
-  if (stat === undefined || stat.type !== 'file') return undefined
-  return readTextFile(ctx, exec, path, stat.target, stat.size, config, warnings)
-}
-
-async function listOptionalDir(ctx: Context, exec: ToolExecution, path: string): Promise<FsDirEntry[]> {
-  const stat = await optionalStat(ctx, exec, path)
-  if (stat === undefined || stat.type !== 'directory') return []
-  try {
-    return await ctx.fs.listDir(stat.target, exec.signal)
-  } catch (error) {
-    if (isMissingError(error)) return []
-    throw error
-  }
-}
-
-async function walkFiles(
-  ctx: Context,
-  exec: ToolExecution,
-  path: string,
-  state: WalkState,
-  config: ResolvedConfig,
-  warnings: string[],
-  predicate: (path: string, entry: FsDirEntry) => boolean,
-): Promise<Array<{ path: string; entry: FsDirEntry }>> {
-  if (state.entries >= config.maxEntries) {
-    if (!state.warned) {
-      state.warned = true
-      warnings.push(`directory scan stopped after maxEntries ${config.maxEntries}`)
-    }
-    return []
-  }
-  const entries = await listOptionalDir(ctx, exec, path)
-  const out: Array<{ path: string; entry: FsDirEntry }> = []
-  for (const entry of entries) {
-    state.entries++
-    const child = posix.join(path, entry.name)
-    if (entry.type === 'file' && predicate(child, entry)) out.push({ path: child, entry })
-    if (entry.type === 'directory') {
-      out.push(...await walkFiles(ctx, exec, child, state, config, warnings, predicate))
-    }
-    if (state.entries >= config.maxEntries) break
-  }
-  return out
 }
 
 function addLoader(state: DetectionState, loader: Exclude<Loader, 'unknown'>, evidence: string): void {
@@ -504,28 +356,6 @@ function scanGradleTaskDeclarations(state: DetectionState, text: string): void {
     /* v8 ignore next -- the alternation guarantees one task capture. */
     if (task !== undefined) addGradleTask(state, task)
   }
-}
-
-function preferredDatagenTask(loader: Loader): string | undefined {
-  switch (loader) {
-    case 'fabric':
-    case 'quilt':
-      return 'runDatagen'
-    case 'forge':
-    case 'neoforge':
-      return 'runData'
-    case 'unknown':
-      return undefined
-  }
-}
-
-function datagenTaskCandidates(loader: Loader, tasks: readonly string[]): string[] {
-  const preferred = preferredDatagenTask(loader)
-  const matching = tasks.filter(task => DATAGEN_TASK_PATTERN.test(task))
-  if (preferred !== undefined && tasks.includes(preferred)) return [preferred]
-  if (matching.length <= 1) return [...matching]
-  const conventional = matching.filter(task => /^(?:runData|runDatagen)$/iu.test(task))
-  return conventional.length === 1 ? conventional : [...matching].sort()
 }
 
 function addMinecraftVersion(state: DetectionState, value: string, source: string, evidence: string): void {
@@ -773,22 +603,6 @@ function chooseMappings(state: DetectionState): MappingsResult {
   return { status: 'conflict', candidates }
 }
 
-function validationCommands(
-  loader: Loader,
-  hasGradle: boolean,
-  hasWrapper: boolean,
-  datagen: readonly DatagenClue[],
-  taskCandidates: readonly string[],
-): string[] {
-  if (!hasGradle) return []
-  const gradle = hasWrapper ? './gradlew' : 'gradle'
-  const commands = [`${gradle} build`]
-  const tasks = loader === 'unknown' ? [] : datagenTaskCandidates(loader, taskCandidates)
-  const task = datagen.length > 0 && tasks.length === 1 ? tasks[0] : undefined
-  if (task !== undefined) commands.push(`${gradle} ${task}`)
-  return uniq(commands, command => command)
-}
-
 function outputSummarySchema() {
   return {
     type: 'object',
@@ -977,7 +791,7 @@ function addTargetPlans(plans: CommandPlan[], target: CheckTarget, detected: Det
       plans.push({ step: 'test', task: 'test' })
       return undefined
     case 'datagen': {
-      if (detected.loader === 'unknown') return 'datagen'
+      if (detected.loaderSupport !== 'supported') return 'datagen'
       plans.push({ step: 'datagen' })
       return undefined
     }
@@ -985,13 +799,15 @@ function addTargetPlans(plans: CommandPlan[], target: CheckTarget, detected: Det
       plans.push({ step: 'resources:gradle', task: 'processResources' })
       return undefined
     case 'runtime':
-      if (detected.loader === 'unknown') return 'runtime'
+      if (detected.loaderSupport !== 'supported') return 'runtime'
       plans.push({ step: 'runtime' })
       return undefined
     case 'all': {
       if (detected.datagenClues.length > 0) {
-        if (detected.loader === 'unknown') return 'datagen'
-        plans.push({ step: 'datagen' })
+        if (detected.loaderSupport === 'supported') plans.push({ step: 'datagen' })
+        // Unsupported loaders retain generic checks; only the loader-specific
+        // datagen plan is omitted. Unknown evidence still fails closed.
+        if (detected.loaderSupport === 'unknown') return 'datagen'
       }
       plans.push(
         { step: 'resources:gradle', task: 'processResources' },
@@ -1575,7 +1391,8 @@ function projectOutputSchema() {
     additionalProperties: false,
     properties: {
       workspace: { type: 'string', required: true },
-      loader: { type: 'string', required: true, enum: ['fabric', 'forge', 'neoforge', 'quilt', 'unknown'] },
+      loader: { type: 'string', required: true, enum: ['architectury', 'fabric', 'forge', 'neoforge', 'quilt', 'unknown'] },
+      loaderSupport: { type: 'string', required: true, enum: ['supported', 'unsupported', 'unknown'] },
       loaderEvidence: {
         type: 'array',
         required: true,
@@ -1583,7 +1400,7 @@ function projectOutputSchema() {
           type: 'object',
           additionalProperties: false,
           properties: {
-            loader: { type: 'string', required: true, enum: ['fabric', 'forge', 'neoforge', 'quilt'] },
+            loader: { type: 'string', required: true, enum: ['architectury', 'fabric', 'forge', 'neoforge', 'quilt'] },
             evidence: { ...stringArray, required: true },
           },
         },
@@ -1840,6 +1657,7 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
   }
 
   const loader = chooseLoader(state)
+  const loaderSupportState = loaderSupport(loader)
   const minecraftVersion = chooseMinecraftVersion(state)
   const mappings = chooseMappings(state)
   const modIdCandidates = uniq(state.modIds, item => `${item.id}\0${item.source}\0${item.confidence}`)
@@ -1851,6 +1669,9 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
   if (metadataFiles.length === 0) warnings.push('no Minecraft mod metadata files were found under resource roots')
   if (resourceRoots.length === 0) warnings.push('no src/<sourceSet>/resources roots were found')
   if (loader === 'unknown' && state.loaderEvidence.size === 0) warnings.push('loader could not be identified from Gradle files or mod metadata')
+  if (loaderSupportState === 'unsupported') {
+    warnings.push(`loader ${loader} is detected but unsupported by this profile; only Fabric and NeoForge are supported`)
+  }
   if (minecraftVersion.status === 'unknown') warnings.push('Minecraft version could not be identified')
   if (mappings.status === 'unknown') warnings.push('mappings could not be identified')
 
@@ -1861,6 +1682,7 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
   return {
     workspace: root.displayPath,
     loader,
+    loaderSupport: loaderSupportState,
     loaderEvidence,
     minecraftVersion,
     mappings,
@@ -1872,6 +1694,7 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
     datagenClues,
     recommendedValidationCommands: validationCommands(
       loader,
+      loaderSupportState,
       gradleFiles.length > 0,
       hasWrapper,
       datagenClues,
@@ -2203,7 +2026,10 @@ async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedCon
   }
   const unsupportedStep = addTargetPlans(plans, args.target, detected)
   if (unsupportedStep !== undefined) {
-    const step = unavailableStep(unsupportedStep, `Cannot infer a datagen Gradle task for loader ${detected.loader}.`)
+    const message = detected.loaderSupport === 'unsupported'
+      ? `Loader ${detected.loader} is detected but unsupported by this profile; no loader-specific ${unsupportedStep} check was executed.`
+      : `Cannot infer a datagen Gradle task for loader ${detected.loader}.`
+    const step = unavailableStep(unsupportedStep, message)
     return {
       commands: [],
       exitCode: null,
@@ -2312,7 +2138,7 @@ export function apply(ctx: Context, rawConfig: Config = {}): void {
   }, 'tool-mc-project.runtime-approval')
   ctx.tools.register(defineTool({
     name: DETECT_MC_PROJECT,
-    description: 'Inspect the current workspace and return structured Minecraft mod project facts: loader, Minecraft version, mappings, mod id candidates, languages, source sets, resource roots, mixins, datagen clues, and recommended Gradle validation commands. Use this before assuming which Minecraft mod loader or version the repository uses.',
+    description: 'Inspect the current workspace and return structured Minecraft mod project facts: loader, loader support status, Minecraft version, mappings, mod id candidates, languages, source sets, resource roots, mixins, datagen clues, and recommended Gradle validation commands. Fabric and NeoForge are supported; Forge, Quilt, and Architectury are diagnostic-only. Use this before assuming which Minecraft mod loader or version the repository uses.',
     parameters: {},
     output: {
       schema: projectOutputSchema(),

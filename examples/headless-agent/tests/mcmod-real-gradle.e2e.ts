@@ -60,16 +60,64 @@ async function createFabricFixture(root: string): Promise<void> {
     '  minecraft "com.mojang:minecraft:1.21.1"',
     '  mappings "net.fabricmc:yarn:1.21.1+build.3:v2"',
     '  modImplementation "net.fabricmc:fabric-loader:0.16.9"',
+    '  modImplementation "net.fabricmc.fabric-api:fabric-api:0.102.0+1.21.1"',
     '}',
-    'tasks.register("runDatagen") { doLast {',
-    '  def files = ["src/main/java/com/example/real/ModItems.java", "src/main/resources/assets/realfabric/lang/en_us.json", "src/main/resources/assets/realfabric/models/item/codex_gear.json", "src/main/resources/assets/realfabric/textures/item/codex_gear.png"]',
-    '  files.each { if (!file(it).exists()) throw new GradleException("missing fixture file: ${it}") }',
-    '} }',
+    'fabricApi { configureDataGeneration() }',
+    'java { withSourcesJar() }',
     '',
   ].join('\n'))
-  await write(root, 'src/main/resources/fabric.mod.json', JSON.stringify({ schemaVersion: 1, id: 'realfabric', version: '1.0.0', entrypoints: { main: ['com.example.real.MinimalMod'] } }, null, 2) + '\n')
-  await write(root, 'src/main/java/com/example/real/MinimalMod.java', 'package com.example.real;\npublic final class MinimalMod {}\n')
-  await write(root, 'src/main/java/com/example/real/ModItems.java', 'package com.example.real;\npublic final class ModItems { String id = "codex_gear"; }\n')
+  await write(root, 'src/main/resources/fabric.mod.json', JSON.stringify({ schemaVersion: 1, id: 'realfabric', version: '1.0.0', entrypoints: { main: ['com.example.real.MinimalMod'], 'fabric-datagen': ['com.example.real.FabricData'] }, depends: { 'fabricloader': '>=0.16.9', minecraft: '1.21.1', 'fabric-api': '*' } }, null, 2) + '\n')
+  await write(root, 'src/main/java/com/example/real/MinimalMod.java', [
+    'package com.example.real;',
+    '',
+    'import net.fabricmc.api.ModInitializer;',
+    '',
+    'public final class MinimalMod implements ModInitializer {',
+    '  public static final String MOD_ID = "realfabric";',
+    '',
+    '  @Override',
+    '  public void onInitialize() {',
+    '    ModItems.register();',
+    '  }',
+    '}',
+    '',
+  ].join('\n'))
+  await write(root, 'src/main/java/com/example/real/ModItems.java', [
+    'package com.example.real;',
+    '',
+    'import net.minecraft.item.Item;',
+    'import net.minecraft.registry.Registries;',
+    'import net.minecraft.registry.Registry;',
+    'import net.minecraft.util.Identifier;',
+    '',
+    'public final class ModItems {',
+    '  public static final Item CODEX_GEAR = Registry.register(',
+    '    Registries.ITEM,',
+    '    Identifier.of(MinimalMod.MOD_ID, "codex_gear"),',
+    '    new Item(new Item.Settings())',
+    '  );',
+    '',
+    '  private ModItems() {',
+    '  }',
+    '',
+    '  public static void register() {',
+    '  }',
+    '}',
+    '',
+  ].join('\n'))
+  await write(root, 'src/main/java/com/example/real/FabricData.java', [
+    'package com.example.real;',
+    '',
+    'import net.fabricmc.fabric.api.datagen.v1.DataGeneratorEntrypoint;',
+    'import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;',
+    '',
+    'public final class FabricData implements DataGeneratorEntrypoint {',
+    '  @Override',
+    '  public void onInitializeDataGenerator(FabricDataGenerator fabricDataGenerator) {',
+    '  }',
+    '}',
+    '',
+  ].join('\n'))
   await write(root, 'src/main/resources/assets/realfabric/lang/en_us.json', '{"item.realfabric.codex_gear":"Codex Gear"}\n')
   await write(root, 'src/main/resources/assets/realfabric/models/item/codex_gear.json', '{"parent":"minecraft:item/generated","textures":{"layer0":"realfabric:item/codex_gear"}}\n')
   await write(root, 'src/main/resources/assets/realfabric/textures/item/codex_gear.png', VALID_PNG)
@@ -78,17 +126,49 @@ async function createFabricFixture(root: string): Promise<void> {
 async function createNeoForgeFixture(root: string): Promise<void> {
   await write(root, 'settings.gradle', 'rootProject.name = "real-neoforge-fixture"\n')
   await write(root, 'build.gradle', [
-    'plugins { id "net.neoforged.moddev" version "2.0.107" }',
+    'plugins { id "java-library"; id "net.neoforged.moddev" version "2.0.107" }',
     'neoForge { version = "21.1.77" }',
-    'tasks.register("runData") { doLast {',
-    '  def files = ["src/main/java/com/example/real/ModItems.java", "src/main/resources/assets/realneo/lang/en_us.json", "src/main/resources/assets/realneo/models/item/codex_gear.json", "src/main/resources/assets/realneo/textures/item/codex_gear.png"]',
-    '  files.each { if (!file(it).exists()) throw new GradleException("missing fixture file: ${it}") }',
-    '} }',
+    'sourceSets.main.resources { srcDir "src/generated/resources" }',
+    'runs {',
+    '  configureEach { systemProperty "neoforge.enabledGameTestNamespaces", "realneo" }',
+    '  data {',
+    '    data()',
+    '    programArguments.addAll "--mod", "realneo", "--all", "--output", file("src/generated/resources"), "--existing", file("src/main/resources")',
+    '  }',
+    '}',
     '',
   ].join('\n'))
   await write(root, 'src/main/resources/META-INF/neoforge.mods.toml', 'modLoader="javafml"\n[[mods]]\nmodId="realneo"\nversion="1.0.0"\n')
-  await write(root, 'src/main/java/com/example/real/MinimalMod.java', 'package com.example.real;\npublic final class MinimalMod {}\n')
-  await write(root, 'src/main/java/com/example/real/ModItems.java', 'package com.example.real;\nimport net.neoforged.neoforge.registries.DeferredRegister;\npublic final class ModItems { DeferredRegister.Items items; String id = "codex_gear"; }\n')
+  await write(root, 'src/main/java/com/example/real/MinimalMod.java', [
+    'package com.example.real;',
+    '',
+    'import net.neoforged.bus.api.IEventBus;',
+    'import net.neoforged.fml.common.Mod;',
+    '',
+    '@Mod("realneo")',
+    'public final class MinimalMod {',
+    '  public MinimalMod(IEventBus modEventBus) {',
+    '    ModItems.ITEMS.register(modEventBus);',
+    '  }',
+    '}',
+    '',
+  ].join('\n'))
+  await write(root, 'src/main/java/com/example/real/ModItems.java', [
+    'package com.example.real;',
+    '',
+    'import net.minecraft.world.item.Item;',
+    'import net.neoforged.neoforge.registries.DeferredHolder;',
+    'import net.neoforged.neoforge.registries.DeferredRegister;',
+    '',
+    'public final class ModItems {',
+    '  public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems("realneo");',
+    '  public static final DeferredHolder<Item, Item> CODEX_GEAR = ITEMS.registerSimpleItem("codex_gear");',
+    '',
+    '  private ModItems() {',
+    '  }',
+    '}',
+    '',
+  ].join('\n'))
   await write(root, 'src/main/resources/assets/realneo/lang/en_us.json', '{"item.realneo.codex_gear":"Codex Gear"}\n')
   await write(root, 'src/main/resources/assets/realneo/models/item/codex_gear.json', '{"parent":"minecraft:item/generated","textures":{"layer0":"realneo:item/codex_gear"}}\n')
   await write(root, 'src/main/resources/assets/realneo/textures/item/codex_gear.png', VALID_PNG)
@@ -117,7 +197,7 @@ function dependencyUnavailable(result: ReturnType<typeof spawnSync>): string | u
 
 async function runFixture(
   create: (root: string) => Promise<void>,
-  task: string,
+  tasks: readonly string[],
 ): Promise<{ result: ReturnType<typeof spawnSync>; root: string }> {
   const root = await mkdtemp(join(tmpdir(), 'dsh-mcmod-real-gradle-'))
   await create(root)
@@ -130,7 +210,7 @@ async function runFixture(
   })
   if (wrapper.status !== 0) return { result: wrapper, root }
   const command = wrapperCommand()
-  const resultInvocation = commandInvocation(command.command, [...command.args, task])
+  const resultInvocation = commandInvocation(command.command, [...command.args, ...tasks])
   const result = spawnSync(resultInvocation.command, resultInvocation.args, {
     cwd: root,
     encoding: 'utf8',
@@ -141,7 +221,7 @@ async function runFixture(
 
 describe.skipIf(skipReason !== undefined)('mcmod real Gradle fixtures', () => {
   it('builds the pinned Fabric fixture and runs its datagen task', async ({ skip }) => {
-    const { result, root } = await runFixture(createFabricFixture, 'runDatagen')
+    const { result, root } = await runFixture(createFabricFixture, ['build', 'runDatagen'])
     try {
       const unavailable = dependencyUnavailable(result)
       if (unavailable !== undefined) skip(unavailable)
@@ -152,7 +232,7 @@ describe.skipIf(skipReason !== undefined)('mcmod real Gradle fixtures', () => {
   }, 600_000)
 
   it('loads the pinned NeoForge ModDev fixture and runs runData without Fabric or Forge APIs', async ({ skip }) => {
-    const { result, root } = await runFixture(createNeoForgeFixture, 'runData')
+    const { result, root } = await runFixture(createNeoForgeFixture, ['build', 'runData'])
     try {
       const unavailable = dependencyUnavailable(result)
       if (unavailable !== undefined) skip(unavailable)
