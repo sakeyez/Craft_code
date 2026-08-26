@@ -37,6 +37,8 @@
     "test:coverage:partitioned": "tsx scripts/run-coverage-partitions.ts",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "test:e2e:mcmod:gradle": "node scripts/run-mcmod-real-gradle.mjs",
+    "benchmark:mcmod-agent": "tsx scripts/mcmod-agent-benchmark.ts",
+    "benchmark:mcmod-agent:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-mcmod-agent-benchmark.ps1",
     "test:issue-management": "node .github/issue-management/policy.test.mjs",
     "test:snapshot": "vitest run --config vitest.snapshot.config.ts",
     "test:snapshot:record": "DSH_SNAPSHOT=record vitest run --config vitest.snapshot.config.ts --update",

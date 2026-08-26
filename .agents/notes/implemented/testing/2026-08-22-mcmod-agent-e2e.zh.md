@@ -18,12 +18,15 @@ mcmod profile 已有 prompt、bundle、项目检测、资源校验和检查 runn
 
 有密钥 e2e 会在 `DEEPSEEK_API_KEY` 可用时使用真实 DeepSeek route。它断言相同的外部文件与 wrapper 结果，并检查持久化日志包含 Minecraft 工具调用。无密钥环境只跳过这个真实模型用例。
 
+`scripts/mcmod-agent-benchmark.ts` 中按需运行的重复 benchmark 会在三个随仓库保存的 NeoForge 任务上测量一个具名 agent 版本。每次重复运行都从摘要与同一个真实 MDK 基线一致的副本开始。Runner 保留生成后的项目，将持久 Session log 折叠为时间、token、重试、step、工具调用、重复读取和 build 尝试证据，并在 agent 退出后独立运行 Gradle wrapper。Markdown 和 JSON 报告把成功定义为独立 build 加全部自动静态验收检查；只能在运行时验收的项目会明确保持未验证。Windows 启动器会在 Git 之外保存本机输入，并接受明确的输出与报告打开控制，因此交互式入口和后台 Codex 控制器会走同一执行路径，又不会把 benchmark 控制暴露给被测 agent。
+
 ## 曾考虑的替代方案
 
 - **只扩展 `tool-mc-project` 单元测试**——否决，因为这些测试不会启动产品 profile，不会覆盖模型可见的工具选择，不会持久化会话，也不能证明 agent 在校验前能编辑 workspace。
 - **每次无密钥 CI 都运行真实 Fabric 或 NeoForge Gradle build**——否决，因为依赖下载和缓存状态会让 fixture 变慢、不稳定或依赖网络。本地 wiring wrapper 证明命令选择和编辑后的校验；真实项目 build 作为明确受环境控制的场景运行。
 - **使用文本占位 texture**——否决，因为静态校验器必须拒绝伪装的 PNG。无密钥 fixture 携带一个很小的有效二进制 PNG。
+- **把 agent 最终回复或它自己执行的 build 当作 benchmark 真值**——否决，因为模型可能漏做工作或错误报告成功。Benchmark 保留 transcript，但根据独立 build 和文件系统检查判定成功。
 
 ## 后果
 
-mcmod profile 现在有一个通过组装后产品入口运行的 e2e：当 profile 不再暴露 Minecraft 工具、agent 无法创建预期文件，或 `run_mc_check build` 没有到达 wrapper 时，它会失败。无密钥证明不声称 Minecraft runtime compatibility 或依赖解析能力；这些仍属于具体项目中的真实 Gradle build。
+mcmod profile 有一个通过组装后产品入口运行的 e2e：当 profile 不再暴露 Minecraft 工具、agent 无法创建预期文件，或 `run_mc_check build` 没有到达 wrapper 时，它会失败。重复 benchmark 为一个具名版本提供可比较的正确性、稳定性、耗时、token、工具使用、恢复和效率证据。静态检查与编译不能证明游戏玩法、渲染、世界重载、漏斗行为或 Dedicated Server 加载，因此报告会把这些结果保留为未验证，而不是抬高成功率。

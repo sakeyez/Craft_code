@@ -15,6 +15,7 @@ Mounting this row outside an agent scope collides with the registry's own `deplo
 | Field | Default | Meaning |
 |---|---|---|
 | `text` | required | Persona prose rendered as the `deployment:persona` section |
+| `workflowPolicy` | `false` | Append the shared `CODING_WORKFLOW_POLICY`; opt-in only and never applied to deployment-authored prompts |
 | `complete` | `false` | Restore this persona after assembly as the only system-prompt section |
 | `includeRuntimeContext` | `true` | Include dynamic runtime-context snapshots for this agent scope; false suppresses every context contribution without disabling its owning services |
 

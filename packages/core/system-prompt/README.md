@@ -4,6 +4,8 @@ English | [中文](README.zh.md)
 
 System prompt assembly registry. Plugins contribute ordered sections, tool schemas, and named variables. The loop assembles once per step and renders the result as the complete model prompt. This plugin owns the static harness identity and global deployment persona; an agent-scoped persona shadows the global default.
 
+Coding presets can opt into the exported `CODING_WORKFLOW_POLICY`; it is a single soft policy for batching independent reads, avoiding unchanged-file rereads, focused research, concentrated edits, and evidence-backed validation. It never changes an explicitly supplied deployment prompt.
+
 ## Config
 
 | Key | Default | Meaning |

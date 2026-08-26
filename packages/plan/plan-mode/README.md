@@ -10,6 +10,12 @@ Logged, per-agent plan collaboration state with deployment-owned guidance, direc
 
 `ctx.planMode.set(agent, active)` appends the standalone `plan/mode` event immediately when the agent is idle, because no in-turn pre-step runs before the next prompt. While the agent is running, it holds a pending selection for the next accepted in-turn pre-step. It returns which happened (`committed`/`queued`), a `cancelled` reversal, or a `noop`. `get(agent)` returns `{ active, pending? }`, separating the logged state used to assemble the current step from a user's mid-turn selection. Initial and continuation pre-steps both apply pending selections; a same-step request-recovery retry reuses its frozen assembly and leaves the selection pending for the next pre-step. A changed user selection contributes one plugin-sourced `user/message` notice when the last logged request header described the other state (both commit paths).
 
+## Task graph execution
+
+`ctx.planMode.execute(agent, planId, tasks, executor, options?)` runs a host-side dependency graph and records `plan/tasks`, `plan/task-status`, and `plan/end` events. Tasks are returned in their original order, while only pending tasks whose dependencies completed may start. The configured `maxParallelTasks` limit bounds each batch; tasks default to exclusive, and parallel tasks with overlapping `resources` are separated into different batches. A failed task does not cancel unrelated work, but its dependents become `blocked` and the final outcome is not successful.
+
+The executor receives a shared cancellation signal and a read-only map of completed dependency outputs. Cancellation prevents new starts and waits for already-started executors to settle; their results and all status facts remain in the returned value. Graph validation rejects empty plans, duplicate or unknown ids, duplicate dependencies, and cycles before writing the task snapshot. `foldPlanExecution(events, planId)` reconstructs durable task state without executor outputs; task events are log-only and do not enter model history.
+
 ## Model and human interactions
 
 While active, `plan:policy` renders the configured `section`. The plugin always registers `exit_plan_mode`, keeping tool schemas stable across the transition; its execute path accepts only active plan mode and leaves it only after an exact user approval through `ctx.userQuestions`.
@@ -33,9 +39,10 @@ When the composition mounts `ctx.sessionProjections` ([`@deepseek-ai/dsh-session
     section: |
       You are in plan mode. Explore and design before presenting the complete
       plan through exit_plan_mode.
+    maxParallelTasks: 10
 ```
 
-`section` is required and non-empty. Unknown keys fail at load. The package does not accept arbitrary named modes, tool filters, sandbox settings, or approval policy.
+`section` is required and non-empty. `maxParallelTasks` is an optional positive safe integer and defaults to `10`. Unknown keys fail at load. The package does not accept arbitrary named modes, tool filters, sandbox settings, or approval policy.
 
 Design: [plan-specific collaboration state](../../../.agents/notes/implemented/simplification/2026-07-22-plan-specific-collaboration-state.md).
 
@@ -91,6 +98,7 @@ Mode transitions do not change the tool catalog; plan arguments and review resul
 
 ## Known Limitations and Deferred Work
 
+- Task graph execution is host-side and does not resume an incomplete graph after process recovery; the log retains the last committed task state.
 - Plan mode guides rather than enforces; deployments that need enforced restrictions must configure sandbox and approval controls independently.
 - A selection made after the turn's final accepted pre-step is lost if the process exits before another accepted in-turn pre-step, so the UI must reapply it.
 - Forked agents inherit logged plan state, while newly spawned agents begin inactive; there is no creation-time plan option.

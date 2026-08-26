@@ -3,6 +3,7 @@ import { Context } from '@deepseek-ai/cordis'
 import SessionStore, { Session, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session'
 import * as PlanModeInvariant from '@deepseek-ai/dsh-plan-mode/invariant'
 import InvariantRegistry from '@deepseek-ai/dsh-invariants'
+import { PlanId, PlanTaskId } from '../src/types.ts'
 
 async function setup(): Promise<Context> {
   const ctx = new Context()
@@ -21,6 +22,17 @@ function emitTurnStart(ctx: Context, session: Session): void {
     type: 'turn/start', seq: 0, time: 0,
     data: { turn: 1 },
   })
+}
+
+function appendPlanEvent<T extends SessionEvent['type']>(
+  ctx: Context,
+  session: Session,
+  type: T,
+  data: Extract<SessionEvent, { type: T }>['data'],
+): void {
+  void ctx
+  const append = session.append.bind(session) as unknown as (eventType: T, eventData: typeof data) => SessionEvent
+  append(type, data)
 }
 
 describe('plan-mode stream invariants', () => {
@@ -91,5 +103,43 @@ describe('plan-mode stream invariants', () => {
     await ctx.plugin(InvariantRegistry, { enabled: true })
 
     await expect(ctx.plugin(PlanModeInvariant).then(() => undefined)).resolves.toBeUndefined()
+  })
+
+  it('accepts a complete task graph lifecycle and rejects invalid transitions', async () => {
+    const ctx = await setup()
+    const session = ctx.sessions.create()
+    const planId = PlanId('invariant-plan')
+    const taskId = PlanTaskId('task-a')
+    appendPlanEvent(ctx, session, 'plan/tasks', {
+      planId,
+      tasks: [{
+        id: taskId,
+        description: 'task a',
+        dependencies: [],
+        concurrency: 'parallel',
+        resources: [],
+        status: 'pending',
+      }],
+    })
+    appendPlanEvent(ctx, session, 'plan/task-status', { planId, taskId, status: 'running' })
+    appendPlanEvent(ctx, session, 'plan/task-status', { planId, taskId, status: 'completed' })
+    appendPlanEvent(ctx, session, 'plan/end', { planId, outcome: 'completed' })
+    expect(() => {
+      appendPlanEvent(ctx, session, 'plan/task-status', {
+        planId, taskId, status: 'failed', error: { name: 'Error', message: 'late' },
+      })
+    }).toThrow(/after plan\/end/)
+  })
+
+  it('rejects a completed plan with a non-completed task', async () => {
+    const ctx = await setup()
+    const session = ctx.sessions.create()
+    const planId = PlanId('invariant-incomplete')
+    appendPlanEvent(ctx, session, 'plan/tasks', {
+      planId,
+      tasks: [{ id: PlanTaskId('task-a'), description: 'task a', dependencies: [], status: 'pending' }],
+    })
+    expect(() => { appendPlanEvent(ctx, session, 'plan/end', { planId, outcome: 'completed' }) })
+      .toThrow(/non-completed tasks/)
   })
 })

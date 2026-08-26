@@ -28,6 +28,8 @@
 
       Load the `editing-cordis-compositions` skill before writing or changing a composition.
 
+    workflowPolicy: true
+
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
   config:

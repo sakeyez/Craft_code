@@ -12,6 +12,12 @@
 
 <a id="model-and-human-interactions"></a>
 
+## 任务图执行
+
+`ctx.planMode.execute(agent, planId, tasks, executor, options?)` 运行 host 侧的依赖任务图，并记录 `plan/tasks`、`plan/task-status` 和 `plan/end` 事件。任务按原始顺序返回，只有依赖已完成的 pending 任务才会启动。每批任务受配置的 `maxParallelTasks` 限制；任务默认独占，带有重叠 `resources` 的 parallel 任务会被拆到不同批次。一个任务失败不会取消无关任务，但其后继任务会变为 `blocked`，最终结果也不会被视为成功。
+
+executor 会收到共享取消信号以及已完成依赖输出的只读映射。取消会阻止新任务启动，并等待已启动 executor 结算；这些结果和全部状态事实都会保留在返回值中。图校验会在写入任务快照前拒绝空计划、重复或未知 ID、重复依赖和循环依赖。`foldPlanExecution(events, planId)` 可以在不包含 executor 输出的情况下重建持久任务状态；任务事件只存在于日志中，不会进入模型历史。
+
 ## 模型与人类交互
 
 激活时，`plan:policy` 会渲染已配置的 `section`。插件始终注册 `exit_plan_mode`，使工具 schema 在转换期间保持稳定；其 execute 路径只接受已激活的 plan mode，且只有通过 `ctx.userQuestions` 获得用户明确批准后才退出。
@@ -35,9 +41,10 @@ Web 客户端使用该插件提供的 `/plan` 命令；其他入口可以直接�
     section: |
       You are in plan mode. Explore and design before presenting the complete
       plan through exit_plan_mode.
+    maxParallelTasks: 10
 ```
 
-`section` 必填且非空。出现未知键时，插件会加载失败。该包不接受任意命名的 mode、工具过滤器、沙箱设置或批准策略。
+`section` 必填且非空。`maxParallelTasks` 是可选的正安全整数，默认值为 `10`。出现未知键时，插件会加载失败。该包不接受任意命名的 mode、工具过滤器、沙箱设置或批准策略。
 
 设计：[plan 专用协作状态](../../../.agents/notes/implemented/simplification/2026-07-22-plan-specific-collaboration-state.zh.md)。
 
@@ -95,6 +102,7 @@ mode 转换不改变工具目录；plan 参数与评审结果按常规方式扩�
 
 ## 已知限制与暂缓事项
 
+- 任务图执行只在 host 侧运行，进程恢复后不会继续未完成的任务图；日志会保留最后一次已提交的任务状态。
 - Plan mode 只进行引导，而不强制执行；需要强制限制的部署必须分别配置沙箱与批准控制。
 - 如果进程在另一个被接受的轮内 pre-step 之前退出，某轮最后一个被接受的 pre-step 之后作出的选择会丢失，因此 UI 必须重新应用它。
 - Fork 的 agent 会继承已记录的 plan 状态，新 spawn 的 agent 则从未激活状态开始；不存在创建时 plan 选项。

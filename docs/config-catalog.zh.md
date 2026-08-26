@@ -1513,6 +1513,8 @@ export interface Config {
    * variables. Empty text drops the section at render, matching the registry.
    */
   text: string
+  /** Append the shared coding workflow policy to this persona (default false). */
+  workflowPolicy?: boolean
   /** Make this persona the complete system prompt, suppressing every other section. */
   complete?: boolean
   /** Suppress dynamic runtime-context snapshots for this persona's agent scope. */
@@ -1533,10 +1535,12 @@ export interface Config {
 export interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
   section: string
+  /** Maximum number of conflict-free Plan tasks admitted to one batch. */
+  maxParallelTasks?: number
 }
 ```
 
-来源：[`packages/plan/plan-mode/src/index.ts:70`](../packages/plan/plan-mode/src/index.ts)
+来源：[`packages/plan/plan-mode/src/index.ts:74`](../packages/plan/plan-mode/src/index.ts)
 
 <a id="deepseek-aidsh-pwsh-local"></a>
 

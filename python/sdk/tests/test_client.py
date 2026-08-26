@@ -64,6 +64,17 @@ for line in sys.stdin:
             "params": {
                 "sessionId": params["sessionId"],
                 "event": {
+                    "type": "plan/tasks",
+                    "data": {"planId": "plan-python", "tasks": [{"id": "task-python", "description": "probe", "dependencies": [], "status": "pending"}]},
+                },
+            },
+        }), flush=True)
+        print(json.dumps({
+            "jsonrpc": "2.0",
+            "method": "session.event",
+            "params": {
+                "sessionId": params["sessionId"],
+                "event": {
                     "type": "turn/end",
                     "data": {"turn": 1, "reason": {"kind": "completed"}},
                 },
@@ -110,6 +121,7 @@ for line in sys.stdin:
     assert result.final_response == "hello from runtime"
     assert result.finish_reason == "max-tokens"
     assert result.events[-1]["type"] == "turn/end"
+    assert any(event["type"] == "plan/tasks" for event in result.events)
     dumped_env = json.loads(env_dump.read_text())
     assert dumped_env["DEEPSEEK_API_KEY"] == "env-key"
     assert dumped_env["DEEPSEEK_BASE_URL"] == "http://127.0.0.1:4321"

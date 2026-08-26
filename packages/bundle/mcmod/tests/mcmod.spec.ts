@@ -63,6 +63,7 @@ describe('dsh-mcmod bundle', () => {
         servers: {
           java: {
             command: 'jdtls',
+            optional: true,
             extensionToLanguage: { '.java': 'java' },
           },
         },

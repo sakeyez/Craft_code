@@ -3,7 +3,7 @@ import SystemPrompt, { renderPrompt } from '@deepseek-ai/dsh-system-prompt'
 import { createScope, type ScopeKey } from '@deepseek-ai/dsh-scope'
 import { describe, expect, it } from 'vitest'
 import * as Persona from '@deepseek-ai/dsh-persona'
-import { PERSONA_SECTION } from '@deepseek-ai/dsh-persona'
+import { CODING_WORKFLOW_POLICY, PERSONA_SECTION } from '@deepseek-ai/dsh-persona/src/index.ts'
 
 async function harness(deploymentPersona: string): Promise<Context> {
   const ctx = new Context()
@@ -33,6 +33,16 @@ describe('the persona row', () => {
     await scope.ctx.plugin(Persona, { text: 'preset identity' })
 
     expect(await personaText(ctx, key)).toBe('preset identity')
+    expect(await personaText(ctx)).toBe('deployment identity')
+  })
+
+  it('appends the shared workflow policy only when explicitly enabled', async () => {
+    const ctx = await harness('deployment identity')
+    const key: ScopeKey = { agent: 'a1' }
+    await createScope(ctx, key).ctx.plugin(Persona, { text: 'preset identity', workflowPolicy: true })
+
+    const text = await personaText(ctx, key)
+    expect(text).toBe(`preset identity\n\n${CODING_WORKFLOW_POLICY}`)
     expect(await personaText(ctx)).toBe('deployment identity')
   })
 

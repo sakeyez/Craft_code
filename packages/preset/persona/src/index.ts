@@ -20,9 +20,9 @@ import type {} from '@deepseek-ai/dsh-system-prompt'
 // Imported rather than restated: the registry declares the slot this row
 // replaces, and two hardcoded copies would drift into a preset whose persona
 // silently lands beside the deployment's instead of shadowing it.
-import { PERSONA_ORDER, PERSONA_SECTION } from '@deepseek-ai/dsh-system-prompt'
+import { CODING_WORKFLOW_POLICY, PERSONA_ORDER, PERSONA_SECTION } from '@deepseek-ai/dsh-system-prompt/src/index.ts'
 
-export { PERSONA_ORDER, PERSONA_SECTION }
+export { CODING_WORKFLOW_POLICY, PERSONA_ORDER, PERSONA_SECTION }
 
 /** Cordis plugin name. */
 export const name = 'persona'
@@ -38,6 +38,8 @@ export interface Config {
    * variables. Empty text drops the section at render, matching the registry.
    */
   text: string
+  /** Append the shared coding workflow policy to this persona (default false). */
+  workflowPolicy?: boolean
   /** Make this persona the complete system prompt, suppressing every other section. */
   complete?: boolean
   /** Suppress dynamic runtime-context snapshots for this persona's agent scope. */
@@ -47,6 +49,7 @@ export interface Config {
 /** Runtime schema for the persona row. */
 export const Config: z<Config> = z.object({
   text: z.string().required(),
+  workflowPolicy: z.boolean().default(false),
   complete: z.boolean().default(false),
   includeRuntimeContext: z.boolean().default(true),
 })
@@ -58,10 +61,13 @@ export const Config: z<Config> = z.object({
  * @param config - the persona text and complete-prompt policy.
  */
 export function apply(ctx: Context, config: Config): void {
+  const text = config.workflowPolicy
+    ? `${config.text}\n\n${CODING_WORKFLOW_POLICY}`
+    : config.text
   ctx.effect(() => ctx.systemPrompt.section({
     name: PERSONA_SECTION,
     order: PERSONA_ORDER,
-    text: config.text,
+    text,
     ...(config.complete ? { complete: true } : {}),
   }), 'persona.section()')
   if (!(config.includeRuntimeContext ?? true)) ctx.systemPrompt.suppressRuntimeContext()

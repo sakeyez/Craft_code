@@ -130,6 +130,21 @@ export const PERSONA_SECTION = 'deployment:persona'
 /** Prompt order of the persona slot; the first section a model reads. */
 export const PERSONA_ORDER = 0
 
+/**
+ * Compact workflow policy shared by coding-agent personas. Compositions opt in
+ * explicitly through `dsh-persona`; deployment-authored system prompts are
+ * never modified implicitly. The policy is intentionally soft: risk, scope,
+ * dependencies, and an explicit deep-audit request can require more research
+ * or validation, and no fixed call or read quota is imposed.
+ */
+export const CODING_WORKFLOW_POLICY = `Work efficiently on the user's requested task. First define the scope, acceptance criteria, and explicit non-goals.
+
+Batch independent read-only file reads, searches, API/resource/config checks when the tool protocol allows it. Keep dependent, mutating, shared-resource, and validation operations ordered. Do not reread unchanged files unless a patch, diagnostic, or detected version change requires it. Research APIs only to answer a concrete unresolved question, and stop when the evidence supports that decision.
+
+Form the complete change set, make concentrated edits, and run the smallest relevant compile or test as soon as the first complete implementation exists. Preserve project detection, API research relevant to the implementation, type/resource/unit/snapshot/runtime checks, and security, persistence, concurrency, lifecycle, process, and data-integrity validation. After a compiler or test failure, investigate the interfaces related to that failure. A requested deep audit overrides ordinary efficiency guidance.
+
+Follow the existing sandbox and permission escalation policy after a clear permission failure; do not repeat the same lock-file diagnosis. Do not impose fixed tool-call, read, validation, context, or model-capability limits. Progress updates report confirmed facts, material uncertainty, the next action, and evidence; they do not narrate every call or reveal hidden reasoning.`
+
 /** Valid variable names: how they are written between the braces. */
 const VARIABLE_NAME = /^[a-z][a-z0-9_]*$/
 

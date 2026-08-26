@@ -21,6 +21,7 @@ export {
   type FixtureTurnOptions,
   type FixtureTurnResult,
 } from './agent-turn.ts'
+export { parseEfficiencyMetrics, type EfficiencyMetricOptions, type EfficiencyMetrics, type EfficiencyTokenTotals } from './efficiency.ts'
 
 const DEFAULT_PROCESS_TIMEOUT_MS = 30_000
 
@@ -162,6 +163,8 @@ export interface LoaderSmokeResult {
   readonly stdout: string
   /** Complete stderr after clean exit. */
   readonly stderr: string
+  /** Wall-clock process duration measured from spawn through inspection. */
+  readonly durationMs: number
 }
 
 /**
@@ -174,6 +177,7 @@ export interface LoaderSmokeResult {
 export async function runLoaderSmoke(options: LoaderSmokeOptions): Promise<LoaderSmokeResult> {
   const cwd = await mkdtemp(join(tmpdir(), options.tempDirPrefix))
   const processTimeoutMs = options.processTimeoutMs ?? DEFAULT_PROCESS_TIMEOUT_MS
+  const startedAt = performance.now()
   try {
     await options.prepare?.(cwd)
     const launch = resolveExampleLaunch({
@@ -205,7 +209,7 @@ export async function runLoaderSmoke(options: LoaderSmokeOptions): Promise<Loade
       throw new Error(`${options.label} exited ${String(result.exitCode)} (expected ${expectedExitCode}). stdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
     }
     await options.inspect?.(cwd)
-    return { stdout: result.stdout, stderr: result.stderr }
+    return { stdout: result.stdout, stderr: result.stderr, durationMs: performance.now() - startedAt }
   } finally {
     await rm(cwd, { recursive: true, force: true })
   }

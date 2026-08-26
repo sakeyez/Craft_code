@@ -10,6 +10,10 @@
 
 `plan/mode`（`{ active: boolean }`）是仅记日志、整值替换的[会话事件](session.zh.md)：持久且可回放，绝不进入模型 transcript（文本记录）。`foldPlanMode(events, end?)` 返回前缀中最后一条已记录值，没有时返回 `false`：生效状态始终是会话日志的纯折叠，因此恢复、fork 与压缩（compaction）无需实时镜像即可将其复原，UI 通过 `session/event` 观察已提交的切换。完整事件声明见[持久化日志事件目录](../persistence-catalog.zh.md)。
 
+## 任务图执行
+
+`ctx.planMode.execute(agent, planId, tasks, executor, options?)` 执行 host 侧依赖任务图，并记录 `plan/tasks`、`plan/task-status` 和 `plan/end`。调度器保留输入顺序用于展示，只启动依赖已完成的任务，每批受 `maxParallelTasks` 限制，任务默认独占，并将资源键相交的 parallel 任务拆分开。`foldPlanExecution(events, planId)` 可以在不包含 executor 输出的情况下重建任务状态。
+
 ## 待生效选择与 pre-step 追加
 
 由于每个会话事件都位于轮次之内，用户选择会保持待生效状态，直到下一个被接受的轮内 pre-step 在派生请求之前追加该选择，无论该 pre-step 位于哪个轮次。选择不会强制续行，因此在某轮最后一个被接受的 pre-step 之后作出的选择会在之后的轮次追加。`set(agent, active)` 记录待生效选择（目标值与已记录或已在等待的状态相同时不做任何事），`get(agent)` 返回 `{ active: boolean; pending?: boolean }`：用于组装当前步骤的已记录状态，以及等待追加的已选状态。
@@ -23,10 +27,12 @@ agent 运行时，唯一的追加点是前置（prepend）注册的 `agent/pre-s
 interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
   section: string
+  /** Maximum number of conflict-free Plan tasks admitted to one batch. */
+  maxParallelTasks?: number
 }
 ```
 
-`section` 缺失、为空白或不是字符串，以及任何未知键，都会在插件加载时失败，而不是被忽略。计划模式激活期间，确切的 `section` 文本以 order 50 渲染为 `plan:policy` [系统提示词段落](system-prompt.zh.md)；未激活的计划模式不贡献任何文本。
+`section` 缺失、为空白或不是字符串、`maxParallelTasks` 非正，以及任何未知键，都会在插件加载时失败，而不是被忽略。`maxParallelTasks` 默认值为 `10`。计划模式激活期间，确切的 `section` 文本以 order 50 渲染为 `plan:policy` [系统提示词段落](system-prompt.zh.md)；未激活的计划模式不贡献任何文本。
 
 ## 退出工具与 `/plan` 命令
 
@@ -61,6 +67,18 @@ Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnp
  * @returns Current logged state plus a pending selection, when present.
  */
 get(agent: Agent): { active: boolean; pending?: boolean }
+
+/**
+ * Execute one dependency graph for an owning agent and persist every state transition.
+ *
+ * @param agent The agent whose session receives the task events.
+ * @param planId Stable id for this execution in the session log.
+ * @param tasks The task graph in display and scheduling order.
+ * @param executor The callback that performs one admitted task.
+ * @param options Optional cancellation signal.
+ * @returns Complete task states and the in-memory dependency outputs.
+ */
+async execute( agent: Agent, planId: PlanId, tasks: readonly PlanTaskSpec[], executor: PlanTaskExecutor, options: PlanExecutionOptions = {}, ): Promise<PlanExecutionResult>
 
 /**
  * Select whether plan mode should be active. Between turns the method

@@ -84,6 +84,16 @@ describe('DeepSeekHarness', () => {
           },
         },
       },
+      {
+        method: 'session.event',
+        params: {
+          sessionId: 'owned',
+          event: {
+            type: 'plan/tasks',
+            data: { planId: 'plan-sdk', tasks: [{ id: 'task-sdk', description: 'probe', dependencies: [], status: 'pending' }] },
+          },
+        },
+      },
       { method: 'session.status', params: { sessionId: 'owned', status: 'idle' } },
     ] as HarnessNotification[]
     let closed = false
@@ -107,8 +117,8 @@ describe('DeepSeekHarness', () => {
     const result = await new HarnessSession(harness, 'owned').run('go')
 
     expect(result.notifications.map(notification => notification.method))
-      .toEqual(['session.event', 'session.status'])
-    expect(result.events.map(event => event.type)).toEqual(['agent/inbox/spliced'])
+      .toEqual(['session.event', 'session.event', 'session.status'])
+    expect(result.events.map(event => event.type)).toEqual(['agent/inbox/spliced', 'plan/tasks'])
     expect(closed).toBe(true)
   })
 

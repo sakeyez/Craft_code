@@ -11,7 +11,8 @@ import UserQuestionService, {
 } from '@deepseek-ai/dsh-user-questions'
 import CommandRuntime from '@deepseek-ai/dsh-commands'
 import { CodeRuntime, type CodeRunRequest, type CodeRunResult } from '@deepseek-ai/dsh-code-runtime'
-import PlanModeController, { EXIT_PLAN_MODE, foldPlanMode, resolveConfig } from '../src/index.ts'
+import PlanModeController, { EXIT_PLAN_MODE, PlanId, PlanTaskId, foldPlanExecution, foldPlanMode, resolveConfig } from '../src/index.ts'
+import type { PlanTaskSpec } from '../src/types.ts'
 import type { PlanModeConfig } from '../src/index.ts'
 
 const TEST_PLAN_SECTION = 'Test plan mode instructions.'
@@ -165,13 +166,20 @@ describe('resolveConfig', () => {
   it('returns a detached plan config', () => {
     const config = { section: TEST_PLAN_SECTION }
     const resolved = resolveConfig(config)
-    expect(resolved).toEqual(config)
+    expect(resolved).toEqual({ ...config, maxParallelTasks: 10 })
     expect(resolved).not.toBe(config)
   })
 
   it('rejects fields outside the plan policy config', () => {
     expect(() => resolveConfig({ section: TEST_PLAN_SECTION, tools: ['read'] } as unknown as PlanModeConfig))
-      .toThrow('unknown key(s) tools — config is { section }')
+      .toThrow('unknown key(s) tools — config is { section, maxParallelTasks? }')
+  })
+
+  it('rejects an invalid task concurrency limit', () => {
+    expect(() => resolveConfig({ section: TEST_PLAN_SECTION, maxParallelTasks: 0 }))
+      .toThrow('positive safe integer `maxParallelTasks`')
+    expect(() => resolveConfig({ section: TEST_PLAN_SECTION, maxParallelTasks: 1.5 }))
+      .toThrow('positive safe integer `maxParallelTasks`')
   })
 })
 
@@ -1093,6 +1101,69 @@ describe('exit_plan_mode', () => {
       title: 'Plan review',
       content,
     })
+  })
+})
+
+describe('Plan task execution', () => {
+  const task = (id: string, dependencies: string[] = []): PlanTaskSpec => ({
+    id: PlanTaskId(id),
+    description: `task ${id}`,
+    dependencies: dependencies.map(PlanTaskId),
+    concurrency: 'parallel',
+  })
+
+  it('persists task transitions and folds them in original order', async () => {
+    const ctx = await setup({ section: TEST_PLAN_SECTION, maxParallelTasks: 2 })
+    const agent = await agentWithSession(ctx, 'task-plan')
+    const result = await ctx.planMode.execute(
+      agent,
+      PlanId('plan-1'),
+      [task('a'), task('b'), task('c', ['a', 'b'])],
+      async current => String(current.id),
+    )
+    expect(result.outcome).toBe('completed')
+    expect(result.tasks.map(item => item.status)).toEqual(['completed', 'completed', 'completed'])
+    expect(foldPlanExecution(agent.session.events, PlanId('plan-1'))).toMatchObject({
+      planId: PlanId('plan-1'),
+      outcome: 'completed',
+      tasks: [
+        { id: PlanTaskId('a'), status: 'completed' },
+        { id: PlanTaskId('b'), status: 'completed' },
+        { id: PlanTaskId('c'), status: 'completed' },
+      ],
+    })
+    expect(agent.session.events.filter(event => event.type === 'plan/tasks')).toHaveLength(1)
+    expect(agent.session.events.filter(event => event.type === 'plan/end')).toHaveLength(1)
+  })
+
+  it('records failed and blocked tasks without cancelling unrelated work', async () => {
+    const ctx = await setup({ section: TEST_PLAN_SECTION, maxParallelTasks: 3 })
+    const agent = await agentWithSession(ctx, 'task-failure')
+    const result = await ctx.planMode.execute(
+      agent,
+      PlanId('plan-failure'),
+      [task('bad'), task('blocked', ['bad']), task('ok')],
+      async (current) => {
+        if (current.id === PlanTaskId('bad')) throw new Error('bad task')
+        return 'ok'
+      },
+    )
+    expect(result.outcome).toBe('failed')
+    expect(result.tasks.map(item => item.status)).toEqual(['failed', 'blocked', 'completed'])
+    expect(foldPlanExecution(agent.session.events, PlanId('plan-failure'))?.tasks[1]?.error)
+      .toMatchObject({ name: 'PlanDependencyError', code: 'PLAN_BLOCKED' })
+  })
+
+  it('does not write a task graph when validation fails', async () => {
+    const ctx = await setup()
+    const agent = await agentWithSession(ctx, 'task-invalid')
+    await expect(ctx.planMode.execute(
+      agent,
+      PlanId('invalid'),
+      [task('a', ['missing'])],
+      async () => 'never',
+    )).rejects.toThrow('unknown dependency')
+    expect(agent.session.events.some(event => event.type === 'plan/tasks')).toBe(false)
   })
 })
 

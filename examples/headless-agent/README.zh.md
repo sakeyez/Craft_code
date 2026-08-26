@@ -33,6 +33,26 @@ pnpm exec vitest run examples/headless-agent/tests/mcmod.e2e.ts --config vitest.
 pnpm run test:e2e:mcmod:gradle
 ```
 
+### 重复运行的真实 agent benchmark
+
+[Benchmark runner](../../scripts/mcmod-agent-benchmark.ts) 使用 [`scripts/fixtures/mcmod-agent-benchmark-prompts.md`](../../scripts/fixtures/mcmod-agent-benchmark-prompts.md) 中随仓库保存的三段提示词，以及一个真实且已经能够构建的 Minecraft 1.21.1 / NeoForge 21.1 / Java 21 MDK 目录。它为每次重复运行复制未改动的 MDK，按顺序让 `dsh --profile mcmod` 对每题至少运行三次，然后在 agent 外部独立执行 `gradlew build` 和静态验收检查。每次运行的 workspace 都会保留，并在全新的输出目录中写入 `report.md` 和 `report.json`。
+
+在 Windows 上，用 VS Code 打开 [`scripts/start-mcmod-agent-benchmark.ps1`](../../scripts/start-mcmod-agent-benchmark.ps1)，选择“运行 PowerShell 文件”。首次运行会询问未改动的 MDK 目录与 agent 版本标签，将其保存到 Git 忽略的 `scripts/mcmod-agent-benchmark.local.json`，然后开始测试；以后运行会复用这些设置，并在完成后打开 `report.md`。使用 `-ResetSettings` 运行启动器可以替换已保存的值。
+
+Codex 控制器或其他宿主自动化可以传入 `-Fixture`、`-AgentLabel`、`-OutputPath` 和 `-NoOpenReport`，在后台启动同一个 launcher 并监控其输出目录。这些控制器输入不会进入被测 agent 的工具集或提示词。
+
+启动前需要在仓库根目录 `.env` 或当前环境中设置 `DEEPSEEK_API_KEY`。MDK 基线必须包含 Gradle wrapper，并且在 benchmark 开始前已经能够成功 build；依赖下载和缓存属于 benchmark 宿主环境，runner 不会修复它们。
+
+```sh
+pnpm run benchmark:mcmod-agent -- \
+  --fixture /absolute/path/to/pristine-neoforge-mdk \
+  --runs 3 \
+  --agent-patch /absolute/path/to/model-version.patch.yml \
+  --agent-label deepseek-v4-flash-<revision>
+```
+
+除非同时传入 `--allow-dirty` 和明确的 `--agent-label`，否则 runner 会拒绝有未提交改动的 harness 源码树；Windows 启动器会在需要时从已保存设置中提供两者。可重复传入的 `--agent-patch` 会固定模型或组合覆盖，并记录到报告。`--prompt-source` 可以替换仓库自带提示词；可选的 `--prices prices.json` 接受每百万 token 的 `input`、`output`、`cache` 和 `reasoning` 价格，不传时仍会记录 token 数量，成本显示为 `N/A`。自动成功要求独立 build 和全部自动验收检查通过。游戏玩法、世界重载、渲染、漏斗行为和 Dedicated Server 加载在 GameTest 或人工运行提供证据之前保持 `unverified`；报告不会把这些项目计为通过。
+
 宿主缺少 Gradle 或依赖解析不可用时，测试会打印缺失前置条件并 skip；不会把 wiring wrapper 的通过当成 Gradle 构建。
 
 ## E2B POC overlay

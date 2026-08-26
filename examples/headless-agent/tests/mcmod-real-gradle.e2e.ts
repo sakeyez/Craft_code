@@ -127,18 +127,20 @@ async function createNeoForgeFixture(root: string): Promise<void> {
   await write(root, 'settings.gradle', 'rootProject.name = "real-neoforge-fixture"\n')
   await write(root, 'build.gradle', [
     'plugins { id "java-library"; id "net.neoforged.moddev" version "2.0.107" }',
-    'neoForge { version = "21.1.77" }',
-    'sourceSets.main.resources { srcDir "src/generated/resources" }',
-    'runs {',
-    '  configureEach { systemProperty "neoforge.enabledGameTestNamespaces", "realneo" }',
-    '  data {',
-    '    data()',
-    '    programArguments.addAll "--mod", "realneo", "--all", "--output", file("src/generated/resources"), "--existing", file("src/main/resources")',
+    'neoForge {',
+    '  version = "21.1.77"',
+    '  runs {',
+    '    configureEach { systemProperty "neoforge.enabledGameTestNamespaces", "realneo" }',
+    '    data {',
+    '      data()',
+    '      programArguments.addAll "--mod", "realneo", "--all", "--output", file("src/generated/resources").absolutePath, "--existing", file("src/main/resources").absolutePath',
+    '    }',
     '  }',
     '}',
+    'sourceSets.main.resources { srcDir "src/generated/resources" }',
     '',
   ].join('\n'))
-  await write(root, 'src/main/resources/META-INF/neoforge.mods.toml', 'modLoader="javafml"\n[[mods]]\nmodId="realneo"\nversion="1.0.0"\n')
+  await write(root, 'src/main/resources/META-INF/neoforge.mods.toml', 'modLoader="javafml"\nloaderVersion="[4,)"\nlicense="MIT"\n[[mods]]\nmodId="realneo"\nversion="1.0.0"\n')
   await write(root, 'src/main/java/com/example/real/MinimalMod.java', [
     'package com.example.real;',
     '',

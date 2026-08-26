@@ -10,6 +10,10 @@ Source: [`packages/plan/plan-mode/src/index.ts`](../../packages/plan/plan-mode/s
 
 `plan/mode` (`{ active: boolean }`) is a log-only, whole-value-replace [session event](session.md): durable and replayable, never in the model transcript. `foldPlanMode(events, end?)` returns the last logged value in the prefix, or `false` when there is none — the state in force is always a pure fold of the session log, so resume, fork, and compaction recover it with no live mirror, and UIs observe committed flips through `session/event`. The complete event declaration is in the [persistence log event catalog](../persistence-catalog.md).
 
+## Task graph execution
+
+`ctx.planMode.execute(agent, planId, tasks, executor, options?)` executes a host-side dependency graph and records `plan/tasks`, `plan/task-status`, and `plan/end`. The scheduler preserves input order for display, starts only tasks whose dependencies completed, bounds each batch by `maxParallelTasks`, defaults tasks to exclusive, and separates parallel tasks with intersecting resource keys. `foldPlanExecution(events, planId)` reconstructs task states without executor outputs.
+
 ## Pending selections and the pre-step append
 
 Because every session event is turn-enclosed, a user selection remains pending until the next accepted in-turn pre-step appends it before request derivation, in whichever turn that occurs. A selection never forces continuation, so one made after a turn's final accepted pre-step is appended in a later turn. `set(agent, active)` records the pending selection (a no-op when the target equals the logged-or-already-pending state), and `get(agent)` returns `{ active: boolean; pending?: boolean }`: the logged state used to assemble the current step plus the selected state waiting to be appended.
@@ -23,10 +27,12 @@ The only append point while an agent is running is a prepended `agent/pre-step` 
 interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
   section: string
+  /** Maximum number of conflict-free Plan tasks admitted to one batch. */
+  maxParallelTasks?: number
 }
 ```
 
-A missing, blank, or non-string `section` and any unknown key fail at plugin load rather than being ignored. While plan mode is active, the exact `section` text renders as the `plan:policy` [system-prompt section](system-prompt.md) at order 50; inactive plan mode contributes no text.
+A missing, blank, or non-string `section`, a non-positive `maxParallelTasks`, and any unknown key fail at plugin load rather than being ignored. `maxParallelTasks` defaults to `10`. While plan mode is active, the exact `section` text renders as the `plan:policy` [system-prompt section](system-prompt.md) at order 50; inactive plan mode contributes no text.
 
 ## The exit tool and the `/plan` command
 
@@ -61,6 +67,18 @@ Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnp
  * @returns Current logged state plus a pending selection, when present.
  */
 get(agent: Agent): { active: boolean; pending?: boolean }
+
+/**
+ * Execute one dependency graph for an owning agent and persist every state transition.
+ *
+ * @param agent The agent whose session receives the task events.
+ * @param planId Stable id for this execution in the session log.
+ * @param tasks The task graph in display and scheduling order.
+ * @param executor The callback that performs one admitted task.
+ * @param options Optional cancellation signal.
+ * @returns Complete task states and the in-memory dependency outputs.
+ */
+async execute( agent: Agent, planId: PlanId, tasks: readonly PlanTaskSpec[], executor: PlanTaskExecutor, options: PlanExecutionOptions = {}, ): Promise<PlanExecutionResult>
 
 /**
  * Select whether plan mode should be active. Between turns the method

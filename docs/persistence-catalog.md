@@ -518,20 +518,49 @@ Source: [`packages/interaction/permission-presets/src/index.ts:50`](../packages/
 
 ### `plan/*`
 
+<a id="planend--log-only"></a>
+
+#### `plan/end` — log-only
+
+```ts persistence-catalog
+/** Terminal outcome for one task graph. */
+'plan/end': { planId: PlanId; outcome: PlanExecutionOutcome }
+```
+
+Source: [`packages/plan/plan-mode/src/types.ts:122`](../packages/plan/plan-mode/src/types.ts)
+
 <a id="planmode--log-only"></a>
 
 #### `plan/mode` — log-only
 
 ```ts persistence-catalog
-/**
- * Whether plan mode is in force from this point on: log-only, non-surface,
- * whole-value replace. The last `plan/mode` wins; a log with none folds to
- * inactive through {@link foldPlanMode}.
- */
+/** Whether plan mode is in force from this point on. */
 'plan/mode': { active: boolean }
 ```
 
-Source: [`packages/plan/plan-mode/src/index.ts:53`](../packages/plan/plan-mode/src/index.ts)
+Source: [`packages/plan/plan-mode/src/types.ts:116`](../packages/plan/plan-mode/src/types.ts)
+
+<a id="plantask-status--log-only"></a>
+
+#### `plan/task-status` — log-only
+
+```ts persistence-catalog
+/** One task status transition, in original task order per scheduler commit. */
+'plan/task-status': { planId: PlanId; taskId: PlanTaskId; status: PlanTaskStatus; error?: PlanTaskError }
+```
+
+Source: [`packages/plan/plan-mode/src/types.ts:120`](../packages/plan/plan-mode/src/types.ts)
+
+<a id="plantasks--log-only"></a>
+
+#### `plan/tasks` — log-only
+
+```ts persistence-catalog
+/** Full task graph snapshot written before any task starts. */
+'plan/tasks': { planId: PlanId; tasks: PlanTask[] }
+```
+
+Source: [`packages/plan/plan-mode/src/types.ts:118`](../packages/plan/plan-mode/src/types.ts)
 
 ### `request/*`
 

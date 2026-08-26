@@ -37,22 +37,28 @@ import type { CommandId } from '@deepseek-ai/dsh-commands'
 // Type-only: resolves ctx.sessionProjections for the optional unit child.
 import type {} from '@deepseek-ai/dsh-session-projection'
 import type { PlanProjection } from './types.ts'
+import {
+  executePlanTasks,
+  PlanGraphError,
+  validatePlanTasks,
+} from './scheduler.ts'
+import type {
+  PlanExecutionResult,
+  PlanExecutionOptions,
+  PlanExecutionSnapshot,
+  PlanId,
+  PlanTask,
+  PlanTaskExecutor,
+  PlanTaskSpec,
+} from './types.ts'
+
+export { executePlanTasks, PlanGraphError, validatePlanTasks } from './scheduler.ts'
 // The `plan` projection-key declaration lives in src/types.ts (its one home);
 // this re-export projects the type face onto the package root AND keeps the
 // module edge in the emitted index.d.ts, so aggregate programs consuming the
 // declarations still receive the SessionProjectionMap merge.
 export type * from './types.ts'
-
-declare module '@deepseek-ai/dsh-session/types' {
-  interface SessionEventMap {
-    /**
-     * Whether plan mode is in force from this point on: log-only, non-surface,
-     * whole-value replace. The last `plan/mode` wins; a log with none folds to
-     * inactive through {@link foldPlanMode}.
-     */
-    'plan/mode': { active: boolean }
-  }
-}
+export { PlanId, PlanTaskId } from './types.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -70,7 +76,12 @@ export const EXIT_PLAN_MODE = 'exit_plan_mode'
 export interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
   section: string
+  /** Maximum number of conflict-free Plan tasks admitted to one batch. */
+  maxParallelTasks?: number
 }
+
+/** Default maximum Plan task concurrency. */
+export const DEFAULT_MAX_PARALLEL_TASKS = 10
 
 /** The review question's id, echoed in the answer this tool reads. */
 const REVIEW_ID = 'plan-review'
@@ -103,7 +114,7 @@ function firstHeading(plan: string): string | undefined {
  * @param config Raw plugin config.
  * @returns A detached validated config.
  */
-export function resolveConfig(config: PlanModeConfig): PlanModeConfig {
+export function resolveConfig(config: PlanModeConfig): Required<PlanModeConfig> {
   const section = (config as Partial<PlanModeConfig>).section
   if (typeof section !== 'string') {
     throw new Error('PlanModeConfig needs a string `section`')
@@ -111,11 +122,54 @@ export function resolveConfig(config: PlanModeConfig): PlanModeConfig {
   if (section.trim() === '') {
     throw new Error('PlanModeConfig needs a non-empty `section`')
   }
-  const unknown = Object.keys(config).filter(key => key !== 'section')
-  if (unknown.length > 0) {
-    throw new Error(`PlanModeConfig has unknown key(s) ${unknown.join(', ')} — config is { section }`)
+  const maxParallelTasks = (config as Partial<PlanModeConfig>).maxParallelTasks
+    ?? DEFAULT_MAX_PARALLEL_TASKS
+  if (!Number.isSafeInteger(maxParallelTasks) || maxParallelTasks < 1) {
+    throw new Error('PlanModeConfig needs a positive safe integer `maxParallelTasks`')
   }
-  return { section }
+  const unknown = Object.keys(config).filter(key => key !== 'section' && key !== 'maxParallelTasks')
+  if (unknown.length > 0) {
+    throw new Error(`PlanModeConfig has unknown key(s) ${unknown.join(', ')} — config is { section, maxParallelTasks? }`)
+  }
+  return { section, maxParallelTasks }
+}
+
+/**
+ * Fold one persisted task graph from the session log.
+ * @param events - durable session events in sequence order.
+ * @param planId - graph identity to fold.
+ * @returns the latest graph snapshot, or undefined before its declaration.
+ */
+export function foldPlanExecution(
+  events: readonly SessionEvent[],
+  planId: PlanId,
+): PlanExecutionSnapshot | undefined {
+  let snapshot: PlanExecutionSnapshot | undefined
+  for (const event of events) {
+    if (event.type === 'plan/tasks' && event.data.planId === planId) {
+      snapshot = {
+        planId,
+        tasks: event.data.tasks.map(task => ({
+          ...task,
+          dependencies: [...task.dependencies],
+          ...(task.resources === undefined ? {} : { resources: [...task.resources] }),
+        })),
+      }
+      continue
+    }
+    if (snapshot === undefined) continue
+    if (event.type === 'plan/task-status' && event.data.planId === planId) {
+      const task = snapshot.tasks.find(candidate => candidate.id === event.data.taskId)
+      if (task !== undefined) {
+        task.status = event.data.status
+        if (event.data.error === undefined) delete task.error
+        else task.error = { ...event.data.error }
+      }
+    } else if (event.type === 'plan/end' && event.data.planId === planId) {
+      snapshot.outcome = event.data.outcome
+    }
+  }
+  return snapshot
 }
 
 /**
@@ -205,6 +259,9 @@ export class PlanModeController extends Service {
   /** Validated deployment-owned guidance. */
   private readonly section: string
 
+  /** Validated task batch limit. */
+  private readonly maxParallelTasks: number
+
   /**
    * Latest selection per session awaiting the next accepted in-turn pre-step.
    * `narrate` is true for user selections and false for the exit tool, whose
@@ -214,7 +271,9 @@ export class PlanModeController extends Service {
 
   constructor(ctx: Context, config: PlanModeConfig = { section: '' }) {
     super(ctx, 'planMode')
-    this.section = resolveConfig(config).section
+    const resolved = resolveConfig(config)
+    this.section = resolved.section
+    this.maxParallelTasks = resolved.maxParallelTasks
     let disposed = false
     // Pre-step is outside Session.append publication, so it can append the
     // log-only mode event inside an open turn without re-entering the session.
@@ -441,6 +500,53 @@ export class PlanModeController extends Service {
     const active = foldPlanMode(agent.session.events)
     const pending = this.pendingIntents.get(agent.session)
     return pending === undefined ? { active } : { active, pending: pending.active }
+  }
+
+  /**
+   * Execute one dependency graph for an owning agent and persist every state transition.
+   *
+   * @param agent The agent whose session receives the task events.
+   * @param planId Stable id for this execution in the session log.
+   * @param tasks The task graph in display and scheduling order.
+   * @param executor The callback that performs one admitted task.
+   * @param options Optional cancellation signal.
+   * @returns Complete task states and the in-memory dependency outputs.
+   */
+  async execute(
+    agent: Agent,
+    planId: PlanId,
+    tasks: readonly PlanTaskSpec[],
+    executor: PlanTaskExecutor,
+    options: PlanExecutionOptions = {},
+  ): Promise<PlanExecutionResult> {
+    if (planId === '') throw new PlanGraphError('Plan id must be non-empty')
+    if (foldPlanExecution(agent.session.events, planId) !== undefined) {
+      throw new PlanGraphError(`Plan id ${String(planId)} already exists in the session`)
+    }
+    const normalized = validatePlanTasks(tasks)
+    const initialTasks: PlanTask[] = normalized.map(task => ({
+      ...task,
+      status: 'pending',
+    }))
+    agent.session.append('plan/tasks', { planId, tasks: initialTasks })
+    const signal = options.signal ?? new AbortController().signal
+    const result = await executePlanTasks(
+      planId,
+      normalized,
+      executor,
+      this.maxParallelTasks,
+      signal,
+      (task, status, error) => {
+        agent.session.append('plan/task-status', {
+          planId,
+          taskId: task.id,
+          status,
+          ...(error === undefined ? {} : { error }),
+        })
+      },
+    )
+    agent.session.append('plan/end', { planId, outcome: result.outcome })
+    return result
   }
 
   /**

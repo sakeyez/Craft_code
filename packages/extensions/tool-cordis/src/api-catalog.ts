@@ -1127,6 +1127,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'Current logged state plus a pending selection, when present.',
       },
       {
+        signature: 'async execute( agent: Agent, planId: PlanId, tasks: readonly PlanTaskSpec[], executor: PlanTaskExecutor, options: PlanExecutionOptions = {}, ): Promise<PlanExecutionResult>',
+        description: 'Execute one dependency graph for an owning agent and persist every state transition.',
+        parameters: [{ name: 'agent', description: 'The agent whose session receives the task events.' }, { name: 'planId', description: 'Stable id for this execution in the session log.' }, { name: 'tasks', description: 'The task graph in display and scheduling order.' }, { name: 'executor', description: 'The callback that performs one admitted task.' }, { name: 'options', description: 'Optional cancellation signal.' }],
+        returns: 'Complete task states and the in-memory dependency outputs.',
+      },
+      {
         signature: 'set(agent: Agent, active: boolean): \'committed\' | \'queued\' | \'cancelled\' | \'noop\'',
         description: 'Select whether plan mode should be active. Between turns the method appends the change immediately because no in-turn pre-step will run until another prompt starts a turn. The open-turn fold is the idle signal: agent status stays `running` through post-turn checkpointing, when no further in-turn pre-step runs. During an open turn the selection remains pending until the next accepted in-turn pre-step. Repeated selection of the current or already-pending state is a no-op.',
         parameters: [{ name: 'agent', description: 'The agent to switch.' }, { name: 'active', description: 'Whether plan mode should be active.' }],
@@ -3808,6 +3814,54 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'PermissionSelect',
     declaration: 'export interface PermissionSelect {\n    options: PresetOption[];\n    currentValue: string;\n}',
+  },
+  {
+    name: 'PlanExecutionOptions',
+    declaration: 'export interface PlanExecutionOptions {\n    signal?: AbortSignal;\n}',
+  },
+  {
+    name: 'PlanExecutionOutcome',
+    declaration: 'export type PlanExecutionOutcome = \'completed\' | \'failed\' | \'cancelled\';',
+  },
+  {
+    name: 'PlanExecutionResult',
+    declaration: 'export interface PlanExecutionResult {\n    planId: PlanId;\n    outcome: PlanExecutionOutcome;\n    tasks: PlanTask[];\n    outputs: ReadonlyMap<PlanTaskId, unknown>;\n}',
+  },
+  {
+    name: 'PlanId',
+    declaration: 'export type PlanId = Branded<\'PlanId\'>;',
+  },
+  {
+    name: 'PlanTask',
+    declaration: 'export interface PlanTask extends PlanTaskSpec {\n    status: PlanTaskStatus;\n    error?: PlanTaskError;\n}',
+  },
+  {
+    name: 'PlanTaskConcurrency',
+    declaration: 'export type PlanTaskConcurrency = \'parallel\' | \'exclusive\';',
+  },
+  {
+    name: 'PlanTaskError',
+    declaration: 'export interface PlanTaskError {\n    name: string;\n    message: string;\n    code?: string;\n}',
+  },
+  {
+    name: 'PlanTaskExecutionContext',
+    declaration: 'export interface PlanTaskExecutionContext {\n    signal: AbortSignal;\n    dependencies: ReadonlyMap<PlanTaskId, unknown>;\n}',
+  },
+  {
+    name: 'PlanTaskExecutor',
+    declaration: 'export type PlanTaskExecutor = (task: PlanTaskSpec, context: PlanTaskExecutionContext) => Promise<unknown>;',
+  },
+  {
+    name: 'PlanTaskId',
+    declaration: 'export type PlanTaskId = Branded<\'PlanTaskId\'>;',
+  },
+  {
+    name: 'PlanTaskSpec',
+    declaration: 'export interface PlanTaskSpec {\n    id: PlanTaskId;\n    description: string;\n    dependencies: PlanTaskId[];\n    concurrency?: PlanTaskConcurrency;\n    resources?: string[];\n}',
+  },
+  {
+    name: 'PlanTaskStatus',
+    declaration: 'export type PlanTaskStatus = \'pending\' | \'running\' | \'completed\' | \'failed\' | \'blocked\';',
   },
   {
     name: 'PostToolDecision',

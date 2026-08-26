@@ -520,20 +520,49 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 ### `plan/*`
 
+<a id="planend--log-only"></a>
+
+#### `plan/end` — log-only
+
+```ts persistence-catalog
+/** Terminal outcome for one task graph. */
+'plan/end': { planId: PlanId; outcome: PlanExecutionOutcome }
+```
+
+来源：[`packages/plan/plan-mode/src/types.ts:114`](../packages/plan/plan-mode/src/types.ts)
+
 <a id="planmode--log-only"></a>
 
 #### `plan/mode` — log-only
 
 ```ts persistence-catalog
-/**
- * Whether plan mode is in force from this point on: log-only, non-surface,
- * whole-value replace. The last `plan/mode` wins; a log with none folds to
- * inactive through {@link foldPlanMode}.
- */
+/** Whether plan mode is in force from this point on. */
 'plan/mode': { active: boolean }
 ```
 
-来源：[`packages/plan/plan-mode/src/index.ts:53`](../packages/plan/plan-mode/src/index.ts)
+来源：[`packages/plan/plan-mode/src/types.ts:108`](../packages/plan/plan-mode/src/types.ts)
+
+<a id="plantask-status--log-only"></a>
+
+#### `plan/task-status` — log-only
+
+```ts persistence-catalog
+/** One task status transition, in original task order per scheduler commit. */
+'plan/task-status': { planId: PlanId; taskId: PlanTaskId; status: PlanTaskStatus; error?: PlanTaskError }
+```
+
+来源：[`packages/plan/plan-mode/src/types.ts:112`](../packages/plan/plan-mode/src/types.ts)
+
+<a id="plantasks--log-only"></a>
+
+#### `plan/tasks` — log-only
+
+```ts persistence-catalog
+/** Full task graph snapshot written before any task starts. */
+'plan/tasks': { planId: PlanId; tasks: PlanTask[] }
+```
+
+来源：[`packages/plan/plan-mode/src/types.ts:110`](../packages/plan/plan-mode/src/types.ts)
 
 ### `request/*`
 

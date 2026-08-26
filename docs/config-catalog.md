@@ -1511,6 +1511,8 @@ export interface Config {
    * variables. Empty text drops the section at render, matching the registry.
    */
   text: string
+  /** Append the shared coding workflow policy to this persona (default false). */
+  workflowPolicy?: boolean
   /** Make this persona the complete system prompt, suppressing every other section. */
   complete?: boolean
   /** Suppress dynamic runtime-context snapshots for this persona's agent scope. */
@@ -1531,10 +1533,12 @@ Requires: `tools` · `systemPrompt`
 export interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
   section: string
+  /** Maximum number of conflict-free Plan tasks admitted to one batch. */
+  maxParallelTasks?: number
 }
 ```
 
-Source: [`packages/plan/plan-mode/src/index.ts:70`](../packages/plan/plan-mode/src/index.ts)
+Source: [`packages/plan/plan-mode/src/index.ts:76`](../packages/plan/plan-mode/src/index.ts)
 
 <a id="deepseek-aidsh-pwsh-local"></a>
 
@@ -2410,7 +2414,7 @@ export interface Config {
 }
 ```
 
-Source: [`packages/core/system-prompt/src/index.ts:186`](../packages/core/system-prompt/src/index.ts)
+Source: [`packages/core/system-prompt/src/index.ts:201`](../packages/core/system-prompt/src/index.ts)
 
 <a id="deepseek-aidsh-terminal-bash"></a>
 

@@ -35,5 +35,5 @@ No direct request-prefix contribution. The selected preset decides the prompt pr
 ## Known Limitations and Deferred Work
 
 - **Web profile surface** — this bundle expects the Web agent-preset roster supplied by `@deepseek-ai/dsh-web-app`; it is not the headless task surface.
-- **JDTLS is deployment-owned** — the default command name must resolve on the host PATH. Project-specific or machine-specific JDTLS launch details belong in the profile's own overlay.
+- **JDTLS is deployment-owned and optional** — the default command name is resolved on the host PATH. If it is unavailable, the Web profile reports a diagnostic and disables only Java LSP; project-specific or machine-specific launch details belong in the profile's own overlay.
 - **No optional tool expansion** — the patch does not enable web search, workflows, Ralph, subagents, background job controls, todo, or goal tools.

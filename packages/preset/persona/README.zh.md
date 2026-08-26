@@ -15,6 +15,7 @@
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `text` | 必填 | 作为 `deployment:persona` 段落渲染的人设文本 |
+| `workflowPolicy` | `false` | 追加共享的 `CODING_WORKFLOW_POLICY`；仅显式启用，绝不会自动追加到部署人设 |
 | `complete` | `false` | 组装后将此人设恢复为唯一的系统提示词段落 |
 | `includeRuntimeContext` | `true` | 是否为此 agent 作用域包含动态 runtime-context 快照；false 会抑制所有上下文贡献，但不禁用拥有它们的服务 |
 

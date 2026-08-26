@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/testing/2026-08-22-mcmod-agent-e2e.md
-2026-08-22-mcmod-agent-e2e.md: 406b0343b1347c39bc540d712cfcb033101e2fe0
-2026-08-22-mcmod-agent-e2e.zh.md: 9de92623d67977dc21800d75a9a48893c543520e
+2026-08-22-mcmod-agent-e2e.md: 04193e5a78d90489bb304a5f806fb2a4d93d1a50
+2026-08-22-mcmod-agent-e2e.zh.md: 2397396862698a1f8f5027f5be934942f7eb325e
