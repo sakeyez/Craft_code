@@ -10,6 +10,10 @@
 
 全局样式表归 `ui-theme/src/styles/` 所有。组件样式以 CSS Modules 形式放在组件旁。当某个值属于该组件的布局或呈现约定时，组件可以定义局部自定义属性；共享颜色、排版、层级和动效属于主题包。
 
+## Minecraft 工作台皮肤
+
+`minecraft.css` 在同一套 `--dsw-*` 别名之上为所有 Web 客户端叠加 Minecraft 工作台配色。它提供石材/深板岩表面、苔藓/矿石/金锭/红石状态、无像素阴影的平面物品栏边框和本地标题字体。大部分界面保持方形；未选择 Workspace 的输入框入口使用 `8px` 圆角与更浅的 l2 边框，以区别其选择器入口语义。功能组件只消费这些别名，并保留现有 slot、会话、输入框、焦点和响应式契约；设计理由与验证证据记录在 [Minecraft 工作台 Agent Note](../.agents/notes/implemented/process/2026-08-26-minecraft-web-workbench-theme.zh.md)。
+
 ## 组件规则
 
 - 使用 CSS Modules 和 `clsx`；不得添加组件库或 Tailwind。

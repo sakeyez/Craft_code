@@ -20,7 +20,7 @@
 - button "Settings":
   - img
   - text: Settings
-- text: Into the Unknown Preview
+- text: Craft a new idea
 - button "Choose workspace":
   - img
   - text: workspace
@@ -29,7 +29,7 @@
   - img
   - text: Standard mode
   - img
-- textbox "Describe what you want to build"
+- textbox "Describe what you want to craft"
 - button "Commands":
   - img
 - tooltip "Commands"

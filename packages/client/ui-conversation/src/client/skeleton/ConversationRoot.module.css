@@ -368,3 +368,28 @@
 .root[data-phase='settling'] .composerSeat {
   visibility: hidden;
 }
+
+.root {
+  background-color: var(--dsw-alias-bg-base);
+  background-image: linear-gradient(90deg, var(--dsh-mc-grid) 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+
+.header {
+  padding-top: 14px;
+  border-bottom: 2px solid var(--dsw-alias-border-l2);
+}
+
+.crumbCurrent,
+.tabActive {
+  font-family: 'Press Start 2P', var(--ds-font-family-code);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.tabActive::after {
+  height: 3px;
+  border-radius: 0;
+  background: var(--dsh-mc-moss);
+}

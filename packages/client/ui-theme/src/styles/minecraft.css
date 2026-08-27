@@ -1,0 +1,188 @@
+/* Minecraft workbench skin: presentation-only overrides shared by every
+ * browser client. The semantic tokens stay in design-platform.css; this sheet
+ * supplies the world palette and the hard-edged inventory vocabulary. */
+
+@font-face {
+  font-family: 'Press Start 2P';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/PressStart2P-Regular.ttf') format('truetype');
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  --dsh-mc-stone-light: #e6e9e3;
+  --dsh-mc-stone-mid: #c6ccc3;
+  --dsh-mc-stone-dark: #78847c;
+  --dsh-mc-ink: #1d2924;
+  --dsh-mc-moss: #4d8b43;
+  --dsh-mc-moss-dark: #356c34;
+  --dsh-mc-ore: #168ca0;
+  --dsh-mc-gold: #b9822d;
+  --dsh-mc-redstone: #c94a42;
+  --dsh-mc-on-accent: #fff;
+  --dsh-mc-ore-ink: #102127;
+  --dsh-mc-grid: rgb(255 255 255 / 2%);
+  --dsh-mc-highlight: rgb(255 255 255 / 8%);
+  --dsh-mc-shadow: rgb(0 0 0 / 30%);
+  --dsw-alias-bg-base: var(--dsh-mc-stone-light);
+  --dsw-alias-bg-layer-1: #f2f4ef;
+  --dsw-alias-bg-layer-2: #dce2d9;
+  --dsw-alias-bg-layer-3: #cbd3ca;
+  --dsw-alias-bg-overlay: #eef1eb;
+  --dsw-alias-border-l1: rgb(29 41 36 / 16%);
+  --dsw-alias-border-l2: rgb(29 41 36 / 28%);
+  --dsw-alias-border-l3: rgb(29 41 36 / 42%);
+  --dsw-alias-border-l4: rgb(29 41 36 / 60%);
+  --dsw-alias-label-primary: var(--dsh-mc-ink);
+  --dsw-alias-label-secondary: #42534a;
+  --dsw-alias-label-tertiary: #66766d;
+  --dsw-alias-label-caption: #718078;
+  --dsw-alias-state-business-primary: var(--dsh-mc-moss);
+  --dsw-alias-state-business-tertiary: #d7e7d1;
+  --dsw-alias-button-info-fill: var(--dsh-mc-ore);
+  --dsw-alias-button-info-hover: #0f7184;
+  --dsw-alias-state-success-primary: var(--dsh-mc-moss);
+  --dsw-alias-state-warn-primary: var(--dsh-mc-gold);
+  --dsw-alias-state-warn-label: #8a5b17;
+  --dsw-alias-state-error-primary: var(--dsh-mc-redstone);
+  --dsw-specific-sidebar-fill: #d4dbd1;
+  --dsw-specific-input-major: #f5f7f2;
+  --dsw-specific-selector: #c0c9bf;
+  --dsw-shadow-lv1: none;
+  --dsw-shadow-lv2: none;
+  --dsw-shadow-lv3: none;
+}
+
+body[data-ds-dark-theme] {
+  color-scheme: dark;
+  --dsh-mc-stone-light: #252d35;
+  --dsh-mc-stone-mid: #39454d;
+  --dsh-mc-stone-dark: #6d7b80;
+  --dsh-mc-ink: #e6eee8;
+  --dsh-mc-moss: #6baf52;
+  --dsh-mc-moss-dark: #477c3c;
+  --dsh-mc-ore: #5cd6e8;
+  --dsh-mc-gold: #d3a34a;
+  --dsh-mc-redstone: #e05d52;
+  --dsh-mc-on-accent: #102127;
+  --dsh-mc-ore-ink: #102127;
+  --dsh-mc-grid: rgb(255 255 255 / 3%);
+  --dsh-mc-highlight: rgb(255 255 255 / 8%);
+  --dsh-mc-shadow: rgb(0 0 0 / 46%);
+  --dsw-alias-bg-base: #11151a;
+  --dsw-alias-bg-layer-1: #1b2229;
+  --dsw-alias-bg-layer-2: #252d35;
+  --dsw-alias-bg-layer-3: #303b43;
+  --dsw-alias-bg-overlay: #202930;
+  --dsw-alias-border-l1: rgb(230 238 232 / 14%);
+  --dsw-alias-border-l2: rgb(230 238 232 / 24%);
+  --dsw-alias-border-l3: rgb(230 238 232 / 38%);
+  --dsw-alias-border-l4: rgb(230 238 232 / 58%);
+  --dsw-alias-label-primary: var(--dsh-mc-ink);
+  --dsw-alias-label-secondary: #b5c3ba;
+  --dsw-alias-label-tertiary: #8d9d94;
+  --dsw-alias-label-caption: #75867d;
+  --dsw-alias-state-business-primary: var(--dsh-mc-moss);
+  --dsw-alias-state-business-tertiary: #2a4b32;
+  --dsw-alias-button-info-fill: var(--dsh-mc-ore);
+  --dsw-alias-button-info-hover: #8ae5f1;
+  --dsw-alias-state-success-primary: var(--dsh-mc-moss);
+  --dsw-alias-state-warn-primary: var(--dsh-mc-gold);
+  --dsw-alias-state-warn-label: #e5b961;
+  --dsw-alias-state-error-primary: var(--dsh-mc-redstone);
+  --dsw-specific-sidebar-fill: #171e24;
+  --dsw-specific-input-major: #1d262d;
+  --dsw-specific-selector: #35434b;
+  --dsw-shadow-lv1: none;
+  --dsw-shadow-lv2: none;
+  --dsw-shadow-lv3: none;
+}
+
+html,
+body {
+  background-color: var(--dsw-alias-bg-base);
+}
+
+body {
+  background-image:
+    linear-gradient(90deg, rgb(255 255 255 / 2%) 1px, transparent 1px),
+    linear-gradient(rgb(255 255 255 / 2%) 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+
+button,
+input,
+select,
+textarea {
+  border-radius: 2px;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--dsh-mc-gold);
+  outline-offset: 2px;
+}
+
+/* Shared native surfaces. CSS-module classes retain their local names in the
+ * shipped selector, so these attribute selectors cover cards without coupling
+ * the skin to generated hashes. */
+[class*='_card'],
+[class*='_panel'],
+[class*='_dialog'],
+[class*='_menu'] {
+  border-radius: 2px !important;
+  border-color: var(--dsw-alias-border-l2);
+  box-shadow: var(--dsw-shadow-lv2);
+}
+
+[class*='_rowCard'],
+[class*='_setupCard'],
+[class*='_modelEntry'] {
+  background: var(--dsw-alias-bg-layer-1);
+  border-left: 3px solid var(--dsh-mc-moss);
+}
+
+[class*='_code'],
+pre,
+code {
+  border-radius: 2px;
+}
+
+[class*='_primary'] {
+  border-radius: 2px !important;
+  box-shadow: none;
+}
+
+[class*='_newSession'] {
+  border-radius: 2px !important;
+  box-shadow: none;
+}
+
+[class*='_primary']:active,
+button:active:not([class*='_newSession']) {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+[class*='_newSession']:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

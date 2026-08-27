@@ -71,9 +71,9 @@ describe('official browser-brand plugin', () => {
     name.unmount()
 
     const mark = render(<OfficialBrandMark size={34} className="hero-mark" />)
-    expect(mark.container.querySelector('svg')?.getAttribute('width')).toBe('34')
-    expect(mark.container.querySelector('svg')?.getAttribute('class')).toBe('hero-mark')
+    expect(mark.container.querySelector('img')?.getAttribute('width')).toBe('34')
+    expect(mark.container.querySelector('img')?.getAttribute('class')).toBe('hero-mark')
     mark.rerender(<OfficialBrandMark size={24} />)
-    expect(mark.container.querySelector('svg')?.getAttribute('width')).toBe('24')
+    expect(mark.container.querySelector('img')?.getAttribute('width')).toBe('24')
   })
 })

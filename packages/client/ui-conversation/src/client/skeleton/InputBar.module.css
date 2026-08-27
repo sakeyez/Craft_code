@@ -67,27 +67,19 @@
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
 }
 
-/* No-workspace trigger state: dashed l4 stroke marks the card as a pick-a-
-   workspace affordance rather than a live composer; hover answers in the
-   business blue to invite the click. Native `dashed` has a fixed browser
-   pattern, so the stroke is an ::after overlay: theme-token background masked
-   by an SVG dash ring (stroke-width 2 centered on the box edge = 1px visible
-   inside), which keeps the 22px radius and both themes. */
+/* The no-workspace trigger clips its inert controls to the card border. Live
+   composers keep overflow visible because their menus extend past this box. */
 .cardWorkspaceTrigger {
-  border-color: transparent;
+  overflow: hidden;
   cursor: pointer;
+  transition: border-color 100ms ease;
 }
 
-.cardWorkspaceTrigger::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: 22px;
-  background: var(--dsw-alias-border-l4);
-  transition: background-color 100ms ease;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='none' rx='22' ry='22' stroke='black' stroke-width='2' stroke-dasharray='4 4'/%3E%3C/svg%3E");
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='none' rx='22' ry='22' stroke='black' stroke-width='2' stroke-dasharray='4 4'/%3E%3C/svg%3E");
-  pointer-events: none;
+/* This picker affordance is deliberately softer than the square inventory
+   chrome applied by the Minecraft theme. */
+.card.cardWorkspaceTrigger {
+  border-color: var(--dsw-alias-border-l2);
+  border-radius: 8px !important;
 }
 
 /* Disabled toolbar controls neither receive nor swallow clicks in the trigger
@@ -97,8 +89,8 @@
   pointer-events: none;
 }
 
-.cardWorkspaceTrigger:hover::after {
-  background: var(--dsw-alias-state-business-primary);
+.card.cardWorkspaceTrigger:hover {
+  border-color: var(--dsw-alias-state-business-primary);
 }
 
 .accessory {
@@ -257,10 +249,10 @@
   pointer-events: none;
 }
 
-/* Hero (centered empty-state) keeps the 2-line floor (figma min-h 52 = ~2 × 24
-   line + 4pt); the docked composer collapses to the content height. */
+/* The blank-session hero reserves a three-line draft floor; the docked
+   composer collapses to the content height. */
 .hero .mirror {
-  min-height: 52px;
+  min-height: 78px;
 }
 
 /* Toolbar: attach + Plan + Read-only on the left; model + send on the right
@@ -382,13 +374,12 @@
   background: var(--dsw-alias-button-info-fill);
   /* Static white, not the foreground token: the arrow stays white on the blue
      fill in both themes (design 34:10465). */
-  color: #fff;
+  color: var(--dsh-mc-on-accent);
   cursor: pointer;
   transition: background-color 100ms ease;
-  /* Opts out of the row's 2px downward shift (.row top pad): the send circle
-     keeps its original seat while the smaller chips sit lower. Transform, not
-     margin, so flex centering math is untouched. */
-  transform: translateY(-2px);
+  /* Keep the send circle visually aligned with the lower chip row. Transform,
+     not margin, preserves the flex geometry and hit area. */
+  transform: translateY(-1px);
 }
 
 .primary:hover:not(:disabled) {
@@ -470,4 +461,55 @@
   text-decoration: line-through;
   opacity: 0.7;
   color: var(--dsw-alias-state-error-primary);
+}
+
+/* Inventory hotbar treatment. The text stack and scroll mechanics above are
+ * intentionally untouched; only the chrome and state colors change. */
+.card {
+  border-width: 2px;
+  border-radius: 2px;
+  background: var(--dsw-specific-input-major);
+}
+
+.notice {
+  border-radius: 2px;
+  border-left: 3px solid var(--dsh-mc-gold);
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.row {
+  gap: 8px;
+  border-top: 2px solid var(--dsw-alias-border-l1);
+  background: color-mix(in srgb, var(--dsh-mc-shadow) 12%, transparent);
+}
+
+.add,
+.select {
+  border: 2px solid var(--dsw-alias-border-l2);
+  border-radius: 2px;
+  background-color: var(--dsw-specific-selector);
+  padding: 0;
+}
+
+.select {
+  padding-left: 10px;
+}
+
+.add:hover:not(:disabled),
+.select:hover:not(:disabled) {
+  background-color: var(--dsh-mc-gold);
+  color: var(--dsh-mc-on-accent);
+}
+
+.primary {
+  border: 2px solid color-mix(in srgb, var(--dsh-mc-ore) 68%, var(--dsh-mc-ink) 32%);
+  border-radius: 2px;
+  background: var(--dsw-specific-selector);
+  color: var(--dsw-alias-label-primary);
+  transform: translateY(1px);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--dsh-mc-gold);
+  color: var(--dsh-mc-on-accent);
 }

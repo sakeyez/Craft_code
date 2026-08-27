@@ -72,4 +72,8 @@ describe('SidebarRoot.module.css', () => {
     expect(declarations('.fallbackBrandName')?.get('font-size')).toBe('17px')
     expect(declarations('.fallbackBrandName')?.get('white-space')).toBe('nowrap')
   })
+
+  it('keeps the Minecraft new-session action borderless', () => {
+    expect(css).toMatch(/\.root \.newSession\s*\{[^}]*\bborder:\s*none;/s)
+  })
 })

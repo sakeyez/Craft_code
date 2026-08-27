@@ -10,6 +10,10 @@ This reference defines styling ownership and component rules for browser client 
 
 Global style sheets belong in `ui-theme/src/styles/`. Component styles live beside their component as CSS Modules. A component may define a local custom property when its value is part of that component's layout or presentation contract; shared colors, typography, elevation, and motion belong to the theme package.
 
+## Minecraft workbench skin
+
+The `minecraft.css` sheet layers the Minecraft workbench palette over the same `--dsw-*` aliases for every Web client. It supplies stone/deepslate surfaces, moss/ore/gold/redstone states, flat inventory chrome without pixel shadows, and the local display font. Most chrome stays square; the no-Workspace composer trigger uses an 8px radius and a lighter l2 border to distinguish the picker affordance. Feature CSS consumes these aliases and keeps the existing slot, session, composer, focus, and responsive contracts; the rationale and verification evidence live in the [Minecraft workbench Agent Note](../.agents/notes/implemented/process/2026-08-26-minecraft-web-workbench-theme.md).
+
 ## Component rules
 
 - Use CSS Modules and `clsx`; do not add a component library or Tailwind.

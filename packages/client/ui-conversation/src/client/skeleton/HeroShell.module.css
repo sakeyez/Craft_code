@@ -1,4 +1,4 @@
-/* NEW SESSION hero (figma Input_Bottom 75:8208): fish + title, workspace chip
+/* NEW SESSION hero (figma Input_Bottom 75:8208): project mark + title, workspace chip
    above the shared InputBar card. The input itself is InputBar — only stack
    geometry and the chip live here. */
 
@@ -23,12 +23,10 @@
   overflow: visible;
 }
 
-/* figma 34:10411: fish + title, gap 10, centered; 26/32 wt500. The preview
-   badge is a product addition outside that source: a mono superscript pill
-   riding the title's top-right. */
+/* figma 34:10411: fish + title, gap 10, centered; 26/32 wt500. */
 .headline {
   display: grid;
-  grid-template-columns: 34px auto auto;
+  grid-template-columns: 34px auto;
   column-gap: 10px;
   align-items: center;
   justify-content: center;
@@ -43,24 +41,6 @@
   grid-column: 2;
 }
 
-.previewBadge {
-  grid-row: 1;
-  grid-column: 3;
-  align-self: start;
-  margin-top: 2px;
-  margin-left: -3px;
-  padding: 1px 7px 0;
-  border: 1px solid var(--dsw-alias-interactive-bg-hover);
-  border-radius: 24px;
-  background: var(--dsw-alias-state-business-tertiary);
-  color: var(--dsw-alias-label-primary-bluish);
-  font-family: var(--ds-font-family-code);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
 /* Keep hover detection on a stationary box while the mark moves within it. */
 .fishHitbox {
   grid-row: 1;
@@ -70,7 +50,7 @@
   justify-content: center;
 }
 
-/* Keep the hero mark in the same primary ink as its headline. */
+/* The host-owned transform preserves the mark's hover motion. */
 .fish {
   color: var(--dsw-alias-label-primary);
   transform-origin: 50% 60%;
@@ -204,4 +184,18 @@
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-state-error-primary);
+}
+
+.workspace {
+  min-height: 30px;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.workspace:not(:disabled):hover,
+.workspace[aria-expanded='true'] {
+  background: var(--dsh-mc-moss);
+  color: var(--dsh-mc-on-accent);
 }

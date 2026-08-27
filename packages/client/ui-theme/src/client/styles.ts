@@ -1,6 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import base from '../styles/base.css?inline'
 import designPlatform from '../styles/design-platform.css?inline'
+import minecraft from '../styles/minecraft.css?inline'
 import scrollbar from '../styles/scrollbar.css?inline'
 import gradientShadowText from '../styles/gradient-shadow-text.css?inline'
 import shiki from '../styles/shiki.css?inline'
@@ -13,6 +14,7 @@ const STYLES = [
   ['scrollbar.css', scrollbar],
   ['gradient-shadow-text.css', gradientShadowText],
   ['shiki.css', shiki],
+  ['minecraft.css', minecraft],
 ] as const
 
 /**
