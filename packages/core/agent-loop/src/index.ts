@@ -7,6 +7,8 @@
 
 import { Context, FiberState, Service } from '@deepseek-ai/cordis'
 import { randomUUID } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import z from '@deepseek-ai/schemastery'
 import { emitAgentEvent } from '@deepseek-ai/dsh-agent'
 import type {
@@ -35,6 +37,38 @@ const INACTIVE_STATES: ReadonlySet<FiberState> = new Set([
   FiberState.DISPOSED,
   FiberState.FAILED,
 ])
+
+interface ProjectSettingsFile {
+  systemPrompt?: unknown
+  prerequisites?: unknown
+}
+
+/**
+ * Read the small project-local settings file without scanning referenced roots.
+ * @param cwd - Current session project directory.
+ * @returns Project prompt text, or an empty string when settings are absent or invalid.
+ */
+export function projectSettingsText(cwd: string | undefined): string {
+  if (cwd === undefined) return ''
+  const file = join(cwd, '.dsh', 'project.yaml')
+  if (!existsSync(file)) return ''
+  try {
+    const parsed = JSON.parse(readFileSync(file, 'utf8')) as ProjectSettingsFile
+    const lines: string[] = []
+    if (typeof parsed.systemPrompt === 'string' && parsed.systemPrompt.trim() !== '') lines.push(parsed.systemPrompt.trim())
+    if (Array.isArray(parsed.prerequisites)) {
+      const references = parsed.prerequisites.filter((item): item is { name: string; path: string } => (
+        typeof item === 'object' && item !== null
+        && typeof (item as { name?: unknown }).name === 'string'
+        && typeof (item as { path?: unknown }).path === 'string'
+      ))
+      if (references.length > 0) lines.push(`Restricted prerequisite references (inspect only when needed):\n${references.map(item => `- ${item.name}: ${item.path}`).join('\n')}`)
+    }
+    return lines.join('\n\n')
+  } catch {
+    return ''
+  }
+}
 
 /** Factory-level ownership: live agent teardowns plus config startup work. */
 class FactoryOwnership {
@@ -547,6 +581,11 @@ export class AgentLoop extends Service implements AgentFactory {
     }
     try {
       const agent = machine = new ReactLoopAgent(loopCtx, id, options, session)
+      agent.ctx.systemPrompt.section({
+        name: 'project:settings',
+        order: 10,
+        text: () => projectSettingsText(session.header.cwd),
+      })
       machineReady.resolve()
       assertLive()
 

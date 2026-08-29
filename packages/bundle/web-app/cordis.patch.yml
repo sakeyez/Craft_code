@@ -188,6 +188,11 @@
     - id: ui-layout
       name: '@deepseek-ai/dsh-client-ui-layout'
 
+    # Electron-only menu dialogs and command feedback; inert without the
+    # preload bridge in an ordinary browser.
+    - id: ui-desktop-menu
+      name: '@deepseek-ai/dsh-client-ui-desktop-menu'
+
     - id: ui-renderer
       name: '@deepseek-ai/dsh-client-ui-renderer'
 

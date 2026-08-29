@@ -1,0 +1,40 @@
+{
+  "name": "@deepseek-ai/dsh-desktop",
+  "description": "Electron development shell supervising the existing dsh web application",
+  "version": "0.1.1-rc.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "apps/desktop"
+  },
+  "type": "module",
+  "main": "lib/main.js",
+  "files": [
+    "lib"
+  ],
+  "build": {
+    "appId": "ai.deepseek.craftcode",
+    "productName": "CraftCode",
+    "win": {
+      "icon": "src/CraftCode.ico"
+    },
+    "linux": {
+      "icon": "src/CraftCode.ico"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node -e \"require('node:fs').copyFileSync('src/preload.cjs','lib/preload.cjs'); require('node:fs').copyFileSync('src/CraftCode.ico','lib/CraftCode.ico')\"",
+    "dev": "pnpm run build && electron .",
+    "icon:generate": "node scripts/generate-icon.mjs"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "electron": "43.4.0",
+    "sharp": "^0.35.3",
+    "typescript": "^6.0.3"
+  }
+}

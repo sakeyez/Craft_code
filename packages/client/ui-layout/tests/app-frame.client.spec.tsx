@@ -96,8 +96,10 @@ function mountFrame() {
 }
 
 function tracks(frame: HTMLElement): number[] {
-  const m = /^(\d+)px minmax\(0, 1fr\) (\d+)px$/.exec(frame.style.gridTemplateColumns)
-  if (m === null) throw new Error(`unexpected template: ${frame.style.gridTemplateColumns}`)
+  const body = frame.querySelector<HTMLElement>('[data-shell-body]')
+  if (body === null) throw new Error('missing shell body')
+  const m = /^(\d+)px minmax\(0, 1fr\) (\d+)px$/.exec(body.style.gridTemplateColumns)
+  if (m === null) throw new Error(`unexpected template: ${body.style.gridTemplateColumns}`)
   return [Number(m[1]), Number(m[2])]
 }
 
@@ -137,6 +139,13 @@ afterEach(() => {
 })
 
 describe('AppFrame', () => {
+  it('keeps optional top chrome separate from the three-column body', () => {
+    const { frame, slotCalls } = mountFrame()
+    expect(frame.querySelector('[data-shell-topbar]')).toBeTruthy()
+    expect(frame.querySelector('[data-shell-body]')).toBeTruthy()
+    expect(slotCalls.find(call => call.key === 'shell.topbar')?.props).toEqual({})
+  })
+
   it('renders three tracks from store state', () => {
     const { frame } = mountFrame()
     expect(tracks(frame)).toEqual([280, 0])
