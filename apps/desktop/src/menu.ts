@@ -1,7 +1,7 @@
 import type { MenuItemConstructorOptions } from 'electron'
 
 export const DESKTOP_MENU_ACTIONS = [
-  'project:new', 'project:export-jar', 'project:settings',
+  'project:new', 'project:export-jar', 'project:toggle-game', 'project:settings',
   'editor:find-current', 'editor:find-project',
   'git:status', 'git:diff', 'git:log', 'git:branch', 'git:commit', 'git:push', 'git:pull',
   'help:docs', 'help:sponsor',
@@ -19,9 +19,12 @@ export const DESKTOP_MENU_ITEM_IDS: Readonly<Record<DesktopMenuId, string>> = Ob
   help: 'desktop-menu-help',
 })
 
+export const DESKTOP_GAME_MENU_ITEM_ID = 'desktop-menu-project-game'
+
 export interface DesktopMenuOpenRequest {
   menu: DesktopMenuId
   anchor: { x: number; y: number }
+  cwd?: string
 }
 
 export function isDesktopMenuAction(value: unknown): value is DesktopMenuAction {
@@ -44,7 +47,22 @@ export function parseDesktopMenuOpenRequest(
   if (typeof x !== 'number' || typeof y !== 'number'
     || !Number.isSafeInteger(x) || !Number.isSafeInteger(y)
     || x < 0 || y < 0 || x > bounds.width || y > bounds.height) return undefined
-  return { menu: value.menu, anchor: { x, y } }
+  const cwd = 'cwd' in value ? value.cwd : undefined
+  if (cwd !== undefined && typeof cwd !== 'string') return undefined
+  return { menu: value.menu, anchor: { x, y }, ...(cwd === undefined ? {} : { cwd }) }
+}
+
+export type DesktopGameMenuState = 'unavailable' | 'idle' | 'starting' | 'running' | 'stopping'
+
+/** Derive the native menu label and availability from the current project's game process. */
+export function desktopGameMenuPresentation(state: DesktopGameMenuState): { label: string; enabled: boolean } {
+  switch (state) {
+    case 'unavailable': return { label: '启动游戏', enabled: false }
+    case 'idle': return { label: '启动游戏', enabled: true }
+    case 'starting': return { label: '正在启动…', enabled: false }
+    case 'running': return { label: '停止游戏', enabled: true }
+    case 'stopping': return { label: '正在停止…', enabled: false }
+  }
 }
 
 /** Apply both sender identity and payload validation at the IPC boundary. */
@@ -78,6 +96,7 @@ export function desktopMenuTemplate(
       submenu: [
         sendItem('新建', 'project:new', 'Ctrl+N'),
         sendItem('导出 JAR', 'project:export-jar'),
+        { id: DESKTOP_GAME_MENU_ITEM_ID, ...sendItem('启动游戏', 'project:toggle-game') },
         { type: 'separator' },
         sendItem('项目设置', 'project:settings'),
       ],

@@ -30,7 +30,9 @@ const MENUS: readonly { id: DesktopMenuId; label: string }[] = [
 ]
 
 /** Theme-aware top-level controls backed by Electron's native submenus. */
-export function DesktopMenuBar({ openMenu, windowControls }: DesktopMenuBarProps) {
+export function DesktopMenuBar({ useSessions, openMenu, windowControls }: DesktopMenuBarProps) {
+  const sessions = useSessions(value => value)
+  const cwd = sessions.current === undefined ? undefined : sessions.byId[sessions.current]?.cwd
   const buttons = useRef<Array<HTMLButtonElement | null>>([])
   const [focusIndex, setFocusIndex] = useState(0)
   const [expanded, setExpanded] = useState<DesktopMenuId>()
@@ -65,14 +67,14 @@ export function DesktopMenuBar({ openMenu, windowControls }: DesktopMenuBarProps
     setFocusIndex(index)
     setExpanded(menu)
     try {
-      await openMenu(menu, { x: Math.round(rect.left), y: Math.round(rect.bottom) })
+      await openMenu(menu, { x: Math.round(rect.left), y: Math.round(rect.bottom) }, cwd)
     } catch {
       // The native side owns diagnostics; the renderer only restores UI state.
     } finally {
       setExpanded(undefined)
       buttons.current[index]?.focus()
     }
-  }, [expanded, openMenu])
+  }, [cwd, expanded, openMenu])
 
   const onKeyDown = useCallback((event: KeyboardEvent<HTMLButtonElement>, menu: DesktopMenuId, index: number): void => {
     switch (event.key) {

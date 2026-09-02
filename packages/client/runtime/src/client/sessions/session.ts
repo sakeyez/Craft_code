@@ -2,7 +2,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import type { AttachmentIdType, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import type { GameAnnotation, SessionEvent } from '@deepseek-ai/dsh-session/types'
 import type {
   HistoryEntry, IApiClient, MessageId, MuxFrame, PromptContentPart, QueueAction, RpcError,
   RpcId, RpcResponse, RpcResult, SessionId, SubagentAddress, ToolEventView,
@@ -101,6 +101,7 @@ export class Session implements SessionFace {
   private removed = false
   private promptError: PromptError | null = null
   private lastAgentError: string | null = null
+  private annotations: GameAnnotation[] = []
   /** Live events buffered during open/resync and stitched by sequence once history lands. */
   private liveBuffer: { event: SessionEvent; view: ToolEventView | undefined }[] = []
   /** Gap repair in flight; live events detour to the buffer until the tail page lands. */
@@ -331,6 +332,21 @@ export class Session implements SessionFace {
       this.notifier.markDirty()
     }
     return result
+  }
+
+  /** Replace and persist the session's complete game annotation snapshot. */
+  async annotate(annotations: GameAnnotation[]): Promise<RpcResult<{ accepted: true; seq: number }>> {
+    try {
+      if (this.api.sessions.annotate === undefined) return { ok: false, error: { code: 'internal', message: 'annotations unavailable', details: {} } }
+      const result = (await this.api.sessions.annotate({ sessionId: this.sessionId, annotations })).result
+      if (result.ok) {
+        this.annotations = annotations.map(annotation => ({ ...annotation, sessionId: this.sessionId }))
+        this.notifier.markDirty()
+      }
+      return result
+    } catch (error) {
+      return transportError(error)
+    }
   }
 
   /**
@@ -659,6 +675,8 @@ export class Session implements SessionFace {
     this.views = entries.map(e => e.view)
     this.baseSeq = this.events[0]?.seq ?? 0
     this.hasMore = hasMore
+    const annotationEvent = [...this.events].reverse().find(event => event.type === 'game/annotations')
+    this.annotations = annotationEvent?.type === 'game/annotations' ? annotationEvent.data.annotations : []
     if (this.events.some(event => event.type === 'turn/start')) this.firstPromptPendingTurn = false
     this.conversation.replaceWindow(entries.map(conversationInput), hasMore)
     if (projections !== undefined) this.projections.seed(projections)
@@ -674,6 +692,7 @@ export class Session implements SessionFace {
     if (tailSeq !== null && event.seq <= tailSeq) return 'none' // replay overlap, drop
     this.events.push(event)
     this.views.push(view)
+    if (event.type === 'game/annotations') this.annotations = event.data.annotations
     if (event.type === 'turn/start') this.firstPromptPendingTurn = false
     const queueChanged = this.queueMirror.acceptDurable(event)
     const publication = this.conversation.append({ event, view })
@@ -768,6 +787,7 @@ export class Session implements SessionFace {
       promptError: this.promptError,
       blank: this.blankBit,
       lastAgentError: this.lastAgentError,
+      annotations: this.annotations,
     }
   }
 

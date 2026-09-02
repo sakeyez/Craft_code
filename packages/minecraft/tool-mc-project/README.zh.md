@@ -25,6 +25,10 @@
 
 所有字段都必须是正整数。只读工具不执行 Gradle task 或 shell 命令。
 
+## Library API
+
+`./gradle-tasks` 导出为已经持有 Gradle 执行权的可信调用方提供纯 `parseGradleTaskNames()` 与 `runtimeTaskCandidates()` 辅助方法。解析要求完整且未截断的纯文本 task 输出；运行任务选择只返回约定且未限定的客户端候选（`runClient`、`runGame`）或服务器候选（`runServer`、`runDedicatedServer`），歧义由调用方处理。
+
 ## Model Experience
 
 ### Minecraft Project Detection

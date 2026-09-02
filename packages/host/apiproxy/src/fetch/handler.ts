@@ -24,6 +24,7 @@ import {
   sessionListRequestSchema,
   sessionModelsRequestSchema,
   sessionPromptRequestSchema,
+  sessionAnnotateRequestSchema,
   sessionRenameRequestSchema,
   sessionSearchRequestSchema,
   sessionSelectModelRequestSchema,
@@ -95,6 +96,11 @@ const UNARY_ROUTES: UnaryRoutes = {
   'session.models': { schema: sessionModelsRequestSchema, invoke: (api, r) => api.sessions.models(r) },
   'session.selectModel': { schema: sessionSelectModelRequestSchema, invoke: (api, r) => api.sessions.selectModel(r) },
   'session.rename': { schema: sessionRenameRequestSchema, invoke: (api, r) => api.sessions.rename(r) },
+  'session.annotate': { schema: sessionAnnotateRequestSchema, invoke: (api, r) => {
+    return api.sessions.annotate === undefined
+      ? Promise.resolve({ rpcId: r.rpcId, result: { ok: false, error: { code: 'internal', message: 'annotations unavailable', details: {} } } })
+      : api.sessions.annotate(r)
+  } },
   'session.fork': { schema: sessionForkRequestSchema, invoke: (api, r) => api.sessions.fork(r) },
   'session.prompt': { schema: sessionPromptRequestSchema, invoke: (api, r) => api.sessions.prompt(r) },
   'session.attachment': { schema: sessionAttachmentRequestSchema, invoke: (api, r) => api.sessions.attachment(r) },

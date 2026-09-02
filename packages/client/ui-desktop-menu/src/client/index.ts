@@ -6,7 +6,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import { DesktopMenuBar } from './DesktopMenuBar.tsx'
 import { DesktopMenuSurface } from './DesktopMenuSurface.tsx'
 import type {
-  DesktopMenuBarInjected, DesktopMenuEvent, DesktopMenuInjected, ProjectSearchItem,
+  DesktopGameEvent, DesktopMenuBarInjected, DesktopMenuEvent, DesktopMenuInjected, ProjectSearchItem,
 } from './contract.ts'
 
 /** Required services for the overlay registration and project/session actions. */
@@ -31,9 +31,46 @@ export function apply(ctx: ClientContext): void {
     for (const listener of listeners) listener()
   }), 'ui-desktop-menu: preload menu subscription')
 
+  let gameSnapshot: DesktopGameEvent = { sequence: 0 }
+  const gameListeners = new Set<() => void>()
+  const desktopGame: HostObservable<DesktopGameEvent> = {
+    getSnapshot: () => gameSnapshot,
+    subscribe(listener) {
+      gameListeners.add(listener)
+      return () => { gameListeners.delete(listener) }
+    },
+  }
+  ctx.effect(() => bridge.onGameEvent((event) => {
+    gameSnapshot = { sequence: gameSnapshot.sequence + 1, ...event }
+    for (const listener of gameListeners) listener()
+    window.dispatchEvent(new CustomEvent('craftcode:game-state', {
+      detail: {
+        status: event.result.ok ? 'disconnected' : 'failed',
+        gameName: 'Minecraft',
+        error: event.result.message,
+      },
+    }))
+  }), 'ui-desktop-menu: preload game subscription')
+  if (bridge.onGameSurfaceState !== undefined) {
+    const onGameSurfaceState = bridge.onGameSurfaceState
+    ctx.effect(() => onGameSurfaceState((state) => {
+      window.dispatchEvent(new CustomEvent('craftcode:game-state', { detail: state }))
+    }), 'ui-desktop-menu: preload game surface subscription')
+  }
+  ctx.effect(() => {
+    const reconnect = (): void => {
+      const cwd = ctx.sessions.list.getSnapshot().current
+      const path = cwd === undefined ? undefined : ctx.sessions.list.getSnapshot().byId[cwd]?.cwd
+      if (path !== undefined && bridge.reconnectGameSurface !== undefined) void bridge.reconnectGameSurface(path)
+    }
+    window.addEventListener('craftcode:game-reconnect', reconnect)
+    return () => { window.removeEventListener('craftcode:game-reconnect', reconnect) }
+  }, 'ui-desktop-menu: game reconnect action')
+
   const injected = (): DesktopMenuInjected => ({
-    hooks: { desktopMenu },
+    hooks: { desktopMenu, desktopGame },
     invoke: request => bridge.invokeProjectCommand(request),
+    setActiveProject: cwd => bridge.setActiveProject(cwd),
     createProject: async () => {
       const path = await ctx.workspaces.pickDirectory()
       if (path === null) return null
@@ -51,7 +88,7 @@ export function apply(ctx: ClientContext): void {
 
   if (bridge.menuPresentation === 'web') {
     const menuInjected = (): DesktopMenuBarInjected => ({
-      openMenu: (menu, anchor) => bridge.openMenu(menu, anchor),
+      openMenu: (menu, anchor, cwd) => bridge.openMenu(menu, anchor, cwd),
       windowControls: {
         minimize: () => bridge.minimizeWindow(),
         toggleMaximize: () => bridge.toggleMaximizeWindow(),

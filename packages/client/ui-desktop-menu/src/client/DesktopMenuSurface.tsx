@@ -42,6 +42,7 @@ interface RunOptions {
   title: string
   pending?: boolean
   showResult?: boolean
+  preserveResultTitle?: boolean
 }
 
 const AUTO_DISMISS_MS = 4_000
@@ -140,11 +141,14 @@ const textDialogCopy: Record<TextPurpose, {
 export function DesktopMenuSurface({
   useSessions,
   useDesktopMenu,
+  useDesktopGame,
   invoke,
+  setActiveProject,
   createProject,
   searchProject,
 }: DesktopMenuSurfaceProps) {
   const menuEvent = useDesktopMenu(value => value)
+  const gameEvent = useDesktopGame(value => value)
   const sessions = useSessions(value => value)
   const cwd = sessions.current === undefined ? undefined : sessions.byId[sessions.current]?.cwd
   const [dialog, setDialog] = useState<DialogState>()
@@ -153,7 +157,12 @@ export function DesktopMenuSurface({
   const [lastQuery, setLastQuery] = useState('')
   const noticeSequence = useRef(0)
   const handledMenuSequence = useRef(0)
+  const handledGameSequence = useRef(0)
   const busy = busyCount > 0
+
+  useEffect(() => {
+    void setActiveProject(cwd).catch(() => {})
+  }, [cwd, setActiveProject])
 
   const publish = useCallback((phase: Notice['phase'], result: DesktopCommandResult): number => {
     const id = ++noticeSequence.current
@@ -176,7 +185,7 @@ export function DesktopMenuSurface({
     setBusyCount(value => value + 1)
     try {
       const value = await invoke({ ...request, cwd })
-      const presented = { ...value, title: options.title }
+      const presented = options.preserveResultTitle === true ? value : { ...value, title: options.title }
       if (options.showResult !== false || !presented.ok) {
         publish('complete', presented)
       } else if (pendingId !== undefined) {
@@ -242,6 +251,13 @@ export function DesktopMenuSurface({
       case 'project:export-jar':
         void execute({ kind: 'export-jar' }, { title: '导出 JAR', pending: true })
         return
+      case 'project:toggle-game':
+        window.dispatchEvent(new CustomEvent('craftcode:game-state', { detail: { status: 'starting', gameName: 'Minecraft' } }))
+        void execute({ kind: 'game-toggle' }, { title: '游戏', pending: true, preserveResultTitle: true }).then((result) => {
+          if (!result.ok) window.dispatchEvent(new CustomEvent('craftcode:game-state', { detail: { status: 'failed', gameName: 'Minecraft', error: result.message } }))
+          else window.dispatchEvent(new CustomEvent('craftcode:game-state', { detail: { status: 'unsupported', gameName: 'Minecraft', error: '当前桌面版本尚未提供可叠加的游戏画面流。' } }))
+        })
+        return
       case 'git:status':
         void execute({ kind: 'git-status' }, { title: 'Git 状态', pending: true })
         return
@@ -262,6 +278,12 @@ export function DesktopMenuSurface({
     handledMenuSequence.current = menuEvent.sequence
     handleAction(menuEvent.action)
   }, [handleAction, menuEvent])
+
+  useEffect(() => {
+    if (gameEvent.result === undefined || gameEvent.sequence === handledGameSequence.current) return
+    handledGameSequence.current = gameEvent.sequence
+    publish('complete', gameEvent.result)
+  }, [gameEvent, publish])
 
   useEffect(() => {
     if (notice?.phase !== 'complete' || hasDetails(notice.result)

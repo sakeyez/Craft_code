@@ -2710,7 +2710,7 @@ export interface Config {
 }
 ```
 
-Source: [`packages/minecraft/tool-mc-project/src/index.ts:52`](../packages/minecraft/tool-mc-project/src/index.ts)
+Source: [`packages/minecraft/tool-mc-project/src/index.ts:54`](../packages/minecraft/tool-mc-project/src/index.ts)
 
 <a id="deepseek-aidsh-tool-pwsh"></a>
 

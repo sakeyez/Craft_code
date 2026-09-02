@@ -2260,6 +2260,21 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         }
       },
 
+      async annotate(request) {
+        const { sessionId, annotations } = request.payload
+        const found = await agentFor(sessionId)
+        if ('error' in found) return err(request, found.error)
+        if (annotations.some(annotation => annotation.sessionId !== sessionId)) {
+          return err(request, { code: 'internal', message: 'annotation session ownership mismatch', details: {} })
+        }
+        try {
+          const event = found.agent.session.append('game/annotations', { annotations })
+          return ok(request, { accepted: true, seq: event.seq })
+        } catch (error: unknown) {
+          return err(request, { code: 'internal', message: error instanceof Error ? error.message : String(error), details: {} })
+        }
+      },
+
       async fork(request) {
         const { sessionId, atSeq } = request.payload
         let source: SessionReadState

@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-28-craftcode-native-menus.md
-2026-08-28-craftcode-native-menus.md: 5312cd38f8ea9b22a25e97b7f8e1fd0fe7b1ce13
-2026-08-28-craftcode-native-menus.zh.md: ed64eb63fa32e20ba3d7b07dac172ee695956afb
+2026-08-28-craftcode-native-menus.md: c26f26a54973485610284656c23311e4c7695dfc
+2026-08-28-craftcode-native-menus.zh.md: 61b36123d6c07986ac9e869869ac4ff5011256fd

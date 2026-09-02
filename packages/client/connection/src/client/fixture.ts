@@ -2395,6 +2395,17 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         const appended = logOf(sessionId).at(-1) as SessionEvent
         return ok(request, { title: normalized, seq: appended.seq })
       },
+      annotate: (request) => {
+        const { sessionId, annotations } = request.payload
+        const missing = requireSession(request)
+        if (missing !== undefined) return missing
+        if (annotations.some(annotation => annotation.sessionId !== sessionId)) {
+          return err(request, { code: 'internal', message: 'annotation session ownership mismatch', details: {} })
+        }
+        append(sessionId, { type: 'game/annotations', data: { annotations } })
+        const event = logOf(sessionId).at(-1) as SessionEvent
+        return ok(request, { accepted: true, seq: event.seq })
+      },
       fork: (request) => {
         const { sessionId, atSeq } = request.payload
         const source = summaryOf(sessionId)
@@ -3182,6 +3193,11 @@ export class FixtureApiClient extends AbstractApiClient {
       case 'session.models': return this.api.sessions.models(request)
       case 'session.selectModel': return this.api.sessions.selectModel(request)
       case 'session.rename': return this.api.sessions.rename(request)
+      case 'session.annotate': {
+        return this.api.sessions.annotate === undefined
+          ? Promise.resolve({ rpcId: request.rpcId, result: { ok: false, error: { code: 'internal', message: 'annotations unavailable', details: {} } } })
+          : this.api.sessions.annotate(request)
+      }
       case 'session.fork': return this.api.sessions.fork(request)
       case 'session.prompt': return this.api.sessions.prompt(request)
       case 'session.attachment': return this.api.sessions.attachment(request)

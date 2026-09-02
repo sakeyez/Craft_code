@@ -19,6 +19,8 @@ import type { CollectedOutput, ShellRunResult, ShellSandboxInfo } from '@deepsee
 import type {} from '@deepseek-ai/dsh-shell'
 import { datagenTaskCandidates, loaderSupport, validationCommands } from './loader-support.ts'
 import type { Loader, LoaderSupport } from './loader-support.ts'
+import { parseGradleTaskNames, runtimeTaskCandidates } from './gradle-tasks.ts'
+import type { RuntimeMode } from './gradle-tasks.ts'
 import {
   errorCode,
   isAbortedError,
@@ -85,7 +87,6 @@ export const Config: z<Config> = z.object({
 type Confidence = 'high' | 'medium' | 'low'
 type VersionClassification = 'exact' | 'range'
 type CheckTarget = 'build' | 'test' | 'datagen' | 'resources' | 'runtime' | 'all'
-type RuntimeMode = 'client' | 'server'
 type CheckStepStatus = 'passed' | 'failed' | 'skipped'
 
 interface ResolvedConfig {
@@ -848,16 +849,6 @@ function commandFor(launcher: string, task: string): string {
   return `${launcher} ${task}`
 }
 
-function parseGradleTaskNames(text: string): string[] {
-  const tasks: string[] = []
-  for (const line of text.split(/\r?\n/u)) {
-    const match = /^\s*:?(?<task>[A-Za-z][A-Za-z0-9:_-]*)\s*(?:-\s+.*)?$/u.exec(line)
-    const task = match?.groups?.task
-    if (task !== undefined) pushUnique(tasks, task)
-  }
-  return tasks.sort()
-}
-
 function taskDiscoveryFailure(step: CheckStepResult, message: string): CheckStepResult {
   return { ...step, status: 'failed', message }
 }
@@ -886,13 +877,6 @@ async function listGradleTasks(
     }
   }
   return { tasks: parseGradleTaskNames(result.stdout.text), step }
-}
-
-function runtimeTaskCandidates(mode: RuntimeMode, tasks: readonly string[]): string[] {
-  const expected = mode === 'client'
-    ? /^(?:runClient|runGame)$/iu
-    : /^(?:runServer|runDedicatedServer)$/iu
-  return tasks.filter(task => expected.test(task)).sort()
 }
 
 async function discoverDatagenTask(

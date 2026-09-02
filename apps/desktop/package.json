@@ -31,6 +31,9 @@
     "icon:generate": "node scripts/generate-icon.mjs"
   },
   "license": "MIT",
+  "dependencies": {
+    "@deepseek-ai/dsh-tool-mc-project": "workspace:^"
+  },
   "devDependencies": {
     "@types/node": "^22.20.0",
     "electron": "43.4.0",

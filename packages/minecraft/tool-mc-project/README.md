@@ -25,6 +25,10 @@ Model-facing Minecraft project tools. The package registers `detect_mc_project`,
 
 All fields must be positive integers. The read-only tools do not execute Gradle tasks or shell commands.
 
+## Library API
+
+The `./gradle-tasks` export provides pure `parseGradleTaskNames()` and `runtimeTaskCandidates()` helpers for trusted consumers that already own Gradle execution. Parsing requires complete, non-truncated plain task output; runtime selection returns only conventional unqualified client (`runClient`, `runGame`) or server (`runServer`, `runDedicatedServer`) candidates and leaves ambiguity to the caller.
+
 ## Model Experience
 
 ### Minecraft Project Detection

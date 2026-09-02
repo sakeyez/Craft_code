@@ -11,6 +11,7 @@ import type { AttachmentIdType, ImageAttachmentRef } from '@deepseek-ai/dsh-atta
 import type {
   MessageId, PromptContentPart, QueueAction, RpcResult, SessionId,
 } from '@deepseek-ai/dsh-api-remotes/client'
+import type { GameAnnotation } from '@deepseek-ai/dsh-session/types'
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 import type { ConversationSnapshot } from '../sessions/conversation.ts'
 import type { ObservableSnapshot } from './store.ts'
@@ -64,6 +65,8 @@ export interface ISession {
    * @returns acceptance, or the business error.
    */
   cancel(): Promise<RpcResult<{ accepted: true }>>
+  /** Persist the complete game annotation snapshot for this session. */
+  annotate?(annotations: GameAnnotation[]): Promise<RpcResult<{ accepted: true; seq: number }>>
   /**
    * Rename this session (explicit user title; pins it against automatic
    * regeneration).

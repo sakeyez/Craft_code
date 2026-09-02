@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
+import type { GameAnnotation, SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import type { RequestPayload, ResponseValue } from './rpc-map.ts'
 import type { Wire } from './rpc.schema.ts'
@@ -126,6 +126,34 @@ export const sessionRenameValueSchema = z.object({
   title: z.string().min(1),
   seq: z.number().int().nonnegative(),
 }) satisfies z.ZodType<Wire<ResponseValue<'session.rename'>>>
+
+const normalizedPointSchema = z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) })
+const annotationShapeSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('point'), geometry: normalizedPointSchema }),
+  z.object({ type: z.literal('rect'), geometry: z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1), width: z.number().min(0).max(1), height: z.number().min(0).max(1) }) }),
+  z.object({ type: z.literal('freehand'), geometry: z.object({ points: z.array(normalizedPointSchema).min(1).max(2048) }) }),
+])
+const gameAnnotationSchema: z.ZodType<GameAnnotation> = z.object({
+  sessionId: sessionIdSchema,
+  id: z.string().min(1).max(64),
+  label: z.string().min(1).max(4),
+  shape: annotationShapeSchema,
+  description: z.string().max(4000),
+  createdAt: z.number().int().nonnegative(),
+  screenshotRef: z.string().max(2048).optional(),
+}) as z.ZodType<GameAnnotation>
+
+/** session.annotate request payload (full-list snapshot). */
+export const sessionAnnotateRequestSchema = z.object({
+  sessionId: sessionIdSchema,
+  annotations: z.array(gameAnnotationSchema).max(256),
+}) satisfies z.ZodType<Wire<RequestPayload<'session.annotate'>>>
+
+/** session.annotate response value. */
+export const sessionAnnotateValueSchema = z.object({
+  accepted: z.literal(true),
+  seq: z.number().int().nonnegative(),
+}) satisfies z.ZodType<Wire<ResponseValue<'session.annotate'>>>
 
 /** session.fork request payload (atSeq anchors the completed-turn cut). */
 export const sessionForkRequestSchema = z.object({

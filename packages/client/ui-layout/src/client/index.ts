@@ -14,6 +14,8 @@ import { AppFrame } from './AppFrame.tsx'
 import { createLayoutStore } from './stores.ts'
 import { LayoutController } from './service.ts'
 import { ThemePresenter } from './theme-presenter.ts'
+import { GameWorkspace } from './GameWorkspace.tsx'
+import type { GameSurfaceState } from './game.ts'
 
 // Contract exports only (export-convergence rule: cross-package consumers
 // keep a symbol exported; test-only/package-internal symbols live off /src).
@@ -22,6 +24,7 @@ import { ThemePresenter } from './theme-presenter.ts'
 // against; the frame components and the store factory are package-internal.
 export { LayoutController } from './service.ts'
 export type { ILayout } from './service.ts'
+export type { GameSurfaceState, GameSurfaceStatus, GameAnnotationDraft } from './game.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -66,6 +69,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      * framework hooks of the `session-maybe` scope.
      */
     'conversation': { kind: 'single'; scope: 'session-maybe'; owner: ConvOwnerProps }
+    'game': { kind: 'single'; scope: 'session-maybe'; owner: GameOwnerProps }
     /**
      * The right details column, shown when the layout opens it. OCCUPIED by
      * ui-conversation's DetailsPanel, which declares the tool-details seat
@@ -106,6 +110,8 @@ export interface SidebarOwnerProps {
 
 /** Conversation owner share: business state and actions belong to the registrant. */
 export interface ConvOwnerProps {}
+/** Game owner share: current desktop/native surface state. */
+export interface GameOwnerProps { state: GameSurfaceState; annotate?: (annotations: import('@deepseek-ai/dsh-session/types').GameAnnotation[]) => Promise<unknown> }
 
 /** Details owner share: empty — sessionId arrives as a framework-standard prop. */
 export interface DetailsOwnerProps {}
@@ -129,6 +135,7 @@ export function apply(ctx: ClientContext): void {
         'shell.topbar': { kind: 'single', scope: 'root' },
         'sidebar': { kind: 'single', scope: 'root' },
         'conversation': { kind: 'single', scope: 'session-maybe' },
+        'game': { kind: 'single', scope: 'session-maybe' },
         'details': { kind: 'single', scope: 'session' },
         'shell.overlay': { kind: 'list', scope: 'root' },
       },
@@ -142,7 +149,18 @@ export function apply(ctx: ClientContext): void {
         return {}
       },
     }, AppFrame)
+    const disposeGame = ctx.slots.register({
+      name: 'game',
+      inject: (sessionId: import('@deepseek-ai/dsh-session/types').SessionId | undefined) => ({
+        annotate: sessionId === undefined ? undefined : async (annotations: import('@deepseek-ai/dsh-session/types').GameAnnotation[]) => {
+          const session = ctx.sessions.binding(sessionId)?.session
+          if (session === undefined) return
+          return session.annotate?.(annotations)
+        },
+      }),
+    }, GameWorkspace)
     return () => {
+      disposeGame()
       disposeRegistration()
       // provide()'s disposer settles asynchronously; teardown is synchronous fire-and-forget.
       void disposeService()

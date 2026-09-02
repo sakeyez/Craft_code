@@ -90,7 +90,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }[T]
 ```
 
-Sources: [`packages/core/session/src/types.ts:340`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:347`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:376`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:408`](../packages/core/session/src/types.ts)
+Sources: [`packages/core/session/src/types.ts:363`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:370`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:399`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:431`](../packages/core/session/src/types.ts)
 
 ## Events
 
@@ -408,6 +408,19 @@ Source: [`packages/compaction/compaction/src/types.ts:33`](../packages/compactio
 ```
 
 Source: [`packages/feedback/command-feedback/src/index.ts:62`](../packages/feedback/command-feedback/src/index.ts)
+
+### `game/*`
+
+<a id="gameannotations--log-only"></a>
+
+#### `game/annotations` — log-only
+
+```ts persistence-catalog
+/** Full-list snapshot of game annotations for deterministic replay. */
+'game/annotations': { annotations: GameAnnotation[] }
+```
+
+Source: [`packages/core/session/src/types.ts:338`](../packages/core/session/src/types.ts)
 
 ### `goal/*`
 

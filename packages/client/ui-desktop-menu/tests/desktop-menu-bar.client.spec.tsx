@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DesktopMenuBar } from '../src/client/DesktopMenuBar.tsx'
 
 const runtimeProps = {
-  useSessions: (() => undefined) as never,
+  useSessions: (<S,>(selector: (value: { current: string; byId: Record<string, { cwd: string }> }) => S) =>
+    selector({ current: 'session', byId: { session: { cwd: '/project' } } })) as never,
   useWorkspaces: (() => undefined) as never,
 }
 
@@ -33,7 +34,7 @@ describe('DesktopMenuBar', () => {
       x: 4, y: 0, left: 4, top: 0, right: 48, bottom: 40, width: 44, height: 40, toJSON: () => ({}),
     })
     fireEvent.click(project)
-    expect(openMenu).toHaveBeenCalledWith('project', { x: 4, y: 40 })
+    expect(openMenu).toHaveBeenCalledWith('project', { x: 4, y: 40 }, '/project')
     expect(project.getAttribute('aria-expanded')).toBe('true')
     await act(async () => { pending.resolve(); await pending.promise })
     expect(project.getAttribute('aria-expanded')).toBe('false')
@@ -50,7 +51,7 @@ describe('DesktopMenuBar', () => {
     expect(document.activeElement).toBe(editor)
     expect(editor.getAttribute('tabindex')).toBe('0')
     fireEvent.keyDown(editor, { key: 'ArrowDown' })
-    expect(openMenu).toHaveBeenCalledWith('editor', expect.objectContaining({ y: 0 }))
+    expect(openMenu).toHaveBeenCalledWith('editor', expect.objectContaining({ y: 0 }), '/project')
   })
 
   it('renders compact window controls and forwards their actions', async () => {

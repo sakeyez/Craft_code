@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { apply } from '../src/client/index.ts'
-import type { DesktopAction, DesktopMenuInjected } from '../src/client/contract.ts'
+import type {
+  DesktopAction, DesktopGameProcessEvent, DesktopMenuInjected,
+} from '../src/client/contract.ts'
 
 afterEach(() => { delete window.craftCodeDesktop })
 
@@ -15,11 +17,14 @@ describe('ui-desktop-menu plugin', () => {
 
   it('registers one overlay entry and publishes preload actions through its hook source', async () => {
     let menuListener: ((action: DesktopAction) => void) | undefined
+    let gameListener: ((event: DesktopGameProcessEvent) => void) | undefined
     const invokeProjectCommand = vi.fn(async () => ({ ok: true, title: 'Git', message: 'ok' }))
     window.craftCodeDesktop = {
       menuPresentation: 'web',
       onMenuAction(listener) { menuListener = listener; return () => { menuListener = undefined } },
+      onGameEvent(listener) { gameListener = listener; return () => { gameListener = undefined } },
       openMenu: vi.fn(async () => {}),
+      setActiveProject: vi.fn(async () => {}),
       minimizeWindow: vi.fn(async () => {}),
       toggleMaximizeWindow: vi.fn(async () => {}),
       closeWindow: vi.fn(async () => {}),
@@ -52,17 +57,27 @@ describe('ui-desktop-menu plugin', () => {
     menuListener?.('git:status')
     expect(changed).toHaveBeenCalledOnce()
     expect(face?.hooks.desktopMenu.getSnapshot()).toEqual({ sequence: 1, action: 'git:status' })
+    face?.hooks.desktopGame.subscribe(changed)
+    gameListener?.({ cwd: '/project', result: { ok: true, title: '游戏已关闭', message: '完成' } })
+    expect(face?.hooks.desktopGame.getSnapshot()).toEqual({
+      sequence: 1,
+      cwd: '/project',
+      result: { ok: true, title: '游戏已关闭', message: '完成' },
+    })
     await face?.invoke({ kind: 'git-status', cwd: '/project' })
     expect(invokeProjectCommand).toHaveBeenCalledWith({ kind: 'git-status', cwd: '/project' })
     for (const dispose of effectDisposers) dispose()
     expect(menuListener).toBeUndefined()
+    expect(gameListener).toBeUndefined()
   })
 
   it('keeps macOS on the native application menu without a duplicate topbar', () => {
     window.craftCodeDesktop = {
       menuPresentation: 'native',
       onMenuAction: () => () => {},
+      onGameEvent: () => () => {},
       openMenu: vi.fn(async () => {}),
+      setActiveProject: vi.fn(async () => {}),
       minimizeWindow: vi.fn(async () => {}),
       toggleMaximizeWindow: vi.fn(async () => {}),
       closeWindow: vi.fn(async () => {}),

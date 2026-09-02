@@ -2,7 +2,7 @@ import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 
 /** Native menu actions admitted by the sandboxed desktop preload bridge. */
 export type DesktopAction =
-  | 'project:new' | 'project:export-jar' | 'project:settings'
+  | 'project:new' | 'project:export-jar' | 'project:toggle-game' | 'project:settings'
   | 'editor:find-current' | 'editor:find-project'
   | 'git:status' | 'git:diff' | 'git:log' | 'git:branch' | 'git:commit' | 'git:push' | 'git:pull'
   | 'help:docs' | 'help:sponsor'
@@ -52,19 +52,40 @@ export interface DesktopCommandResult {
 export interface DesktopBridge {
   menuPresentation: DesktopMenuPresentation
   onMenuAction(listener: (action: DesktopAction) => void): () => void
-  openMenu(menu: DesktopMenuId, anchor: DesktopMenuAnchor): Promise<void>
+  openMenu(menu: DesktopMenuId, anchor: DesktopMenuAnchor, cwd?: string): Promise<void>
+  setActiveProject(cwd?: string): Promise<void>
+  onGameEvent(listener: (event: DesktopGameProcessEvent) => void): () => void
   minimizeWindow(): Promise<void>
   toggleMaximizeWindow(): Promise<void>
   closeWindow(): Promise<void>
   isMaximized(): Promise<boolean>
   onMaximizedChange(listener: (maximized: boolean) => void): () => void
   invokeProjectCommand(request: DesktopCommandRequest): Promise<DesktopCommandResult>
+  onGameSurfaceState?: (listener: (state: {
+    status: string
+    gameName?: string
+    surfaceUrl?: string
+    aspectRatio?: number
+    error?: string
+  }) => void) => () => void
+  reconnectGameSurface?: (cwd: string) => Promise<unknown>
 }
 
 /** Observable renderer event derived from a native menu action. */
 export interface DesktopMenuEvent {
   sequence: number
   action?: DesktopAction
+}
+
+/** Completed Minecraft development-client process reported by Electron. */
+export interface DesktopGameProcessEvent {
+  cwd: string
+  result: DesktopCommandResult
+}
+
+/** Observable renderer event derived from a desktop game-process event. */
+export interface DesktopGameEvent extends Partial<DesktopGameProcessEvent> {
+  sequence: number
 }
 
 /** One project-wide conversation search match. */
@@ -75,15 +96,19 @@ export interface ProjectSearchItem {
 
 /** Host capabilities injected into the desktop menu overlay component. */
 export interface DesktopMenuInjected {
-  hooks: { desktopMenu: HostObservable<DesktopMenuEvent> }
+  hooks: {
+    desktopMenu: HostObservable<DesktopMenuEvent>
+    desktopGame: HostObservable<DesktopGameEvent>
+  }
   invoke: (request: DesktopCommandRequest) => Promise<DesktopCommandResult>
+  setActiveProject: (cwd?: string) => Promise<void>
   createProject: () => Promise<string | null>
   searchProject: (query: string, cwd: string, signal: AbortSignal) => Promise<ProjectSearchItem[]>
 }
 
 /** Capability injected only into the desktop top menu bar. */
 export interface DesktopMenuBarInjected {
-  openMenu: (menu: DesktopMenuId, anchor: DesktopMenuAnchor) => Promise<void>
+  openMenu: (menu: DesktopMenuId, anchor: DesktopMenuAnchor, cwd?: string) => Promise<void>
   windowControls?: {
     minimize: () => Promise<void>
     toggleMaximize: () => Promise<void>

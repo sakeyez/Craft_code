@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useSyncExternalStore } from 'react'
 import { DesktopMenuSurface, hasUncommittedChanges } from '../src/client/DesktopMenuSurface.tsx'
 import type {
-  DesktopAction, DesktopCommandRequest, DesktopCommandResult, DesktopMenuEvent,
+  DesktopAction, DesktopCommandRequest, DesktopCommandResult, DesktopGameEvent, DesktopMenuEvent,
 } from '../src/client/contract.ts'
 
 class Source<T> {
@@ -26,12 +26,17 @@ function bench(options: {
   searchProject?: (query: string, cwd: string, signal: AbortSignal) => Promise<{ sessionId: string; snippet: string }[]>
 } = {}) {
   const source = new Source<DesktopMenuEvent>({ sequence: 0 })
+  const gameSource = new Source<DesktopGameEvent>({ sequence: 0 })
   let sequence = 0
+  let gameSequence = 0
   const invoke = vi.fn(options.invoke ?? (async () => ({ ok: true, title: 'command', message: '完成' })))
   const createProject = vi.fn(async () => '/projects/new')
+  const setActiveProject = vi.fn(async () => {})
   const searchProject = vi.fn(options.searchProject ?? (async () => []))
   const useDesktopMenu = <S,>(selector: (value: DesktopMenuEvent) => S): S =>
     useSyncExternalStore(source.subscribe, () => selector(source.getSnapshot()))
+  const useDesktopGame = <S,>(selector: (value: DesktopGameEvent) => S): S =>
+    useSyncExternalStore(gameSource.subscribe, () => selector(gameSource.getSnapshot()))
   const sessionState = {
     current: 'session',
     byId: { session: { cwd: '/projects/example' } },
@@ -40,9 +45,11 @@ function bench(options: {
   const view = render(
     <DesktopMenuSurface
       useDesktopMenu={useDesktopMenu as never}
+      useDesktopGame={useDesktopGame as never}
       useSessions={useSessions as never}
       useWorkspaces={(() => undefined) as never}
       invoke={invoke}
+      setActiveProject={setActiveProject}
       createProject={createProject}
       searchProject={searchProject}
     />,
@@ -51,9 +58,13 @@ function bench(options: {
     ...view,
     invoke,
     createProject,
+    setActiveProject,
     searchProject,
     emit(action: DesktopAction) {
       act(() => { source.set({ sequence: ++sequence, action }) })
+    },
+    emitGame(event: Omit<DesktopGameEvent, 'sequence'>) {
+      act(() => { gameSource.set({ sequence: ++gameSequence, ...event }) })
     },
   }
 }
@@ -67,12 +78,35 @@ afterEach(() => {
 describe('DesktopMenuSurface', () => {
   it('runs export with the current session cwd and presents completion', async () => {
     const b = bench()
+    await waitFor(() => { expect(b.setActiveProject).toHaveBeenCalledWith('/projects/example') })
     b.emit('project:export-jar')
     await waitFor(() => {
       expect(b.invoke).toHaveBeenCalledWith({ kind: 'export-jar', cwd: '/projects/example' })
     })
     expect(await b.findByText('导出 JAR')).toBeTruthy()
     expect(b.getByText('完成')).toBeTruthy()
+  })
+
+  it('toggles the current project game and presents later process exits', async () => {
+    const b = bench({
+      invoke: async request => request.kind === 'game-toggle'
+        ? { ok: true, title: '启动游戏', message: '正在启动客户端。' }
+        : { ok: true, title: 'command', message: '完成' },
+    })
+    b.emit('project:toggle-game')
+    await waitFor(() => {
+      expect(b.invoke).toHaveBeenCalledWith({ kind: 'game-toggle', cwd: '/projects/example' })
+    })
+    expect(await b.findByText('启动游戏')).toBeTruthy()
+    expect(b.getByText('正在启动客户端。')).toBeTruthy()
+
+    b.emitGame({
+      cwd: '/projects/example',
+      result: { ok: false, title: '游戏运行失败', message: 'Gradle 客户端进程退出码 1', stderr: 'failure' },
+    })
+    expect(await b.findByText('游戏运行失败')).toBeTruthy()
+    fireEvent.click(b.getByRole('button', { name: '查看详情' }))
+    expect(b.getByText('failure')).toBeTruthy()
   })
 
   it('creates a project through the injected workspace flow', async () => {

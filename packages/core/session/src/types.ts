@@ -334,6 +334,29 @@ export interface SessionEventMap {
    * so tolerating concurrent writers needs a signal beyond the log.
    */
   'session/end-seed': Record<string, never>
+  /** Full-list snapshot of game annotations for deterministic replay. */
+  'game/annotations': { annotations: GameAnnotation[] }
+}
+
+/** Normalized point in the game surface content rectangle. */
+export interface NormalizedPoint { x: number; y: number }
+/** Normalized rectangle in the game surface content rectangle. */
+export interface NormalizedRect { x: number; y: number; width: number; height: number }
+/** Normalized freehand path in the game surface content rectangle. */
+export interface NormalizedPath { points: NormalizedPoint[] }
+export type AnnotationShape =
+  | { type: 'point'; geometry: NormalizedPoint }
+  | { type: 'rect'; geometry: NormalizedRect }
+  | { type: 'freehand'; geometry: NormalizedPath }
+/** Durable, session-scoped game annotation. */
+export interface GameAnnotation {
+  sessionId: SessionId
+  id: string
+  label: string
+  shape: AnnotationShape
+  description: string
+  createdAt: number
+  screenshotRef?: string
 }
 
 /** The appendable event-type keys of {@link SessionEventMap}, plugin-merged extensions included. */
