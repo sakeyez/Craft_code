@@ -24,7 +24,7 @@ import type { GameSurfaceState } from './game.ts'
 // against; the frame components and the store factory are package-internal.
 export { LayoutController } from './service.ts'
 export type { ILayout } from './service.ts'
-export type { GameSurfaceState, GameSurfaceStatus, GameAnnotationDraft } from './game.ts'
+export type { GameSurfaceState, GameSurfaceStatus, GameSurfaceEvent, GameSurfaceSnapshot, GameAnnotationDraft } from './game.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -69,6 +69,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      * framework hooks of the `session-maybe` scope.
      */
     'conversation': { kind: 'single'; scope: 'session-maybe'; owner: ConvOwnerProps }
+    /** Session-scoped external-game companion controls; absent when no game is active. */
     'game': { kind: 'single'; scope: 'session-maybe'; owner: GameOwnerProps }
     /**
      * The right details column, shown when the layout opens it. OCCUPIED by
@@ -110,8 +111,17 @@ export interface SidebarOwnerProps {
 
 /** Conversation owner share: business state and actions belong to the registrant. */
 export interface ConvOwnerProps {}
-/** Game owner share: current desktop/native surface state. */
-export interface GameOwnerProps { state: GameSurfaceState; annotate?: (annotations: import('@deepseek-ai/dsh-session/types').GameAnnotation[]) => Promise<unknown> }
+/** Game owner share: current desktop external-window state. */
+export interface GameOwnerProps { cwd?: string; state: GameSurfaceState }
+
+/** Host-backed actions injected into the game workspace component. */
+export interface GameWorkspaceInjected {
+  annotate?: (annotations: import('@deepseek-ai/dsh-session/types').GameAnnotation[]) => Promise<unknown>
+  reconnect: (cwd: string) => Promise<GameSurfaceState>
+  beginAnnotation: (cwd: string) => Promise<import('./game.ts').GameSurfaceSnapshot>
+  endAnnotation: (cwd: string) => Promise<void>
+  reposition: (cwd: string) => Promise<void>
+}
 
 /** Details owner share: empty — sessionId arrives as a framework-standard prop. */
 export interface DetailsOwnerProps {}
@@ -157,6 +167,10 @@ export function apply(ctx: ClientContext): void {
           if (session === undefined) return
           return session.annotate?.(annotations)
         },
+        reconnect: (cwd: string) => layout.reconnectGameSurface(cwd),
+        beginAnnotation: (cwd: string) => layout.beginGameAnnotation(cwd),
+        endAnnotation: (cwd: string) => layout.endGameAnnotation(cwd),
+        reposition: (cwd: string) => layout.repositionGameCompanion(cwd),
       }),
     }, GameWorkspace)
     return () => {

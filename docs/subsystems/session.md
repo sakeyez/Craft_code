@@ -123,8 +123,10 @@ interface SessionEventMap {
    * an ended lifecycle, whatever ended it. NOT a liveness signal about other
    * writers — a concurrently live session holds its own boundary elsewhere,
    * so tolerating concurrent writers needs a signal beyond the log.
-   */
+  */
   'session/end-seed': Record<string, never>
+  /** Full-list snapshot of game annotations for deterministic replay. */
+  'game/annotations': { annotations: GameAnnotation[] }
 }
 ```
 

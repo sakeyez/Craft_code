@@ -10,6 +10,9 @@
  */
 import type { BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
 import type { createLayoutStore } from './stores.ts'
+import type {
+  GameSurfaceBridge, GameSurfaceEvent, GameSurfaceSnapshot, GameSurfaceState,
+} from './game.ts'
 
 /** The layout store's bound action set (framework-baked, draft params peeled). */
 export type PanelActions = BoundActions<ReturnType<typeof createLayoutStore>>
@@ -27,11 +30,21 @@ export interface ILayout {
   openDetails(): void
   /** Close the details panel. */
   closeDetails(): void
+  /** Publish one complete project-scoped external-game state. */
+  setGameSurface(event: GameSurfaceEvent): void
+  /** Attach the desktop-only privileged operations and return their disposer. */
+  attachGameSurfaceBridge(bridge: GameSurfaceBridge): () => void
+  reconnectGameSurface(cwd: string): Promise<GameSurfaceState>
+  beginGameAnnotation(cwd: string): Promise<GameSurfaceSnapshot>
+  endGameAnnotation(cwd: string): Promise<void>
+  repositionGameCompanion(cwd: string): Promise<void>
 }
 
 /** Cross-plugin panel-action face (ctx.layout). */
 export class LayoutController implements ILayout {
   #panels: PanelActions | undefined
+  #gameBridge: GameSurfaceBridge | undefined
+  readonly #pendingGameStates = new Map<string, GameSurfaceState>()
 
   /**
    * Adopt the root entry's bound store actions. Called from the root
@@ -42,6 +55,8 @@ export class LayoutController implements ILayout {
    */
   attachPanels(actions: PanelActions): void {
     this.#panels = actions
+    for (const [cwd, state] of this.#pendingGameStates) actions.setGameSurface(cwd, state)
+    this.#pendingGameStates.clear()
   }
 
   /** Toggle the sidebar panel (closed ⟷ contract default width). */
@@ -57,6 +72,26 @@ export class LayoutController implements ILayout {
   /** Close the details panel. */
   closeDetails(): void {
     this.#require().closeDetails()
+  }
+
+  setGameSurface(event: GameSurfaceEvent): void {
+    if (this.#panels === undefined) this.#pendingGameStates.set(event.cwd, event.state)
+    else this.#panels.setGameSurface(event.cwd, event.state)
+  }
+
+  attachGameSurfaceBridge(bridge: GameSurfaceBridge): () => void {
+    this.#gameBridge = bridge
+    return () => { if (this.#gameBridge === bridge) this.#gameBridge = undefined }
+  }
+
+  reconnectGameSurface(cwd: string): Promise<GameSurfaceState> { return this.#requireGameBridge().reconnect(cwd) }
+  beginGameAnnotation(cwd: string): Promise<GameSurfaceSnapshot> { return this.#requireGameBridge().beginAnnotation(cwd) }
+  endGameAnnotation(cwd: string): Promise<void> { return this.#requireGameBridge().endAnnotation(cwd) }
+  repositionGameCompanion(cwd: string): Promise<void> { return this.#requireGameBridge().reposition(cwd) }
+
+  #requireGameBridge(): GameSurfaceBridge {
+    if (this.#gameBridge === undefined) throw new Error('layout: desktop game bridge not attached')
+    return this.#gameBridge
   }
 
   #require(): PanelActions {

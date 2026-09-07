@@ -90,7 +90,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }[T]
 ```
 
-Sources: [`packages/core/session/src/types.ts:363`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:370`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:399`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:431`](../packages/core/session/src/types.ts)
+Sources: [`packages/core/session/src/types.ts:364`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:371`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:400`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:432`](../packages/core/session/src/types.ts)
 
 ## Events
 

@@ -18,11 +18,13 @@ describe('ui-desktop-menu plugin', () => {
   it('registers one overlay entry and publishes preload actions through its hook source', async () => {
     let menuListener: ((action: DesktopAction) => void) | undefined
     let gameListener: ((event: DesktopGameProcessEvent) => void) | undefined
+    let surfaceListener: ((event: { cwd: string; state: { status: 'idle' } }) => void) | undefined
     const invokeProjectCommand = vi.fn(async () => ({ ok: true, title: 'Git', message: 'ok' }))
     window.craftCodeDesktop = {
       menuPresentation: 'web',
       onMenuAction(listener) { menuListener = listener; return () => { menuListener = undefined } },
       onGameEvent(listener) { gameListener = listener; return () => { gameListener = undefined } },
+      onGameSurfaceState(listener) { surfaceListener = listener; return () => { surfaceListener = undefined } },
       openMenu: vi.fn(async () => {}),
       setActiveProject: vi.fn(async () => {}),
       minimizeWindow: vi.fn(async () => {}),
@@ -34,6 +36,7 @@ describe('ui-desktop-menu plugin', () => {
     }
     const registrations: Array<{ name?: string; inject?: () => DesktopMenuInjected; id?: string; order?: number }> = []
     const effectDisposers: (() => void)[] = []
+    const layout = { setGameSurface: vi.fn(), attachGameSurfaceBridge: vi.fn(() => () => {}) }
     const ctx = {
       effect(effect: () => undefined | (() => void)) {
         const dispose = effect()
@@ -45,6 +48,7 @@ describe('ui-desktop-menu plugin', () => {
       },
       workspaces: {},
       sessions: {},
+      layout,
     }
     apply(ctx as never)
     expect(registrations.map(value => value.name)).toEqual(['shell.topbar', 'shell.overlay'])
@@ -64,6 +68,8 @@ describe('ui-desktop-menu plugin', () => {
       cwd: '/project',
       result: { ok: true, title: '游戏已关闭', message: '完成' },
     })
+    surfaceListener?.({ cwd: '/project', state: { status: 'idle' } })
+    expect(layout.setGameSurface).toHaveBeenCalledWith({ cwd: '/project', state: { status: 'idle' } })
     await face?.invoke({ kind: 'git-status', cwd: '/project' })
     expect(invokeProjectCommand).toHaveBeenCalledWith({ kind: 'git-status', cwd: '/project' })
     for (const dispose of effectDisposers) dispose()
@@ -94,6 +100,7 @@ describe('ui-desktop-menu plugin', () => {
       },
       workspaces: {},
       sessions: {},
+      layout: { setGameSurface: vi.fn(), attachGameSurfaceBridge: vi.fn(() => () => {}) },
     } as never)
     expect(registrations).toEqual(['shell.overlay'])
   })

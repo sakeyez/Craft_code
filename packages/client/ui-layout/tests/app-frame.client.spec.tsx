@@ -24,6 +24,7 @@ import type {
 // Session selection controls for the SessionProvider and useSessions stubs.
 const selectedSession = { current: 's-test' as SessionId | undefined }
 const selectedSessionBlank = { current: false }
+const selectedCwd = { current: 'C:\\Projects\\First' }
 const baselinesReady = { current: true }
 
 // Render-prop contract stub fed through the standard seat prop (the renderer
@@ -70,7 +71,7 @@ function mountFrame() {
       ids: current === undefined ? [] : [current],
       byId: current === undefined
         ? {}
-        : { [current]: { id: current, displayTitle: 'Test', running: false, blank: selectedSessionBlank.current, updatedAt: 1 } },
+        : { [current]: { id: current, displayTitle: 'Test', running: false, blank: selectedSessionBlank.current, updatedAt: 1, cwd: selectedCwd.current } },
       current,
       phase: 'ready',
     } as SessionListState
@@ -116,6 +117,7 @@ beforeEach(() => {
   frameWidth = 1920
   selectedSession.current = 's-test' as SessionId
   selectedSessionBlank.current = false
+  selectedCwd.current = 'C:\\Projects\\First'
   baselinesReady.current = true
   vi.useFakeTimers()
   vi.stubGlobal('ResizeObserver', ResizeObserverStub)
@@ -149,6 +151,28 @@ describe('AppFrame', () => {
   it('renders three tracks from store state', () => {
     const { frame } = mountFrame()
     expect(tracks(frame)).toEqual([280, 0])
+  })
+
+  it('keeps the ordinary layout and shows companion state only for the current project', () => {
+    const { frame, instance, slotCalls, rerenderFrame } = mountFrame()
+    act(() => { instance.actions.setGameSurface('c:/projects/first', { status: 'starting', gameName: 'Minecraft' }) })
+    expect(frame.hasAttribute('data-game-mode')).toBe(false)
+    expect(slotCalls.filter(call => call.key === 'game').at(-1)?.props).toEqual({
+      cwd: 'C:\\Projects\\First',
+      state: { status: 'starting', gameName: 'Minecraft' },
+    })
+
+    selectedCwd.current = 'C:\\Projects\\Second'
+    act(() => { rerenderFrame() })
+    expect(slotCalls.filter(call => call.key === 'game').at(-1)?.props).toMatchObject({ state: { status: 'starting' } })
+  })
+
+  it('never enters a game-specific three-column layout for unsupported or idle states', () => {
+    const { frame, instance } = mountFrame()
+    act(() => { instance.actions.setGameSurface(selectedCwd.current, { status: 'unsupported', error: '不支持' }) })
+    expect(frame.hasAttribute('data-game-mode')).toBe(false)
+    act(() => { instance.actions.setGameSurface(selectedCwd.current, { status: 'idle' }) })
+    expect(frame.hasAttribute('data-game-mode')).toBe(false)
   })
 
   it('renders the session pair with empty owner shares (sessionId is framework-standard)', () => {

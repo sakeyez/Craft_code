@@ -10,7 +10,7 @@ import type {
 } from './contract.ts'
 
 /** Required services for the overlay registration and project/session actions. */
-export const inject = ['slots', 'sessions', 'workspaces']
+export const inject = ['slots', 'sessions', 'workspaces', 'layout']
 
 /** Register the desktop overlay only when Electron's preload bridge is present. */
 export function apply(ctx: ClientContext): void {
@@ -43,29 +43,26 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => bridge.onGameEvent((event) => {
     gameSnapshot = { sequence: gameSnapshot.sequence + 1, ...event }
     for (const listener of gameListeners) listener()
-    window.dispatchEvent(new CustomEvent('craftcode:game-state', {
-      detail: {
-        status: event.result.ok ? 'disconnected' : 'failed',
-        gameName: 'Minecraft',
-        error: event.result.message,
-      },
-    }))
   }), 'ui-desktop-menu: preload game subscription')
   if (bridge.onGameSurfaceState !== undefined) {
     const onGameSurfaceState = bridge.onGameSurfaceState
-    ctx.effect(() => onGameSurfaceState((state) => {
-      window.dispatchEvent(new CustomEvent('craftcode:game-state', { detail: state }))
-    }), 'ui-desktop-menu: preload game surface subscription')
+    ctx.effect(
+      () => onGameSurfaceState((event) => { ctx.layout.setGameSurface(event) }),
+      'ui-desktop-menu: preload game surface subscription',
+    )
   }
-  ctx.effect(() => {
-    const reconnect = (): void => {
-      const cwd = ctx.sessions.list.getSnapshot().current
-      const path = cwd === undefined ? undefined : ctx.sessions.list.getSnapshot().byId[cwd]?.cwd
-      if (path !== undefined && bridge.reconnectGameSurface !== undefined) void bridge.reconnectGameSurface(path)
-    }
-    window.addEventListener('craftcode:game-reconnect', reconnect)
-    return () => { window.removeEventListener('craftcode:game-reconnect', reconnect) }
-  }, 'ui-desktop-menu: game reconnect action')
+  ctx.effect(() => ctx.layout.attachGameSurfaceBridge({
+    reconnect: async (cwd) => {
+      if (bridge.reconnectGameSurface === undefined) throw new Error('桌面端未提供游戏重连能力。')
+      return await bridge.reconnectGameSurface(cwd) as never
+    },
+    beginAnnotation: async (cwd) => {
+      if (bridge.beginGameAnnotation === undefined) throw new Error('桌面端未提供游戏截图能力。')
+      return bridge.beginGameAnnotation(cwd)
+    },
+    endAnnotation: async (cwd) => { await bridge.endGameAnnotation?.(cwd) },
+    reposition: async (cwd) => { await bridge.repositionGameCompanion?.(cwd) },
+  }), 'ui-desktop-menu: game surface bridge')
 
   const injected = (): DesktopMenuInjected => ({
     hooks: { desktopMenu, desktopGame },

@@ -1,20 +1,88 @@
-/* oxlint-disable */
-/** Renderer-safe contract for a native game capture provider. */
-export type GameCaptureStatus = 'idle' | 'starting' | 'connected' | 'failed' | 'disconnected' | 'reconnecting' | 'unsupported'
-export interface GameCaptureState { status: GameCaptureStatus; gameName?: string; surfaceUrl?: string; aspectRatio?: number; error?: string }
-export interface GameCaptureProvider {
-  start(cwd: string): Promise<GameCaptureState>
-  reconnect(cwd: string): Promise<GameCaptureState>
-  stop(cwd: string): Promise<void>
-  screenshot(cwd: string): Promise<{ ref: string } | undefined>
-  setBounds(cwd: string, bounds: { x: number; y: number; width: number; height: number }): Promise<void>
+import type { BrowserWindow } from 'electron'
+
+/** Lifecycle states published for one project-owned external game window. */
+export type GameCaptureStatus =
+  | 'idle'
+  | 'starting'
+  | 'connected'
+  | 'failed'
+  | 'disconnected'
+  | 'reconnecting'
+  | 'unsupported'
+
+/** Renderer-safe state for one project-owned external game window. */
+export type GameCaptureState =
+  | { status: 'idle' }
+  | { status: 'starting' | 'reconnecting'; gameName?: string }
+  | { status: 'connected'; gameName?: string; surfaceKind: 'external-window' }
+  | { status: 'failed' | 'disconnected' | 'unsupported'; gameName?: string; error: string }
+
+/** Project key plus the complete replacement state sent across IPC. */
+export interface GameCaptureEvent {
+  cwd: string
+  state: GameCaptureState
 }
 
-/** Explicit fallback until a platform encoder is installed. Never claims a connected surface. */
+/** Bounded still image used only while the HTML annotation layer is active. */
+export interface GameCaptureSnapshot {
+  dataUrl: string
+  width: number
+  height: number
+}
+
+/** Native game-window ownership behind the desktop IPC boundary. */
+export interface GameCaptureProvider {
+  start(cwd: string, rootPid: number): Promise<GameCaptureState>
+  reconnect(cwd: string): Promise<GameCaptureState>
+  select(cwd: string | undefined): Promise<void>
+  stop(cwd: string): Promise<void>
+  beginAnnotation(cwd: string): Promise<GameCaptureSnapshot>
+  endAnnotation(cwd: string): Promise<void>
+  dispose(): Promise<void>
+}
+
+export interface GameCaptureProviderOptions {
+  window: BrowserWindow
+  publish: (event: GameCaptureEvent) => void
+  log?: (line: string) => void
+}
+
+/** Non-Windows provider: launches remain external and no active workspace is claimed. */
 export class UnsupportedGameCaptureProvider implements GameCaptureProvider {
-  async start(_cwd: string): Promise<GameCaptureState> { return { status: 'unsupported', error: '当前平台没有可用的游戏画面 provider。' } }
-  async reconnect(_cwd: string): Promise<GameCaptureState> { return { status: 'unsupported', error: '当前平台没有可用的游戏画面 provider。' } }
-  async stop(_cwd: string): Promise<void> {}
-  async screenshot(_cwd: string): Promise<undefined> { return undefined }
-  async setBounds(_cwd: string, _bounds: { x: number; y: number; width: number; height: number }): Promise<void> {}
+  constructor(private readonly publish?: (event: GameCaptureEvent) => void) {}
+
+  start(cwd: string, _rootPid: number): Promise<GameCaptureState> {
+    const state: GameCaptureState = {
+      status: 'unsupported',
+      error: '当前平台不支持内嵌游戏窗口，Minecraft 将在独立窗口中运行。',
+    }
+    this.publish?.({ cwd, state })
+    return Promise.resolve(state)
+  }
+
+  reconnect(cwd: string): Promise<GameCaptureState> {
+    const state: GameCaptureState = { status: 'unsupported', error: '当前平台不支持内嵌游戏窗口。' }
+    this.publish?.({ cwd, state })
+    return Promise.resolve(state)
+  }
+
+  select(_cwd: string | undefined): Promise<void> { return Promise.resolve() }
+  stop(cwd: string): Promise<void> {
+    this.publish?.({ cwd, state: { status: 'idle' } })
+    return Promise.resolve()
+  }
+
+  beginAnnotation(_cwd: string): Promise<GameCaptureSnapshot> {
+    return Promise.reject(new Error('当前平台不支持游戏画面标注。'))
+  }
+
+  endAnnotation(_cwd: string): Promise<void> { return Promise.resolve() }
+  dispose(): Promise<void> { return Promise.resolve() }
+}
+
+/** Create the platform provider without loading Koffi on non-Windows hosts. */
+export async function createGameCaptureProvider(options: GameCaptureProviderOptions): Promise<GameCaptureProvider> {
+  if (process.platform !== 'win32') return new UnsupportedGameCaptureProvider(options.publish)
+  const { WindowsGameCaptureProvider } = await import('./game-capture-win32.ts')
+  return new WindowsGameCaptureProvider(options)
 }

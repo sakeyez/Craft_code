@@ -61,14 +61,18 @@ export interface DesktopBridge {
   isMaximized(): Promise<boolean>
   onMaximizedChange(listener: (maximized: boolean) => void): () => void
   invokeProjectCommand(request: DesktopCommandRequest): Promise<DesktopCommandResult>
-  onGameSurfaceState?: (listener: (state: {
-    status: string
-    gameName?: string
-    surfaceUrl?: string
-    aspectRatio?: number
-    error?: string
+  onGameSurfaceState?: (listener: (event: {
+    cwd: string
+    state:
+      | { status: 'idle' }
+      | { status: 'starting' | 'reconnecting'; gameName?: string }
+      | { status: 'connected'; gameName?: string; surfaceKind: 'external-window' }
+      | { status: 'failed' | 'disconnected' | 'unsupported'; gameName?: string; error: string }
   }) => void) => () => void
   reconnectGameSurface?: (cwd: string) => Promise<unknown>
+  beginGameAnnotation?: (cwd: string) => Promise<{ dataUrl: string; width: number; height: number }>
+  endGameAnnotation?: (cwd: string) => Promise<void>
+  repositionGameCompanion?: (cwd: string) => Promise<void>
 }
 
 /** Observable renderer event derived from a native menu action. */

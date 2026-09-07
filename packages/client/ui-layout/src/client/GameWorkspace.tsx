@@ -2,14 +2,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { GameAnnotation, NormalizedPoint } from '@deepseek-ai/dsh-session/types'
-import { annotationBounds, annotationLabel, normalizePoint, type GameSurfaceState } from './game.ts'
+import {
+  annotationBounds, annotationLabel, normalizePoint, type GameSurfaceSnapshot,
+  type GameSurfaceState,
+} from './game.ts'
 import css from './GameWorkspace.module.css'
 
-export type GameWorkspaceProps = PropsRuntime<'game'>
-
-function initialGameState(): GameSurfaceState {
-  if (typeof window === 'undefined') return { status: 'idle' }
-  return (window as Window & { __craftCodeGameState?: GameSurfaceState }).__craftCodeGameState ?? { status: 'idle' }
+export type GameWorkspaceProps = PropsRuntime<'game'> & {
+  annotate: ((annotations: GameAnnotation[]) => Promise<unknown>) | undefined
+  reconnect: (cwd: string) => Promise<GameSurfaceState>
+  beginAnnotation: (cwd: string) => Promise<GameSurfaceSnapshot>
+  endAnnotation: (cwd: string) => Promise<void>
+  reposition: (cwd: string) => Promise<void>
 }
 
 function AnnotationLayer(props: {
@@ -60,26 +64,54 @@ function AnnotationContextList(props: { annotations: readonly GameAnnotation[]; 
   return <section className={css.contextList} aria-label="游戏标注上下文"><h3>标注上下文</h3>{props.annotations.length === 0 ? <p className={css.muted}>还没有标注</p> : props.annotations.map(annotation => { const bounds = annotationBounds(annotation); return <div key={annotation.id} className={css.contextItem}><button type="button" onClick={() => props.onFocus(annotation.id)}><strong>[标注 {annotation.label}]</strong><span>{annotation.description || '未填写说明'}</span><small>x {bounds.x.toFixed(2)} · y {bounds.y.toFixed(2)} · w {bounds.width.toFixed(2)} · h {bounds.height.toFixed(2)}</small></button><button type="button" onClick={() => props.onEdit(annotation)}>编辑</button><button type="button" className={css.deleteButton} onClick={() => props.onDelete(annotation.id)} aria-label={`删除标注 ${annotation.label}`}>删除</button></div> })}</section>
 }
 
-export function GameWorkspace({ useSession, sessionId, useSessions, state, annotate }: GameWorkspaceProps & { state: GameSurfaceState; annotate: ((annotations: GameAnnotation[]) => Promise<unknown>) | undefined }) {
-  const [game, setGame] = useState<GameSurfaceState>(state ?? initialGameState)
-  const [annotating, setAnnotating] = useState(false)
+export function GameWorkspace({ useSession, sessionId, cwd, state: game, annotate, reconnect, beginAnnotation, endAnnotation, reposition }: GameWorkspaceProps) {
+  const annotationCwd = useRef<string>()
+  const captureGeneration = useRef(0)
+  const [snapshot, setSnapshot] = useState<GameSurfaceSnapshot>()
+  const [captureError, setCaptureError] = useState<string>()
   const [pendingShape, setPendingShape] = useState<GameAnnotation['shape'] | null>(null)
   const [editing, setEditing] = useState<GameAnnotation | null>(null)
   const [activeId, setActiveId] = useState<string>()
-  useEffect(() => setGame(state), [state])
   const annotations = useSession(snapshot => snapshot?.annotations ?? []) ?? []
-  const currentCwd = useSessions(state => state.current ? state.byId[state.current]?.cwd : undefined)
-  useEffect(() => {
-    const listener = (event: Event): void => setGame((event as CustomEvent<GameSurfaceState>).detail)
-    window.addEventListener('craftcode:game-state', listener)
-    return () => window.removeEventListener('craftcode:game-state', listener)
-  }, [])
+  useEffect(() => () => {
+    captureGeneration.current += 1
+    const active = annotationCwd.current
+    annotationCwd.current = undefined
+    if (active !== undefined) void endAnnotation(active)
+  }, [cwd, endAnnotation])
+
+  const finishAnnotation = useCallback(async (): Promise<void> => {
+    captureGeneration.current += 1
+    const active = annotationCwd.current
+    annotationCwd.current = undefined
+    setSnapshot(undefined)
+    setPendingShape(null)
+    if (active !== undefined) await endAnnotation(active)
+  }, [endAnnotation])
+
+  const toggleAnnotation = useCallback(async (): Promise<void> => {
+    if (snapshot !== undefined) { await finishAnnotation(); return }
+    if (cwd === undefined || game.status !== 'connected') return
+    const generation = ++captureGeneration.current
+    setCaptureError(undefined)
+    try {
+      const captured = await beginAnnotation(cwd)
+      if (captureGeneration.current !== generation) { await endAnnotation(cwd); return }
+      annotationCwd.current = cwd
+      setSnapshot(captured)
+    } catch (error) {
+      await endAnnotation(cwd).catch(() => {})
+      setCaptureError(error instanceof Error ? error.message : String(error))
+    }
+  }, [beginAnnotation, cwd, endAnnotation, finishAnnotation, game.status, snapshot])
+
   const persist = useCallback(async (next: GameAnnotation[]) => { if (!annotate || sessionId === undefined) return; await annotate(next) }, [annotate, sessionId])
-  const create = useCallback((draft: { shape: GameAnnotation['shape'] }) => { setPendingShape(draft.shape); setAnnotating(false) }, [])
-  const save = useCallback((description: string) => {
+  const create = useCallback((draft: { shape: GameAnnotation['shape'] }) => { setPendingShape(draft.shape) }, [])
+  const save = useCallback(async (description: string): Promise<void> => {
     if (editing !== null) {
-      void persist(annotations.map(annotation => annotation.id === editing.id ? { ...annotation, description } : annotation))
+      await persist(annotations.map(annotation => annotation.id === editing.id ? { ...annotation, description } : annotation))
       setEditing(null)
+      if (snapshot !== undefined) await finishAnnotation()
       return
     }
     if (!pendingShape || !sessionId) return
@@ -87,15 +119,15 @@ export function GameWorkspace({ useSession, sessionId, useSessions, state, annot
     let index = 0
     while (labels.has(annotationLabel(index))) index += 1
     const annotation: GameAnnotation = { sessionId, id: crypto.randomUUID(), label: annotationLabel(index), shape: pendingShape, description, createdAt: Date.now() }
-    void persist([...annotations, annotation])
-    setPendingShape(null)
-  }, [annotations, editing, pendingShape, persist, sessionId])
+    try { await persist([...annotations, annotation]) } finally { await finishAnnotation() }
+  }, [annotations, editing, finishAnnotation, pendingShape, persist, sessionId, snapshot])
   const remove = useCallback((id: string) => { void persist(annotations.filter(annotation => annotation.id !== id)) }, [annotations, persist])
   const focus = useCallback((id: string) => { setActiveId(id); window.setTimeout(() => setActiveId(current => current === id ? undefined : current), 1200) }, [])
   const statusLabel = useMemo(() => ({ idle: '未启动', starting: '启动中', connected: '已连接', failed: '启动失败', disconnected: '已断开', reconnecting: '正在重连', unsupported: '当前平台不支持' }[game.status]), [game.status])
   return <div className={css.workspace} data-game-status={game.status}>
-    <header className={css.toolbar}><div><strong>{game.gameName ?? currentCwd?.split(/[\\/]/).pop() ?? 'Minecraft'}</strong><span className={css.status} data-status={game.status}>{statusLabel}</span></div><div className={css.toolbarActions}><button type="button" className={css.annotateButton} onClick={() => setAnnotating(value => !value)} disabled={game.status !== 'connected'} aria-label="标注游戏区域" title="标注游戏区域">⌖ 标注游戏区域</button><button type="button" onClick={() => window.dispatchEvent(new CustomEvent('craftcode:game-reconnect'))} disabled={game.status !== 'disconnected' && game.status !== 'failed'}>重连</button></div></header>
-    <div className={css.surfaceFrame} style={{ aspectRatio: game.aspectRatio ?? 16 / 9 }}><div className={css.surfaceContent}>{game.status === 'connected' && game.surfaceUrl ? <video src={game.surfaceUrl} autoPlay muted playsInline /> : <div className={css.surfaceState}><strong>{statusLabel}</strong><span>{game.error ?? (game.status === 'unsupported' ? '暂无可用的游戏画面 provider' : '启动游戏后将在这里显示真实画面')}</span></div>}{(annotating || pendingShape) && game.status === 'connected' && <AnnotationLayer annotations={annotations} activeId={activeId} onCreate={create} onFocus={focus} />}{(pendingShape || editing) && <AnnotationPopover initialValue={editing?.description} onSave={save} onCancel={() => { setPendingShape(null); setEditing(null) }} />}</div></div>
+    <header className={css.toolbar}><div><strong>{('gameName' in game ? game.gameName : undefined) ?? cwd?.split(/[\\/]/).pop() ?? 'Minecraft'}</strong><span className={css.status} data-status={game.status}>{statusLabel}</span></div><div className={css.toolbarActions}><button type="button" className={css.annotateButton} onClick={() => { void toggleAnnotation() }} disabled={game.status !== 'connected'} aria-label={snapshot === undefined ? '标注 Minecraft 窗口' : '退出标注'} title={snapshot === undefined ? '标注 Minecraft 窗口' : '退出标注'}>{snapshot === undefined ? '⌖ 标注窗口' : '退出标注'}</button><button type="button" onClick={() => { if (cwd !== undefined) void reposition(cwd).catch(error => { setCaptureError(error instanceof Error ? error.message : String(error)) }) }} disabled={cwd === undefined || game.status !== 'connected'}>重新定位面板</button><button type="button" onClick={() => { if (cwd !== undefined) void reconnect(cwd).catch(error => { setCaptureError(error instanceof Error ? error.message : String(error)) }) }} disabled={cwd === undefined || (game.status !== 'disconnected' && game.status !== 'failed')}>重连</button></div></header>
+    <div className={css.companionStatus}>{captureError ?? (game.status === 'unsupported' ? 'Minecraft 将在独立窗口中运行。' : game.status === 'connected' ? 'Minecraft 正在独立窗口运行，CraftCode 陪伴面板已跟随。' : ('error' in game ? game.error : '启动游戏后会自动定位陪伴面板。'))}</div>
+    {snapshot !== undefined && <div className={css.annotationPreview}><img className={css.snapshot} src={snapshot.dataUrl} alt="Minecraft 标注截图" /><AnnotationLayer annotations={annotations} activeId={activeId} onCreate={create} onFocus={focus} />{(pendingShape || editing) && <AnnotationPopover initialValue={editing?.description} onSave={description => { void save(description) }} onCancel={() => { setEditing(null); void finishAnnotation() }} />}</div>}
     <AnnotationContextList annotations={annotations} onFocus={focus} onEdit={annotation => setEditing(annotation)} onDelete={remove} />
   </div>
 }

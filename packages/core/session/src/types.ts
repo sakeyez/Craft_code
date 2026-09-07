@@ -344,6 +344,7 @@ export interface NormalizedPoint { x: number; y: number }
 export interface NormalizedRect { x: number; y: number; width: number; height: number }
 /** Normalized freehand path in the game surface content rectangle. */
 export interface NormalizedPath { points: NormalizedPoint[] }
+/** Geometry variant used by a durable game annotation. */
 export type AnnotationShape =
   | { type: 'point'; geometry: NormalizedPoint }
   | { type: 'rect'; geometry: NormalizedRect }

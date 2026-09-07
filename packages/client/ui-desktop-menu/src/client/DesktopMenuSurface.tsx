@@ -252,11 +252,7 @@ export function DesktopMenuSurface({
         void execute({ kind: 'export-jar' }, { title: '导出 JAR', pending: true })
         return
       case 'project:toggle-game':
-        window.dispatchEvent(new CustomEvent('craftcode:game-state', { detail: { status: 'starting', gameName: 'Minecraft' } }))
-        void execute({ kind: 'game-toggle' }, { title: '游戏', pending: true, preserveResultTitle: true }).then((result) => {
-          if (!result.ok) window.dispatchEvent(new CustomEvent('craftcode:game-state', { detail: { status: 'failed', gameName: 'Minecraft', error: result.message } }))
-          else window.dispatchEvent(new CustomEvent('craftcode:game-state', { detail: { status: 'unsupported', gameName: 'Minecraft', error: '当前桌面版本尚未提供可叠加的游戏画面流。' } }))
-        })
+        void execute({ kind: 'game-toggle' }, { title: '游戏', pending: true, preserveResultTitle: true })
         return
       case 'git:status':
         void execute({ kind: 'git-status' }, { title: 'Git 状态', pending: true })

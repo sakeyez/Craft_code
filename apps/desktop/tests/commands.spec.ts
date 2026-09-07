@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
-  desktopGameMenuState, executeDesktopCommand, gradleInvocation, onDesktopGameEvent, stopActiveCommands,
+  desktopGameMenuState, executeDesktopCommand, gradleInvocation, onDesktopGameEvent, onDesktopGameLifecycle, stopActiveCommands,
 } from '../src/commands.ts'
 import type { DesktopGameEvent } from '../src/preload.ts'
 
@@ -136,6 +136,8 @@ describe('desktop project commands', () => {
   it('discovers, starts, and stops one development client for a project', async () => {
     const cwd = project()
     gameWrapper(cwd)
+    const lifecycle: Array<{ type: string; cwd: string; rootPid?: number }> = []
+    const disposeLifecycle = onDesktopGameLifecycle((event) => { lifecycle.push(event) })
     await expect(executeDesktopCommand({ kind: 'game-toggle', cwd })).resolves.toMatchObject({
       ok: true,
       title: '启动游戏',
@@ -147,6 +149,11 @@ describe('desktop project commands', () => {
       title: '停止游戏',
     })
     expect(desktopGameMenuState(cwd)).toBe('idle')
+    disposeLifecycle()
+    expect(lifecycle).toHaveLength(2)
+    expect(lifecycle[0]).toMatchObject({ type: 'spawned', cwd })
+    expect(lifecycle[0]?.rootPid).toEqual(expect.any(Number))
+    expect(lifecycle[1]).toEqual({ type: 'exited', cwd })
   }, 20_000)
 
   it('rejects a duplicate launch while the same project is starting', async () => {

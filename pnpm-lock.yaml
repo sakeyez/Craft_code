@@ -382,6 +382,9 @@ importers:
       '@deepseek-ai/dsh-tool-mc-project':
         specifier: workspace:^
         version: link:../../packages/minecraft/tool-mc-project
+      koffi:
+        specifier: ^3.1.0
+        version: 3.1.1
     devDependencies:
       '@types/node':
         specifier: ^22.20.0

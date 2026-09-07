@@ -32,7 +32,8 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-tool-mc-project": "workspace:^"
+    "@deepseek-ai/dsh-tool-mc-project": "workspace:^",
+    "koffi": "^3.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",

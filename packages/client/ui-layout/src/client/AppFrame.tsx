@@ -1,4 +1,3 @@
-/* oxlint-disable typescript/no-confusing-void-expression */
 /**
  * Three-column shell frame, registered into the built-in 'root' slot (the web
  * shell renders only 'root'). Owns the grid tracks (sidebar | center |
@@ -17,7 +16,7 @@ import type { PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/ds
 import { computeColumns, SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT } from './columns.ts'
 import type { createLayoutStore } from './stores.ts'
 import css from './AppFrame.module.css'
-import type { GameSurfaceState } from './game.ts'
+import { gameProjectKey } from './game.ts'
 
 /** Full composed props: runtime share + child-slot render share + store share. */
 export type AppFrameProps =
@@ -93,20 +92,18 @@ export function AppFrame({
   renderSlot,
 }: AppFrameProps) {
   const panels = useStore(s => s)
-  const detailsSession = useSessions((s) => {
+  const currentProject = useSessions((s) => {
     const current = s.current
-    return current !== undefined && s.byId[current]?.blank === false ? current : undefined
+    const session = current === undefined ? undefined : s.byId[current]
+    return {
+      detailsSession: session?.blank === false ? current : undefined,
+      cwd: session?.cwd,
+    }
   })
+  const detailsSession = currentProject.detailsSession
   const bodyRef = useRef<HTMLDivElement | null>(null)
   const [viewport, setViewport] = useState(() => window.innerWidth)
-  const [gameState, setGameState] = useState<GameSurfaceState>(() => (window as Window & { __craftCodeGameState?: GameSurfaceState }).__craftCodeGameState ?? { status: 'idle' })
-  const [mobileTab, setMobileTab] = useState<'game' | 'conversation' | 'content'>('game')
-  useEffect(() => {
-    const listener = (event: Event): void => setGameState((event as CustomEvent<GameSurfaceState>).detail)
-    window.addEventListener('craftcode:game-state', listener)
-    return () => window.removeEventListener('craftcode:game-state', listener)
-  }, [])
-  const gameMode = gameState.status !== 'idle' && gameState.status !== 'unsupported'
+  const gameState = currentProject.cwd === undefined ? { status: 'idle' as const } : panels.gameByCwd[gameProjectKey(currentProject.cwd)] ?? { status: 'idle' as const }
 
   const lastSession = useRef(detailsSession)
   useLayoutEffect(() => {
@@ -149,10 +146,8 @@ export function AppFrame({
   const sidebarPreference = sidebarCollapsed
     ? 0
     : panels.sidebar === 0 ? SIDEBAR_DEFAULT : panels.sidebar
-  const cols = computeColumns(viewport, sidebarPreference, gameMode ? 0 : (detailsSession === undefined ? 0 : panels.details))
-  const gridColumns = gameMode
-    ? `${cols.sidebar}px minmax(0, 1fr) minmax(0, 1fr)`
-    : `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px`
+  const cols = computeColumns(viewport, sidebarPreference, detailsSession === undefined ? 0 : panels.details)
+  const gridColumns = `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px`
   const colsRef = useRef(cols)
   colsRef.current = cols
 
@@ -179,7 +174,6 @@ export function AppFrame({
       className={css.frame}
       data-sidebar-collapsed={sidebarCollapsed || undefined}
       data-details-collapsed={cols.details === 0 || undefined}
-      data-game-mode={gameMode || undefined}
       data-dragging={dragging || undefined}
     >
       <div className={css.topbar} data-shell-topbar>
@@ -190,10 +184,8 @@ export function AppFrame({
         className={css.body}
         style={{ gridTemplateColumns: gridColumns }}
         data-shell-body
-        data-game-mode={gameMode || undefined}
       >
-        {gameMode && <div className={css.mobileTabs} role="tablist" aria-label="工作区视图"><button type="button" role="tab" aria-selected={mobileTab === 'content'} onClick={() => setMobileTab('content')}>原有内容</button><button type="button" role="tab" aria-selected={mobileTab === 'game'} onClick={() => setMobileTab('game')}>游戏</button><button type="button" role="tab" aria-selected={mobileTab === 'conversation'} onClick={() => setMobileTab('conversation')}>对话</button></div>}
-        <div className={`${css.sidebarCol} ${gameMode && mobileTab !== 'content' ? css.mobileHidden : ''}`}>
+        <div className={css.sidebarCol}>
           {/* Render-site slot call with live concession output: a closed
               sidebar keeps the mounted slot at the compact-rail width, and the
               component sees its rendered state as owner params decided here
@@ -210,9 +202,11 @@ export function AppFrame({
               the shell's own pending rendering. The conversation
               is session-maybe; the strict details entry naturally renders
               empty while no session is current. */}
-          {gameMode ? <CenterColumn hidden={mobileTab !== 'game'}>{renderSlot('game', { state: gameState })}</CenterColumn> : <CenterColumn>{renderSlot('conversation', {})}</CenterColumn>}
-          {gameMode && <div className={css.gameConversationCol}><div className={mobileTab === 'conversation' ? '' : css.mobileConversationHidden}>{renderSlot('conversation', {})}</div><div className={css.gameDetails}>{renderSlot('details', {})}</div></div>}
-          {!gameMode && <DetailsColumn>{renderSlot('details', {})}</DetailsColumn>}
+          <CenterColumn>
+            {gameState.status !== 'idle' && renderSlot('game', { ...(currentProject.cwd === undefined ? {} : { cwd: currentProject.cwd }), state: gameState })}
+            {renderSlot('conversation', {})}
+          </CenterColumn>
+          <DetailsColumn>{renderSlot('details', {})}</DetailsColumn>
         </>
         {/* The collapsed rail is fixed-width: no resize handle while closed. */}
         {!sidebarCollapsed && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}

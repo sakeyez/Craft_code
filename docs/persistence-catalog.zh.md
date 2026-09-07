@@ -411,6 +411,19 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 来源：[`packages/feedback/command-feedback/src/index.ts:62`](../packages/feedback/command-feedback/src/index.ts)
 
+### `game/*`
+
+<a id="gameannotations--log-only"></a>
+
+#### `game/annotations` — log-only
+
+```ts persistence-catalog
+/** Full-list snapshot of game annotations for deterministic replay. */
+'game/annotations': { annotations: GameAnnotation[] }
+```
+
+来源：[`packages/core/session/src/types.ts:338`](../packages/core/session/src/types.ts)
+
 ### `goal/*`
 
 <a id="goalchange--log-only"></a>

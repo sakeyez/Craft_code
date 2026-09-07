@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { fileURLToPath } from 'node:url'
-import { isDesktopGameEvent } from '../src/preload-validation.ts'
+import {
+  isDesktopGameEvent, isGameCaptureEvent, isGameCaptureSnapshot, isGameCaptureState,
+} from '../src/preload-validation.ts'
 
 describe('desktop preload boundary', () => {
   it('accepts only structurally valid game process events', () => {
@@ -40,6 +42,18 @@ describe('desktop preload boundary', () => {
     expect(source).not.toContain('desktop:exec')
     expect(source).not.toContain('project:save')
     expect(source).not.toContain('project-save')
+  })
+
+  it('accepts only strict project-scoped game states and bounded JPEG snapshots', () => {
+    expect(isGameCaptureState({ status: 'connected', surfaceKind: 'external-window', gameName: 'Minecraft' })).toBe(true)
+    expect(isGameCaptureState({ status: 'connected' })).toBe(false)
+    expect(isGameCaptureState({ status: 'anything' })).toBe(false)
+    expect(isGameCaptureState({ status: 'idle', error: 'extra' })).toBe(false)
+    expect(isGameCaptureEvent({ cwd: 'C:\\project', state: { status: 'starting' } })).toBe(true)
+    expect(isGameCaptureEvent({ cwd: 'relative', state: { status: 'starting' } })).toBe(false)
+    expect(isGameCaptureSnapshot({ dataUrl: 'data:image/jpeg;base64,AA==', width: 1920, height: 1080 })).toBe(true)
+    expect(isGameCaptureSnapshot({ dataUrl: 'data:image/png;base64,AA==', width: 1, height: 1 })).toBe(false)
+    expect(isGameCaptureSnapshot({ dataUrl: 'data:image/jpeg;base64,AA==', width: 1921, height: 1 })).toBe(false)
   })
 
   it('keeps the sandbox runtime preload limited to Electron primitives', () => {

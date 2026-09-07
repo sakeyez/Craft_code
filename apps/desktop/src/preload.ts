@@ -2,8 +2,8 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import {
   isDesktopMenuAction, type DesktopMenuAction, type DesktopMenuId, type DesktopMenuOpenRequest,
 } from './menu.ts'
-import { isDesktopGameEvent } from './preload-validation.ts'
-import type { GameCaptureState } from './game-capture.ts'
+import { isDesktopGameEvent, isGameCaptureEvent, isGameCaptureSnapshot, isGameCaptureState } from './preload-validation.ts'
+import type { GameCaptureEvent, GameCaptureSnapshot, GameCaptureState } from './game-capture.ts'
 
 export interface DesktopCommandRequest {
   kind: 'project-settings-read' | 'project-settings-write' | 'export-jar' | 'game-toggle'
@@ -45,11 +45,11 @@ export interface DesktopBridge {
   isMaximized: () => Promise<boolean>
   onMaximizedChange: (listener: (maximized: boolean) => void) => () => void
   invokeProjectCommand: (request: DesktopCommandRequest) => Promise<DesktopCommandResult>
-  onGameSurfaceState?: (listener: (state: GameCaptureState) => void) => () => void
+  onGameSurfaceState?: (listener: (event: GameCaptureEvent) => void) => () => void
   reconnectGameSurface?: (cwd: string) => Promise<GameCaptureState>
-  stopGameSurface?: (cwd: string) => Promise<void>
-  screenshotGameSurface?: (cwd: string) => Promise<{ ref: string } | undefined>
-  setGameSurfaceBounds?: (cwd: string, bounds: { x: number; y: number; width: number; height: number }) => Promise<void>
+  beginGameAnnotation?: (cwd: string) => Promise<GameCaptureSnapshot>
+  endGameAnnotation?: (cwd: string) => Promise<void>
+  repositionGameCompanion?: (cwd: string) => Promise<void>
 }
 
 contextBridge.exposeInMainWorld('craftCodeDesktop', {
@@ -83,15 +83,23 @@ contextBridge.exposeInMainWorld('craftCodeDesktop', {
     return () => { ipcRenderer.removeListener('desktop:window-maximized', wrapped) }
   },
   invokeProjectCommand: (request: DesktopCommandRequest) => ipcRenderer.invoke('desktop:command', request),
-  onGameSurfaceState: (listener: (state: GameCaptureState) => void) => {
+  onGameSurfaceState: (listener: (event: GameCaptureEvent) => void) => {
     const wrapped = (_event: IpcRendererEvent, value: unknown): void => {
-      if (value !== null && typeof value === 'object' && 'status' in value && typeof value.status === 'string') listener(value as GameCaptureState)
+      if (isGameCaptureEvent(value)) listener(value)
     }
     ipcRenderer.on('desktop:game-surface-state', wrapped)
     return () => { ipcRenderer.removeListener('desktop:game-surface-state', wrapped) }
   },
-  reconnectGameSurface: (cwd: string) => ipcRenderer.invoke('desktop:game-surface-reconnect', cwd),
-  stopGameSurface: (cwd: string) => ipcRenderer.invoke('desktop:game-surface-stop', cwd),
-  screenshotGameSurface: (cwd: string) => ipcRenderer.invoke('desktop:game-surface-screenshot', cwd),
-  setGameSurfaceBounds: (cwd: string, bounds) => ipcRenderer.invoke('desktop:game-surface-bounds', { cwd, bounds }),
+  reconnectGameSurface: async (cwd: string) => {
+    const value: unknown = await ipcRenderer.invoke('desktop:game-surface-reconnect', cwd)
+    if (!isGameCaptureState(value)) throw new Error('主进程返回了无效的游戏状态。')
+    return value
+  },
+  beginGameAnnotation: async (cwd: string) => {
+    const value: unknown = await ipcRenderer.invoke('desktop:game-annotation-begin', cwd)
+    if (!isGameCaptureSnapshot(value)) throw new Error('主进程返回了无效的游戏截图。')
+    return value
+  },
+  endGameAnnotation: (cwd: string) => ipcRenderer.invoke('desktop:game-annotation-end', cwd),
+  repositionGameCompanion: (cwd: string) => ipcRenderer.invoke('desktop:game-companion-reposition', cwd),
 } satisfies DesktopBridge)

@@ -16,6 +16,7 @@ function fakePanels(): PanelActions {
     setNarrow: vi.fn(),
     openDetails: vi.fn(),
     closeDetails: vi.fn(),
+    setGameSurface: vi.fn(),
   }
 }
 
@@ -54,5 +55,29 @@ describe('LayoutController', () => {
 
     expect(stale.toggleSidebar).not.toHaveBeenCalled()
     expect(fresh.toggleSidebar).toHaveBeenCalledTimes(1)
+  })
+
+  it('buffers project game state until the root store actions attach', () => {
+    const service = new LayoutController()
+    service.setGameSurface({ cwd: 'C:\\Project', state: { status: 'starting' } })
+    const panels = fakePanels()
+    service.attachPanels(panels)
+    expect(panels.setGameSurface).toHaveBeenCalledWith('C:\\Project', { status: 'starting' })
+  })
+
+  it('forwards external-game operations only while the desktop bridge is attached', async () => {
+    const service = new LayoutController()
+    const bridge = {
+      reconnect: vi.fn(async () => ({ status: 'reconnecting' as const })),
+      beginAnnotation: vi.fn(async () => ({ dataUrl: 'data:image/jpeg;base64,AA==', width: 1, height: 1 })),
+      endAnnotation: vi.fn(async () => {}),
+      reposition: vi.fn(async () => {}),
+    }
+    const dispose = service.attachGameSurfaceBridge(bridge)
+    await expect(service.reconnectGameSurface('C:\\Project')).resolves.toEqual({ status: 'reconnecting' })
+    await service.repositionGameCompanion('C:\\Project')
+    expect(bridge.reposition).toHaveBeenCalledWith('C:\\Project')
+    dispose()
+    expect(() => service.beginGameAnnotation('C:\\Project')).toThrow(/not attached/)
   })
 })

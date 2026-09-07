@@ -1,12 +1,12 @@
 /** Electron development shell over the existing loopback `dsh web` runtime. */
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { copyFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell, type NativeImage, type WebContents } from 'electron'
 import { startBackend, type BackendHandle } from './backend.ts'
 import {
-  desktopGameMenuState, executeDesktopCommand, onDesktopGameEvent, stopActiveCommands,
+  desktopGameMenuState, executeDesktopCommand, onDesktopGameEvent, onDesktopGameLifecycle, stopActiveCommands,
 } from './commands.ts'
 import { decodeEmbeddedPng } from './icon.ts'
 import {
@@ -17,7 +17,9 @@ import {
 import type { DesktopCommandRequest, DesktopCommandResult } from './preload.ts'
 import { resolveDesktopRuntime } from './runtime.ts'
 import { desktopAppUserModelId, desktopWindowOptions, navigationDisposition } from './window.ts'
-import { UnsupportedGameCaptureProvider, type GameCaptureState } from './game-capture.ts'
+import {
+  createGameCaptureProvider, type GameCaptureProvider, type GameCaptureSnapshot, type GameCaptureState,
+} from './game-capture.ts'
 
 const REPOSITORY_ROOT = fileURLToPath(new URL('../../..', import.meta.url))
 const DESKTOP_ICON_PATH = fileURLToPath(new URL('./CraftCode.ico', import.meta.url))
@@ -28,7 +30,7 @@ const PRELOAD_PATH = fileURLToPath(new URL('./preload.cjs', import.meta.url))
 let backend: BackendHandle | undefined
 let mainWindow: BrowserWindow | undefined
 let shutdown: Promise<void> | undefined
-const gameCapture = new UnsupportedGameCaptureProvider()
+let gameCapture: GameCaptureProvider | undefined
 
 app.setName('CraftCode')
 const appUserModelId = desktopAppUserModelId(app.isPackaged)
@@ -38,6 +40,11 @@ const DESKTOP_COMMAND_KINDS: ReadonlySet<string> = new Set([
   'project-settings-read', 'project-settings-write', 'export-jar', 'game-toggle',
   'git-status', 'git-diff', 'git-log', 'git-branch', 'git-commit', 'git-push', 'git-pull',
 ])
+
+function canonicalProjectCwd(value: unknown): string | undefined {
+  if (typeof value !== 'string' || !/^(?:[A-Za-z]:[\\/]|[\\/]{2}|\/)/u.test(value)) return undefined
+  return resolve(value)
+}
 
 /** Append one credential-free lifecycle line to Electron's writable log directory. */
 function desktopLog(line: string): void {
@@ -118,6 +125,8 @@ function shutdownAndQuit(): Promise<void> {
     const active = backend
     backend = undefined
     try {
+      await gameCapture?.dispose()
+      gameCapture = undefined
       await stopActiveCommands()
       await active?.stop()
     } catch (error) {
@@ -140,6 +149,7 @@ app.on('window-all-closed', () => { void shutdownAndQuit() })
 /** Start the supervised Web profile after Electron finishes initialization. */
 async function startDesktop(): Promise<void> {
   let activeProjectCwd: string | undefined
+  const knownProjects = new Set<string>()
   const applicationMenu = Menu.buildFromTemplate(desktopMenuTemplate(
     (action: DesktopMenuAction) => {
       desktopLog(`menu action=${action}`)
@@ -164,6 +174,20 @@ async function startDesktop(): Promise<void> {
     const window = mainWindow
     if (window !== undefined && !window.isDestroyed()) window.webContents.send('desktop:game-event', event)
   })
+  onDesktopGameLifecycle((event) => {
+    const capture = gameCapture
+    if (capture === undefined) return
+    if (event.type === 'spawned') {
+      knownProjects.add(event.cwd)
+      void capture.start(event.cwd, event.rootPid).catch((error: unknown) => {
+        desktopLog(`game capture start failed cwd=${event.cwd} error=${error instanceof Error ? error.message : String(error)}`)
+      })
+      return
+    }
+    void capture.stop(event.cwd).catch((error: unknown) => {
+      desktopLog(`game capture stop failed cwd=${event.cwd} error=${error instanceof Error ? error.message : String(error)}`)
+    })
+  })
   ipcMain.removeHandler('desktop:open-menu')
   ipcMain.handle('desktop:open-menu', async (event, rawRequest: unknown): Promise<void> => {
     const window = mainWindow
@@ -176,8 +200,10 @@ async function startDesktop(): Promise<void> {
     )
     if (request === undefined) throw new Error('Invalid desktop menu request')
     if (request.menu === 'project') {
-      activeProjectCwd = request.cwd
+      activeProjectCwd = canonicalProjectCwd(request.cwd)
+      if (activeProjectCwd !== undefined) knownProjects.add(activeProjectCwd)
       refreshGameMenu(activeProjectCwd)
+      await gameCapture?.select(activeProjectCwd)
     }
     const submenu = applicationMenu.getMenuItemById(DESKTOP_MENU_ITEM_IDS[request.menu])?.submenu
     if (submenu === undefined) throw new Error('Desktop menu is unavailable')
@@ -191,11 +217,13 @@ async function startDesktop(): Promise<void> {
     })
   })
   ipcMain.removeHandler('desktop:set-active-project')
-  ipcMain.handle('desktop:set-active-project', (event, cwd: unknown): void => {
+  ipcMain.handle('desktop:set-active-project', async (event, cwd: unknown): Promise<void> => {
     if (mainWindow === undefined || event.sender !== mainWindow.webContents) throw new Error('Invalid desktop project request')
-    if (cwd !== undefined && typeof cwd !== 'string') throw new Error('Invalid desktop project request')
-    activeProjectCwd = cwd
+    if (cwd !== undefined && canonicalProjectCwd(cwd) === undefined) throw new Error('Invalid desktop project request')
+    activeProjectCwd = canonicalProjectCwd(cwd)
+    if (activeProjectCwd !== undefined) knownProjects.add(activeProjectCwd)
     refreshGameMenu(activeProjectCwd)
+    await gameCapture?.select(activeProjectCwd)
   })
   ipcMain.removeHandler('desktop:window-minimize')
   ipcMain.handle('desktop:window-minimize', (event): void => {
@@ -220,31 +248,33 @@ async function startDesktop(): Promise<void> {
   })
   ipcMain.removeHandler('desktop:game-surface-reconnect')
   ipcMain.handle('desktop:game-surface-reconnect', async (event, cwd: unknown): Promise<GameCaptureState> => {
-    if (mainWindow === undefined || event.sender !== mainWindow.webContents || typeof cwd !== 'string') return { status: 'failed', error: '请求来源无效。' }
-    return gameCapture.reconnect(cwd)
+    const canonical = canonicalProjectCwd(cwd)
+    if (mainWindow === undefined || event.sender !== mainWindow.webContents || canonical === undefined
+      || canonical !== activeProjectCwd || !knownProjects.has(canonical) || gameCapture === undefined) {
+      return { status: 'failed', error: '请求来源或项目无效。' }
+    }
+    return gameCapture.reconnect(canonical)
   })
-  ipcMain.removeHandler('desktop:game-surface-stop')
-  ipcMain.handle('desktop:game-surface-stop', async (event, cwd: unknown): Promise<void> => {
-    if (mainWindow === undefined || event.sender !== mainWindow.webContents || typeof cwd !== 'string') throw new Error('请求来源无效。')
-    await gameCapture.stop(cwd)
+  ipcMain.removeHandler('desktop:game-annotation-begin')
+  ipcMain.handle('desktop:game-annotation-begin', async (event, cwd: unknown): Promise<GameCaptureSnapshot> => {
+    const canonical = canonicalProjectCwd(cwd)
+    if (mainWindow === undefined || event.sender !== mainWindow.webContents || canonical === undefined
+      || canonical !== activeProjectCwd || !knownProjects.has(canonical) || gameCapture === undefined) throw new Error('请求来源或项目无效。')
+    return gameCapture.beginAnnotation(canonical)
   })
-  ipcMain.removeHandler('desktop:game-surface-screenshot')
-  ipcMain.handle('desktop:game-surface-screenshot', async (event, cwd: unknown): Promise<{ ref: string } | undefined> => {
-    if (mainWindow === undefined || event.sender !== mainWindow.webContents || typeof cwd !== 'string') return undefined
-    return gameCapture.screenshot(cwd)
+  ipcMain.removeHandler('desktop:game-annotation-end')
+  ipcMain.handle('desktop:game-annotation-end', async (event, cwd: unknown): Promise<void> => {
+    const canonical = canonicalProjectCwd(cwd)
+    if (mainWindow === undefined || event.sender !== mainWindow.webContents || canonical === undefined
+      || !knownProjects.has(canonical) || gameCapture === undefined) throw new Error('请求来源或项目无效。')
+    await gameCapture.endAnnotation(canonical)
   })
-  ipcMain.removeHandler('desktop:game-surface-bounds')
-  ipcMain.handle('desktop:game-surface-bounds', async (event, raw: unknown): Promise<void> => {
-    if (mainWindow === undefined || event.sender !== mainWindow.webContents || raw === null || typeof raw !== 'object') throw new Error('请求来源无效。')
-    const value = raw as { cwd?: unknown; bounds?: unknown }
-    const bounds = value.bounds as { x?: unknown; y?: unknown; width?: unknown; height?: unknown } | undefined
-    if (typeof value.cwd !== 'string' || bounds === undefined || ![bounds.x, bounds.y, bounds.width, bounds.height].every(v => typeof v === 'number' && Number.isFinite(v) && v >= 0)) throw new Error('bounds 无效。')
-    await gameCapture.setBounds(value.cwd, {
-      x: bounds.x as number,
-      y: bounds.y as number,
-      width: bounds.width as number,
-      height: bounds.height as number,
-    })
+  ipcMain.removeHandler('desktop:game-companion-reposition')
+  ipcMain.handle('desktop:game-companion-reposition', async (event, cwd: unknown): Promise<void> => {
+    const canonical = canonicalProjectCwd(cwd)
+    if (mainWindow === undefined || event.sender !== mainWindow.webContents || canonical === undefined
+      || canonical !== activeProjectCwd || !knownProjects.has(canonical) || gameCapture === undefined) throw new Error('请求来源或项目无效。')
+    await gameCapture.select(canonical)
   })
   ipcMain.removeHandler('desktop:command')
   ipcMain.handle('desktop:command', async (event, rawRequest: unknown): Promise<DesktopCommandResult> => {
@@ -257,6 +287,8 @@ async function startDesktop(): Promise<void> {
     }
     const request = rawRequest as DesktopCommandRequest
     try {
+      const canonical = canonicalProjectCwd(request.cwd)
+      if (canonical !== undefined) knownProjects.add(canonical)
       let result = await executeDesktopCommand(request)
       if (request.kind === 'game-toggle') refreshGameMenu(activeProjectCwd)
       if (request.kind === 'export-jar' && result.ok && result.path !== undefined && result.artifacts !== undefined && result.artifacts.length > 0) {
@@ -290,6 +322,15 @@ async function startDesktop(): Promise<void> {
     backend = await startBackend(runtime)
     desktopLog(`backend ready pid=${String(backend.child.pid)} url=${backend.url}`)
     mainWindow = await createWindow(backend.url)
+    gameCapture = await createGameCaptureProvider({
+      window: mainWindow,
+      publish: (gameEvent) => {
+        const window = mainWindow
+        if (window !== undefined && !window.isDestroyed()) window.webContents.send('desktop:game-surface-state', gameEvent)
+      },
+      log: desktopLog,
+    })
+    await gameCapture.select(activeProjectCwd)
     void backend.exited.then(({ code, signal }) => {
       desktopLog(`backend exit code=${String(code)} signal=${String(signal)}`)
       if (shutdown !== undefined) return

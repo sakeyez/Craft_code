@@ -37,7 +37,13 @@ interface ActiveGame {
 const activeCommands = new Set<ChildProcess>()
 const activeGames = new Map<string, ActiveGame>()
 const gameEventListeners = new Set<(event: DesktopGameEvent) => void>()
+const gameLifecycleListeners = new Set<(event: DesktopGameLifecycleEvent) => void>()
 let acceptingCommands = true
+
+/** Main-process-only lifecycle used to attach native windows to Gradle launches. */
+export type DesktopGameLifecycleEvent =
+  | { type: 'spawned'; cwd: string; rootPid: number }
+  | { type: 'exited'; cwd: string }
 
 function isAcceptingCommands(): boolean {
   return acceptingCommands
@@ -200,6 +206,16 @@ export function onDesktopGameEvent(listener: (event: DesktopGameEvent) => void):
   return () => { gameEventListeners.delete(listener) }
 }
 
+/** Subscribe to Gradle process ownership without exposing process ids to the renderer. */
+export function onDesktopGameLifecycle(listener: (event: DesktopGameLifecycleEvent) => void): () => void {
+  gameLifecycleListeners.add(listener)
+  return () => { gameLifecycleListeners.delete(listener) }
+}
+
+function emitGameLifecycle(event: DesktopGameLifecycleEvent): void {
+  for (const listener of gameLifecycleListeners) listener(event)
+}
+
 /** Return the native menu state for the currently selected project path. */
 export function desktopGameMenuState(cwd: string | undefined): DesktopGameMenuState {
   if (cwd === undefined) return 'unavailable'
@@ -280,6 +296,7 @@ function attachGameLifecycle(entry: ActiveGame, child: ChildProcessWithoutNullSt
     finished = true
     if (activeGames.get(entry.cwd) === entry) activeGames.delete(entry.cwd)
     entry.resolveSettled()
+    if (entry.started) emitGameLifecycle({ type: 'exited', cwd: entry.cwd })
     if (!entry.started || entry.stopRequested || !acceptingCommands) return
     const ok = value.error === undefined && value.code === 0
     const message = value.error !== undefined
@@ -301,6 +318,11 @@ function attachGameLifecycle(entry: ActiveGame, child: ChildProcessWithoutNullSt
   return new Promise((resolveSpawn, rejectSpawn) => {
     child.once('spawn', () => {
       entry.started = true
+      if (child.pid === undefined) {
+        rejectSpawn(new Error('Gradle 进程没有可用的进程 ID。'))
+        return
+      }
+      emitGameLifecycle({ type: 'spawned', cwd: entry.cwd, rootPid: child.pid })
       resolveSpawn()
     })
     child.once('error', rejectSpawn)
