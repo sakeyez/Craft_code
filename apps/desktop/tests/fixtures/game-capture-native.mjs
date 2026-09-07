@@ -11,7 +11,6 @@ const log = line => {
   if (process.env.CRAFTCODE_NATIVE_LOG) appendFileSync(process.env.CRAFTCODE_NATIVE_LOG, `${line}\n`)
 }
 log('fixture: module loaded')
-app.disableHardwareAcceleration()
 let koffi
 let createGameCaptureProvider
 
@@ -58,6 +57,7 @@ async function run() {
   await app.whenReady()
   koffi = (await import('koffi')).default
   createGameCaptureProvider = (await import('../../lib/game-capture.js')).createGameCaptureProvider
+  const { desktopWindowOptions } = await import('../../lib/window.js')
   const user32 = koffi.load('user32.dll')
   enumWindows = user32.func('__stdcall', 'EnumWindows', 'int', ['void *', 'intptr'])
   getWindowTextW = user32.func('__stdcall', 'GetWindowTextW', 'int', ['void *', 'void *', 'int'])
@@ -69,8 +69,22 @@ async function run() {
   showWindow = user32.func('__stdcall', 'ShowWindow', 'int', ['void *', 'int'])
   enumProto = koffi.proto('int __stdcall CraftCodeFixtureEnum(void *hwnd, intptr value)')
   log('fixture: electron ready')
-  const host = new BrowserWindow({ frame: false, show: true, x: 100, y: 100, width: 900, height: 700 })
-  await host.loadURL('data:text/html,<body style="margin:0;background:%23222"></body>')
+  const host = new BrowserWindow({ ...desktopWindowOptions(), x: 100, y: 100, width: 900, height: 700 })
+  host.webContents.on('render-process-gone', (_event, details) => log(`fixture: renderer gone ${JSON.stringify(details)}`))
+  host.on('unresponsive', () => log('fixture: renderer unresponsive'))
+  await host.loadURL(`data:text/html,${encodeURIComponent('<body style="margin:0;background:rgb(30,180,90)"><button style="width:200px;height:100px" onclick="this.textContent=String(++window.clicks)">0</button><script>window.clicks=0;window.framesPainted=0;function paint(){window.framesPainted++;requestAnimationFrame(paint)}paint()</script></body>')}`)
+  async function verifyRenderer(label) {
+    const before = await host.webContents.executeJavaScript('({ frames: window.framesPainted, clicks: window.clicks })')
+    host.webContents.sendInputEvent({ type: 'mouseDown', x: 50, y: 50, button: 'left', clickCount: 1 })
+    host.webContents.sendInputEvent({ type: 'mouseUp', x: 50, y: 50, button: 'left', clickCount: 1 })
+    await new Promise(resolve => setTimeout(resolve, 250))
+    const after = await host.webContents.executeJavaScript('({ frames: window.framesPainted, clicks: window.clicks })')
+    if (after.frames <= before.frames || after.clicks !== before.clicks + 1) throw new Error(`${label}: renderer stalled ${JSON.stringify({ before, after })}`)
+    const image = await host.webContents.capturePage({ x: 250, y: 150, width: 10, height: 10 })
+    const pixels = image.toBitmap()
+    if (image.isEmpty() || pixels[0] !== 90 || pixels[1] !== 180 || pixels[2] !== 30) throw new Error(`${label}: renderer pixels invalid ${String(pixels.subarray(0, 4))}`)
+    log(`fixture: ${label} renders and accepts input`)
+  }
   const child = spawn('powershell.exe', ['-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', fixture])
 
   try {
@@ -118,10 +132,13 @@ async function run() {
       if (retriedHost.x === beforeMoveHost.x && retriedHost.y === beforeMoveHost.y && retriedHost.width === beforeMoveHost.width && retriedHost.height === beforeMoveHost.height) throw new Error('companion bounds did not follow game resize')
     }
     if (getParent(hwnd) !== originalParent || (Number(getWindowLongPtrW(hwnd, -16)) >>> 0) !== originalStyle) throw new Error('provider changed native ownership or style')
-    showWindow(hwnd, 6)
-    await until(() => !host.isVisible())
-    showWindow(hwnd, 9)
-    await until(() => host.isVisible())
+    for (let cycle = 0; cycle < 5; cycle++) {
+      showWindow(hwnd, 6)
+      await until(() => !host.isVisible())
+      showWindow(hwnd, 9)
+      await until(() => host.isVisible())
+      await verifyRenderer(`restore ${cycle + 1}`)
+    }
     await provider.select(undefined)
     await provider.select('C:\\fixture')
     const still = await provider.beginAnnotation('C:\\fixture')
@@ -132,6 +149,7 @@ async function run() {
     log('fixture: annotation preserved native state')
     spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true })
     await until(() => state?.status === 'idle')
+    await verifyRenderer('game exit')
     log('fixture: natural process exit returned idle')
     await provider.dispose()
     await until(() => getParent(hwnd) === originalParent)

@@ -17,11 +17,11 @@ describe('Windows external game window fixture', () => {
     const result = spawnSync(electron, [fixture], {
       windowsHide: true,
       encoding: 'utf8',
-      timeout: 20_000,
+      timeout: 40_000,
       env: { ...process.env, ELECTRON_DISABLE_SECURITY_WARNINGS: 'true', CRAFTCODE_NATIVE_LOG: log },
     })
     const diagnostics = existsSync(log) ? readFileSync(log, 'utf8') : result.stderr
     rmSync(log, { force: true })
     expect(result.status, `${diagnostics}\n${result.error?.message ?? ''}`).toBe(0)
-  }, 25_000)
+  }, 45_000)
 })
