@@ -96,6 +96,8 @@ async function run() {
     log(`fixture: root pid ${String(child.pid)} window pid ${String(pid.readUInt32LE(0))}`)
     const originalStyle = Number(getWindowLongPtrW(hwnd, -16)) >>> 0
     const originalParent = getParent(hwnd)
+    host.maximize()
+    await until(() => host.isMaximized())
     const originalHostBounds = host.getBounds()
     let state
     const provider = await createGameCaptureProvider({ window: host, publish: event => { state = event.state; log(`fixture: state ${JSON.stringify(event.state)}`) }, log })
@@ -132,6 +134,12 @@ async function run() {
       if (retriedHost.x === beforeMoveHost.x && retriedHost.y === beforeMoveHost.y && retriedHost.width === beforeMoveHost.width && retriedHost.height === beforeMoveHost.height) throw new Error('companion bounds did not follow game resize')
     }
     if (getParent(hwnd) !== originalParent || (Number(getWindowLongPtrW(hwnd, -16)) >>> 0) !== originalStyle) throw new Error('provider changed native ownership or style')
+    const display = screen.getDisplayMatching(host.getBounds())
+    const workArea = display.workArea
+    const scale = display.scaleFactor
+    setWindowPos(hwnd, 0n, Math.round(workArea.x * scale), Math.round(workArea.y * scale), Math.round(workArea.width * scale), Math.round(workArea.height * scale), 0x0010)
+    await until(() => host.isAlwaysOnTop())
+    await verifyRenderer('compact placement')
     for (let cycle = 0; cycle < 5; cycle++) {
       showWindow(hwnd, 6)
       await until(() => !host.isVisible())

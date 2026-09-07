@@ -33,6 +33,9 @@ let shutdown: Promise<void> | undefined
 let gameCapture: GameCaptureProvider | undefined
 
 app.setName('CraftCode')
+app.on('child-process-gone', (_event, details) => {
+  desktopLog(`child process gone type=${details.type} reason=${details.reason} exitCode=${String(details.exitCode)}`)
+})
 const appUserModelId = desktopAppUserModelId(app.isPackaged)
 if (appUserModelId !== undefined) app.setAppUserModelId(appUserModelId)
 
@@ -107,6 +110,11 @@ async function createWindow(url: string): Promise<BrowserWindow> {
   }
   window.on('maximize', publishMaximized)
   window.on('unmaximize', publishMaximized)
+  window.on('unresponsive', () => { desktopLog('desktop renderer unresponsive') })
+  window.on('responsive', () => { desktopLog('desktop renderer responsive') })
+  window.webContents.on('render-process-gone', (_event, details) => {
+    desktopLog(`desktop renderer gone reason=${details.reason} exitCode=${String(details.exitCode)}`)
+  })
   installNavigationPolicy(window.webContents, allowedOrigin, icon)
   window.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => { callback(false) })
   try {
