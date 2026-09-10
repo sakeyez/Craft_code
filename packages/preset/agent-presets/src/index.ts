@@ -161,7 +161,7 @@ export class AgentPresets extends Service {
     //
     // Known false positive: a session created bare and bound later by
     // `recompose` is warned about once, before its first bind. No shipped flow
-    // does that today — the Web surface mounts in `setup` and children join
+    // does that today — the desktop surface mounts in `setup` and children join
     // through `composeFrom` before publication.
     ctx.on('agent/created', ({ agent }) => {
       if (this.resolvedRoots.length === 0) return

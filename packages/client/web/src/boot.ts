@@ -1,5 +1,5 @@
 /**
- * Web boot kernel. It owns only the module system, Cordis loader, and a
+ * Desktop renderer boot kernel. It owns only the module system, Cordis loader, and a
  * framework-free boot page. The dynamic UI renderer receives the mount
  * point after every client entry activates.
  * @module @deepseek-ai/dsh-client-web/src/boot
@@ -18,8 +18,8 @@ import './base.css'
 /** Module transport hook replaced by jsdom tests. */
 export type BootSeams = Pick<ClientModuleCreateOptions, 'loadBundle'>
 
-/** Browser boot entry consumed by `apps/web`. */
-export class AppWebEntry {
+/** Browser boot entry consumed by `apps/desktop/renderer`. */
+export class RendererBootEntry {
   private readonly container: HTMLElement
   private readonly seams: BootSeams | undefined
   private readonly page: BootPage
@@ -48,7 +48,7 @@ export class AppWebEntry {
       const win = globalThis as DshWindow
       const moduleLoader = win.__ModuleLoader__
       if (moduleLoader === undefined) {
-        throw new Error('web boot: window.__ModuleLoader__ bootstrap facade is missing')
+        throw new Error('renderer boot: window.__ModuleLoader__ bootstrap facade is missing')
       }
       // A pre-injected transport (the worker preview page) owns bundle bytes;
       // its loadBundle is the default and explicit seams still win. The global
@@ -88,7 +88,7 @@ export class AppWebEntry {
   /** Mount through a dependency fiber so replacing uiRenderer remounts the application. */
   private async mountApp(ctx: Context): Promise<void> {
     const mounted = ctx.inject(['uiRenderer'], (scope) => {
-      scope.effect(() => scope.uiRenderer.mount(this.container), 'web boot: application mount')
+      scope.effect(() => scope.uiRenderer.mount(this.container), 'renderer boot: application mount')
     })
     await mounted
   }
@@ -153,7 +153,7 @@ export class AppWebEntry {
       }
     }
     if (failures.length > 0) {
-      throw new Error(`web boot: ${String(failures.length)} entr${failures.length === 1 ? 'y' : 'ies'} did not activate\n${failures.join('\n')}`)
+      throw new Error(`renderer boot: ${String(failures.length)} entr${failures.length === 1 ? 'y' : 'ies'} did not activate\n${failures.join('\n')}`)
     }
   }
 }

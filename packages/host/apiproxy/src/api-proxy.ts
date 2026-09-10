@@ -187,8 +187,25 @@ function referencedImage(events: readonly SessionEvent[], attachmentId: string):
   for (const event of events) {
     const found = imageInEvent(event, ref => String(ref.attachmentId) === attachmentId)
     if (found !== undefined) return found
+    if (event.type === 'game/annotations') {
+      for (const annotation of event.data.annotations) {
+        if (annotation.screenshotRef === undefined) continue
+        try {
+          const ref = JSON.parse(annotation.screenshotRef) as Partial<ImageAttachmentRef>
+          if (String(ref.attachmentId) === attachmentId && typeof ref.mediaType === 'string'
+            && typeof ref.bytes === 'number' && typeof ref.width === 'number' && typeof ref.height === 'number') {
+            return ref as ImageAttachmentRef
+          }
+        } catch { /* legacy opaque refs are not enough to authorize an image read */ }
+      }
+    }
   }
   return undefined
+}
+
+/** Store an image reference in the string-compatible annotation field. */
+function annotationScreenshotRef(ref: ImageAttachmentRef): string {
+  return JSON.stringify(ref)
 }
 
 /** Strict browser-zone profile: UTC or an IANA Area/Location-style identifier. */
@@ -2261,15 +2278,19 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
       },
 
       async annotate(request) {
-        const { sessionId, annotations } = request.payload
+        const { sessionId, annotations, screenshot } = request.payload
         const found = await agentFor(sessionId)
         if ('error' in found) return err(request, found.error)
         if (annotations.some(annotation => annotation.sessionId !== sessionId)) {
           return err(request, { code: 'internal', message: 'annotation session ownership mismatch', details: {} })
         }
         try {
-          const event = found.agent.session.append('game/annotations', { annotations })
-          return ok(request, { accepted: true, seq: event.seq })
+          const refs = screenshot === undefined ? [] : await admitEncodedImages(ctx.attachments, [screenshot])
+          const screenshotRef = refs[0] === undefined ? undefined : annotationScreenshotRef(refs[0])
+          const stored = screenshotRef === undefined ? annotations : annotations.map(annotation =>
+            annotation.screenshotRef === undefined ? { ...annotation, screenshotRef } : annotation)
+          const event = found.agent.session.append('game/annotations', { annotations: stored })
+          return ok(request, { accepted: true, seq: event.seq, ...(screenshotRef === undefined ? {} : { screenshotRef }) })
         } catch (error: unknown) {
           return err(request, { code: 'internal', message: error instanceof Error ? error.message : String(error), details: {} })
         }

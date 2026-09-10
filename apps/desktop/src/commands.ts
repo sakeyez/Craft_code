@@ -3,6 +3,7 @@ import type { ChildProcess, ChildProcessWithoutNullStreams } from 'node:child_pr
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { parseGradleTaskNames, runtimeTaskCandidates } from '@deepseek-ai/dsh-tool-mc-project/gradle-tasks'
+import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess'
 import type { DesktopGameMenuState } from './menu.ts'
 import type { DesktopCommandRequest, DesktopCommandResult, DesktopGameEvent } from './preload.ts'
 
@@ -116,7 +117,7 @@ function runProcess(command: string, args: string[], cwd: string, timeoutMs = CO
       shell: false,
       windowsHide: true,
       detached: process.platform !== 'win32',
-      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+      env: { ...scrubbedParentEnv(), GIT_TERMINAL_PROMPT: '0' },
     })
     activeCommands.add(child)
     const stdout = emptyTail()
@@ -425,7 +426,7 @@ async function toggleGame(cwd: string): Promise<DesktopCommandResult> {
       shell: false,
       windowsHide: true,
       detached: process.platform !== 'win32',
-      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+      env: { ...scrubbedParentEnv(), GIT_TERMINAL_PROMPT: '0' },
     })
     entry.child = child
     await attachGameLifecycle(entry, child)

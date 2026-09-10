@@ -24,7 +24,7 @@ import type { GameSurfaceState } from './game.ts'
 // against; the frame components and the store factory are package-internal.
 export { LayoutController } from './service.ts'
 export type { ILayout } from './service.ts'
-export type { GameSurfaceState, GameSurfaceStatus, GameSurfaceEvent, GameSurfaceSnapshot, GameAnnotationDraft } from './game.ts'
+export type { GameSurfaceState, GameSurfaceStatus, GameSurfaceEvent, GameAnnotationRequest, GameAnnotationDraft, GameAnnotationSnapshot } from './game.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -116,9 +116,10 @@ export interface GameOwnerProps { cwd?: string; state: GameSurfaceState }
 
 /** Host-backed actions injected into the game workspace component. */
 export interface GameWorkspaceInjected {
-  annotate?: (annotations: import('@deepseek-ai/dsh-session/types').GameAnnotation[]) => Promise<unknown>
+  /** Persist annotations; rejects when the session is unavailable or the host refuses the update. */
+  annotate?: (annotations: import('@deepseek-ai/dsh-session/types').GameAnnotation[]) => Promise<void>
   reconnect: (cwd: string) => Promise<GameSurfaceState>
-  beginAnnotation: (cwd: string) => Promise<import('./game.ts').GameSurfaceSnapshot>
+  beginAnnotation: (request: import('./game.ts').GameAnnotationRequest) => Promise<void>
   endAnnotation: (cwd: string) => Promise<void>
   reposition: (cwd: string) => Promise<void>
 }
@@ -127,7 +128,7 @@ export interface GameWorkspaceInjected {
 export interface DetailsOwnerProps {}
 
 /** Required services (cordis fiber inject — the loader passes all module exports as an object plugin). */
-export const inject = ['slots', 'theme']
+export const inject = ['slots', 'theme', 'sessions']
 
 /**
  * Client plugin body: provide ctx.layout, then one register() call — AppFrame
@@ -164,11 +165,28 @@ export function apply(ctx: ClientContext): void {
       inject: (sessionId: import('@deepseek-ai/dsh-session/types').SessionId | undefined) => ({
         annotate: sessionId === undefined ? undefined : async (annotations: import('@deepseek-ai/dsh-session/types').GameAnnotation[]) => {
           const session = ctx.sessions.binding(sessionId)?.session
-          if (session === undefined) return
-          return session.annotate?.(annotations)
+          const annotate = session?.annotate
+          if (annotate === undefined) throw new Error('当前会话无法保存游戏标注。')
+          const result = await annotate(annotations)
+          if (!result.ok) throw new Error(result.error.message)
         },
         reconnect: (cwd: string) => layout.reconnectGameSurface(cwd),
-        beginAnnotation: (cwd: string) => layout.beginGameAnnotation(cwd),
+        beginAnnotation: async (request: import('./game.ts').GameAnnotationRequest) => {
+          if (sessionId === undefined || request.sessionId !== sessionId) throw new Error('标注会话无效。')
+          const session = ctx.sessions.binding(sessionId)?.session
+          const annotate = session?.annotate
+          if (annotate === undefined) throw new Error('当前会话无法保存游戏标注。')
+          if (session === undefined) throw new Error('当前会话无法保存游戏标注。')
+          await layout.beginGameAnnotation(request, async (drafts, snapshot) => {
+            const ids = new Set(drafts.map(draft => draft.id))
+            const existing = (session.getSnapshot().annotations ?? []).filter(annotation => !ids.has(annotation.id))
+            const labels = new Set(existing.map(annotation => annotation.label))
+            if (drafts.some(draft => labels.has(draft.label))) throw new Error('标注编号已变化，请取消后重新标注。')
+            const image = snapshot === undefined ? undefined : annotationImage(snapshot.dataUrl)
+            const result = await annotate([...existing, ...drafts.map(draft => ({ ...draft, sessionId }))], image)
+            if (!result.ok) throw new Error(result.error.message)
+          })
+        },
         endAnnotation: (cwd: string) => layout.endGameAnnotation(cwd),
         reposition: (cwd: string) => layout.repositionGameCompanion(cwd),
       }),
@@ -192,4 +210,10 @@ export function apply(ctx: ClientContext): void {
       presenter.dispose()
     }
   }, 'ui-layout: theme presenter')
+}
+
+function annotationImage(dataUrl: string): { mediaType: 'image/jpeg'; data: string } {
+  const match = /^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/u.exec(dataUrl)
+  if (match === null) throw new Error('截图格式无效。')
+  return { mediaType: 'image/jpeg', data: match[1] ?? '' }
 }

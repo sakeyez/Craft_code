@@ -9,7 +9,7 @@ if (mode === 'hang') {
   setInterval(() => {}, 1_000)
 } else {
   process.stdout.write('noise before readiness\n')
-  process.stdout.write('dsh web: http://127.0.0.1:43123\n')
+  process.stdout.write('dsh desktop: http://127.0.0.1:43123\n')
   process.on('message', (message) => {
     if (message !== 'dsh/supervisor-shutdown') return
     if (mode === 'stubborn') {

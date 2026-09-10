@@ -7,7 +7,7 @@
  * must stub); runtime-internal entry points (history staging, wire-frame
  * dispatch) stay on the class, invisible out here.
  */
-import type { AttachmentIdType, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import type { AttachmentIdType, EncodedImageAttachment, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type {
   MessageId, PromptContentPart, QueueAction, RpcResult, SessionId,
 } from '@deepseek-ai/dsh-api-remotes/client'
@@ -66,7 +66,10 @@ export interface ISession {
    */
   cancel(): Promise<RpcResult<{ accepted: true }>>
   /** Persist the complete game annotation snapshot for this session. */
-  annotate?(annotations: GameAnnotation[]): Promise<RpcResult<{ accepted: true; seq: number }>>
+  annotate?: (
+    annotations: GameAnnotation[],
+    screenshot?: EncodedImageAttachment,
+  ) => Promise<RpcResult<{ accepted: true; seq: number; screenshotRef?: string }>>
   /**
    * Rename this session (explicit user title; pins it against automatic
    * regeneration).

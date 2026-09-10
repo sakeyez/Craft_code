@@ -15,7 +15,7 @@
  * trigger, and no wrapping (`flex-wrap`) or `order` is needed for it. The
  * width-independent half of that contract is asserted here (the panel is a
  * fixed portal, not an inline flex item); the resulting geometry is measured
- * in a real engine by `apps/web/tests/message-feedback-layout`.
+ * in a real engine by `apps/desktop/renderer/tests/message-feedback-layout`.
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'

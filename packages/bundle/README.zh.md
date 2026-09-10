@@ -9,9 +9,9 @@ Bundle 身份由 manifest 声明决定，而不是由本目录决定。领域包
 | 包 | 职责 | ctx key |
 |---|---|---|
 | [`base/`](base/README.zh.md) | 每个 profile 最先应用的共享 dsh 核心 | —（仅 patch） |
-| [`web-app/`](web-app/README.zh.md) | 浏览器表层：web patch 层 + 运行时粘合插件 | 挂载多条配置行 |
+| [`desktop-app/`](desktop-app/README.zh.md) | Electron 私有 renderer 表层与本地 HTTP 运行时 | 挂载多条配置行 |
 | [`headless/`](headless/README.zh.md) | 直接运行在 base 之上的一次性任务模式，不含 Host 或 Web 层 | 挂载 `headless-runner` |
-| [`mcmod/`](mcmod/README.zh.md) | 选择随包 Minecraft 模组开发 agent preset 与 Java LSP 提供方的 Web profile 层 | —（仅 patch） |
+| [`mcmod/`](mcmod/README.zh.md) | 选择随包 Minecraft 模组开发 agent preset 与 Java LSP 提供方的 desktop profile 层 | —（仅 patch） |
 | [`mcmod-headless/`](mcmod-headless/README.zh.md) | 带 Java LSP 与收窄代码开发工具集的 headless Minecraft 模组开发任务 profile 层 | —（仅 patch） |
 
 内置组合包从 dsh 安装目录解析；树外（out-of-tree）组合包通过 `dsh plugin --profile <name> add <package>` 安装进 profile。

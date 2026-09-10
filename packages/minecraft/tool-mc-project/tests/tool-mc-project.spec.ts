@@ -394,7 +394,7 @@ async function addValidResources(namespace = 'examplemod'): Promise<void> {
   await write(`src/main/resources/assets/${namespace}/blockstates/example_block.json`, JSON.stringify({
     variants: { '': { model: `${namespace}:block/example_block` } },
   }, null, 2))
-  await write(`src/main/resources/data/${namespace}/recipes/example_item.json`, JSON.stringify({
+  await write(`src/main/resources/data/${namespace}/recipe/example_item.json`, JSON.stringify({
     type: 'minecraft:crafting_shaped',
     pattern: ['#'],
     key: { '#': { item: `${namespace}:example_block` } },
@@ -1045,6 +1045,70 @@ describe('detect_mc_project', () => {
 })
 
 describe('validate_mc_resources', () => {
+  it.each([
+    ['fabric.mod.json', '{broken'],
+    ['fabric.mod.json', '[]'],
+    ['quilt.mod.json', '{broken'],
+    ['META-INF/neoforge.mods.toml', '[[mods]\nmodId="broken" bad'],
+    ['META-INF/mods.toml', '[[mods]\nmodId="broken" bad'],
+  ])('reports invalid metadata at %s as a resource error', async (path, text) => {
+    const workspace = await createFabricProject()
+    await write(`src/main/resources/${path}`, text)
+    const context = await bootDirect(workspace)
+    const validation = await callValidate(context, workspace)
+
+    expect(validation.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'invalid_metadata', path: `src/main/resources/${path}` }),
+    ]))
+    expect(validation.checkedFiles).toContain(`src/main/resources/${path}`)
+  })
+
+  it.each([
+    ['1.20.6', ['recipes', 'loot_tables', 'advancements', 'predicates', 'item_modifiers']],
+    ['1.21', ['recipe', 'loot_table', 'advancement', 'predicate', 'item_modifier']],
+    ['1.21.1', ['recipe', 'loot_table', 'advancement', 'predicate', 'item_modifier']],
+  ])('checks malformed data JSON in every supported Minecraft %s folder', async (version, folders) => {
+    const workspace = await createFabricProject()
+    await write('gradle.properties', `minecraft_version=${version}\n`)
+    await write('gradle/libs.versions.toml', `[versions]\nminecraft = "${version}"\n`)
+    await write('src/main/resources/fabric.mod.json', JSON.stringify({ id: 'examplemod', depends: { minecraft: version } }))
+    const paths = [...folders, 'tags/item'].map(folder => `src/main/resources/data/examplemod/${folder}/broken.json`)
+    for (const path of paths) await write(path, '{broken')
+    const context = await bootDirect(workspace)
+    const validation = await callValidate(context, workspace)
+
+    expect(validation.checkedFiles).toEqual(expect.arrayContaining(paths))
+    expect(validation.errors.map(issue => issue.path).sort()).toEqual([...paths].sort())
+    expect(validation.errors.every(issue => issue.code === 'invalid_json')).toBe(true)
+    expect(validation.warnings).toEqual([])
+  })
+
+  it('warns when a valid JSON resource uses a directory from another Minecraft version', async () => {
+    const workspace = await createFabricProject()
+    await write('src/main/resources/data/examplemod/recipes/old.json', '{}')
+    const context = await bootDirect(workspace)
+    const validation = await callValidate(context, workspace)
+
+    expect(validation.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'data_directory_version',
+        path: 'src/main/resources/data/examplemod/recipes',
+        expectedPath: 'src/main/resources/data/examplemod/recipe',
+      }),
+    ]))
+  })
+
+  it('checks both data directory spellings without assuming an unknown version', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'dsh-mc-project-data-version-unknown-'))
+    await write('data/examplemod/recipe/current.json', '{}')
+    await write('data/examplemod/recipes/legacy.json', '{}')
+    const context = await bootDirect(dir)
+    const validation = await callValidate(context, dir)
+
+    expect(validation.checkedFiles).toEqual(['data/examplemod/recipe/current.json', 'data/examplemod/recipes/legacy.json'])
+    expect(validation.warnings.filter(issue => issue.code === 'data_directory_version_unknown')).toHaveLength(2)
+  })
+
   it('validates conventional top-level resource roots when no source-set root exists', async () => {
     dir = await mkdtemp(join(tmpdir(), 'dsh-mc-project-top-level-resources-'))
     await write('assets/examplemod/lang/en_us.json', '{}')
@@ -1110,7 +1174,7 @@ describe('validate_mc_resources', () => {
       'src/main/resources/assets/examplemod/models/item/example_item.json',
       'src/main/resources/assets/examplemod/models/block/example_block.json',
       'src/main/resources/assets/examplemod/blockstates/example_block.json',
-      'src/main/resources/data/examplemod/recipes/example_item.json',
+      'src/main/resources/data/examplemod/recipe/example_item.json',
       'src/main/resources/data/examplemod/tags/block/example_blocks.json',
     ]))
   })
@@ -1368,16 +1432,24 @@ describe('validate_mc_resources', () => {
     )).toBe(false)
   })
 
-  it('accepts default-namespace resource references', async () => {
+  it('resolves unqualified model, texture and blockstate references in the minecraft namespace', async () => {
     const workspace = await createFabricProject()
     await addValidResources()
     await write('src/main/resources/assets/examplemod/models/item/default-namespace.json', JSON.stringify({
-      textures: { layer0: 'item/example_item' },
+      parent: 'item/generated',
+      textures: { layer0: 'item/apple' },
+    }))
+    await write('src/main/resources/assets/examplemod/blockstates/default-namespace.json', JSON.stringify({
+      variants: { '': { model: 'block/stone' } },
+    }))
+    await write('src/main/resources/assets/minecraft/models/item/override.json', JSON.stringify({
+      parent: 'item/generated',
+      textures: { layer0: 'item/apple' },
     }))
     const context = await bootDirect(workspace)
     const validation = await callValidate(context, workspace)
 
-    expect(validation.errors.some(issue => issue.path.endsWith('default-namespace.json'))).toBe(false)
+    expect(validation.errors).toEqual([])
   })
 
   it('checks nested blockstate models and ignores invalid or dependency references', async () => {
@@ -1402,7 +1474,7 @@ describe('validate_mc_resources', () => {
   it('reports unknown namespaces in nested data values and keys', async () => {
     const workspace = await createFabricProject()
     await addValidResources()
-    await write('src/main/resources/data/examplemod/recipes/namespaces.json', JSON.stringify({
+    await write('src/main/resources/data/examplemod/recipe/namespaces.json', JSON.stringify({
       'othermod:input': ['thirdmod:item', { nested: 'fourthmod:block' }],
     }))
     const context = await bootDirect(workspace)
@@ -1488,7 +1560,7 @@ describe('validate_mc_resources', () => {
     await write('src/main/resources/assets/examplemod/models/item/no-textures.json', '{"parent":"minecraft:item/generated"}')
     await write('src/main/resources/assets/examplemod/blockstates/primitive.json', '42')
     await write('src/main/resources/assets/examplemod/blockstates/empty-array.json', '[]')
-    await write('src/main/resources/data/examplemod/recipes/primitive.json', '42')
+    await write('src/main/resources/data/examplemod/recipe/primitive.json', '42')
     const context = await bootDirect(workspace)
     const validation = await callValidate(context, workspace)
 
@@ -1497,6 +1569,54 @@ describe('validate_mc_resources', () => {
 })
 
 describe('run_mc_check', () => {
+  it.each(['fabric.mod.json', 'META-INF/neoforge.mods.toml'])('fails before Gradle for malformed %s', async (path) => {
+    const workspace = await createFabricProject()
+    await write(`src/main/resources/${path}`, path.endsWith('.json') ? '{broken' : '[[mods]\nmodId="broken" bad')
+    const { context, shell } = await bootWithShell(workspace)
+    const result = await callRunCheck(context, workspace, { target: 'resources' })
+
+    expect(result.failedStep).toBe('resources:static')
+    expect(result.steps[0]?.stdout.text).toContain('invalid_metadata')
+    expect(result.steps[0]?.stdout.text).toContain(path)
+    expect(shell.commands).toEqual([])
+  })
+
+  it('retains bounded metadata read warnings in a passing resource step', async () => {
+    const workspace = await createFabricProject()
+    await write('src/main/resources/fabric.mod.json', ' '.repeat(600))
+    const { context } = await bootWithShell(workspace, { maxFileBytes: 512 })
+    const result = await callRunCheck(context, workspace, { target: 'resources' })
+
+    expect(result.failedStep).toBeNull()
+    expect(result.steps[0]?.stdout.text).toContain('fabric.mod.json')
+    expect(result.steps[0]?.stdout.text).toContain('maxFileBytes 512')
+  })
+
+  it('reuses metadata detection before resources and refreshes it after datagen', async () => {
+    const workspace = await createFabricProject()
+    const { context, shell } = await bootWithShell(workspace)
+    const readBytes = context.fs.readBytes.bind(context.fs)
+    let metadataReads = 0
+    context.fs.readBytes = async (target, signal, maxBytes) => {
+      if (target.displayPath.endsWith('fabric.mod.json')) metadataReads += 1
+      return readBytes(target, signal, maxBytes)
+    }
+    const resources = await callRunCheck(context, workspace, { target: 'resources' })
+    expect(resources.failedStep).toBeNull()
+    expect(metadataReads).toBe(1)
+
+    const run = shell.run.bind(shell)
+    shell.run = async (spec) => {
+      const result = await run(spec)
+      if (spec.command === expectedGradle('runDatagen')) await write('src/main/resources/fabric.mod.json', '{broken')
+      return result
+    }
+    const all = await callRunCheck(context, workspace, { target: 'all' })
+    expect(all.failedStep).toBe('resources:static')
+    expect(all.steps[1]?.stdout.text).toContain('invalid_metadata')
+    expect(metadataReads).toBe(3)
+  })
+
   it('is registered only when a shell executor is mounted', async () => {
     const workspace = await createFabricProject()
     const context = await bootDirect(workspace)

@@ -23,7 +23,7 @@ export const inject = ['cmdlineArgs']
 
 export function apply(ctx: Context): void {
   const program = webCommand()
-  program.action(() => ctx.provide('webStartup', webValuesFrom(program)))
+  program.action(() => ctx.provide('desktopStartup', desktopValuesFrom(program)))
   parseCmdline(ctx, program)
 }
 ```
@@ -31,8 +31,8 @@ export function apply(ctx: Context): void {
 它的 Loader 行不携带启动器标记，也没有特殊类型：
 
 ```yaml
-- id: web-startup
-  name: '@deepseek-ai/dsh-web-app/startup'
+- id: desktop-startup
+  name: '@deepseek-ai/dsh-desktop-app/startup'
 ```
 
 所有由这些取值配置的行都使用普通服务注入，并在惰性配置中直接访问该服务：
@@ -40,17 +40,17 @@ export function apply(ctx: Context): void {
 ```yaml
 - id: webserver
   name: '@deepseek-ai/dsh-host-webserver'
-  inject: [webStartup]
+  inject: [desktopStartup]
   config:
-    host: !!js ctx.webStartup.host ?? '127.0.0.1'
-    port: !!js ctx.webStartup.port ?? 3080
+    host: '127.0.0.1'
+    port: !!js ctx.desktopStartup.port ?? 3080
 ```
 
 `parseCmdline` 在加载时拒绝整棵命令树中没有任何命令声明 action 的 program，把每个命令的退出与输出都接到启动器上（commander 只在注册时把这些设置复制进子命令），再解析不可变参数；解析成功时 commander 运行被调用命令的同步 action。action 用 `program.error(...)` 拒绝无效调用——必须先拒绝后发布，因为写在拒绝之前的语句已经执行。遇到 `--help`、`--version`、解析错误或这种拒绝时，该适配器输出 commander 文本并请求退出；提供方什么也不发布，因此依赖行不会激活。
 
 ### 注入如何排列配置求值
 
-Loader 会把一行的 `!!js` 插值推迟到该行声明的注入全部激活之后，再基于该行的插件上下文求值。所以上例可以直接读取 `ctx.webStartup`：Loader 索取 `webserver` 的配置之前，Cordis 已经填入了这个注入服务。Include 树会保留嵌套表达式节点，直到各个目标行到达这一时点。提供方替换与活动 patch 重载都会针对当前注入服务重新插值，因此启动 flag 不会被悄悄重置。
+Loader 会把一行的 `!!js` 插值推迟到该行声明的注入全部激活之后，再基于该行的插件上下文求值。所以上例可以直接读取 `ctx.desktopStartup`：Loader 索取 `webserver` 的配置之前，Cordis 已经填入了这个注入服务。Include 树会保留嵌套表达式节点，直到各个目标行到达这一时点。提供方替换与活动 patch 重载都会针对当前注入服务重新插值，因此启动 flag 不会被悄悄重置。
 
 ### 共享不可变参数
 

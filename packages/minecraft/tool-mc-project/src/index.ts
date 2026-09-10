@@ -193,6 +193,12 @@ interface ResourceValidationResult {
   detectedModId: string | null
 }
 
+interface DetectionScan {
+  project: DetectionResult
+  metadataErrors: ResourceIssue[]
+  metadataWarnings: string[]
+}
+
 interface OutputSummary {
   text: string
   truncated: boolean
@@ -249,6 +255,7 @@ interface CommandPlan {
 
 interface DetectionState {
   warnings: string[]
+  metadataErrors: ResourceIssue[]
   loaderEvidence: Map<Exclude<Loader, 'unknown'>, string[]>
   minecraftVersions: MinecraftVersionCandidate[]
   mappings: MappingsCandidate[]
@@ -273,7 +280,14 @@ const METADATA_BASENAMES = new Set([
   'mods.toml',
   'neoforge.mods.toml',
 ])
-const DATA_JSON_FOLDERS = ['recipes', 'tags', 'loot_tables', 'advancements', 'predicates', 'item_modifiers'] as const
+const DATA_JSON_FOLDER_PAIRS = [
+  ['recipes', 'recipe'],
+  ['loot_tables', 'loot_table'],
+  ['advancements', 'advancement'],
+  ['predicates', 'predicate'],
+  ['item_modifiers', 'item_modifier'],
+] as const
+const DATA_JSON_FOLDERS = ['tags', ...DATA_JSON_FOLDER_PAIRS.flat()] as const
 
 const LOADER_PATTERNS: ReadonlyArray<{ loader: Exclude<Loader, 'unknown'>; regex: RegExp; label: string }> = [
   { loader: 'architectury', regex: /\b(?:architectury-loom|architectury-plugin|dev\.architectury(?::|[./])|net\.architectury(?::|[./]))\b/iu, label: 'Architectury Gradle/plugin/dependency clue' },
@@ -475,13 +489,29 @@ function scanVersionsToml(state: DetectionState, file: TextFile): void {
   }
 }
 
-function scanFabricMetadata(state: DetectionState, file: TextFile): void {
+function parseMetadata(state: DetectionState, file: TextFile, format: 'JSON' | 'TOML'): Record<string, unknown> | undefined {
   let document: unknown
   try {
-    document = JSON.parse(file.text) as unknown
+    document = format === 'JSON' ? JSON.parse(file.text) as unknown : parseToml(file.text, { integersAsBigInt: false })
   } catch (error) {
-    /* v8 ignore next -- JSON.parse always throws a SyntaxError. */
-    state.warnings.push(`${file.path}: could not parse JSON (${error instanceof Error ? error.message : String(error)})`)
+    /* v8 ignore next -- both parsers throw Error instances. */
+    const message = `could not parse ${format} (${error instanceof Error ? error.message : String(error)})`
+    state.warnings.push(`${file.path}: ${message}`)
+    addResourceIssue(state.metadataErrors, 'invalid_metadata', file.path, message)
+    return undefined
+  }
+  const record = objectRecord(document)
+  if (record === undefined) {
+    const message = `Mod metadata ${format} must contain an object at the root.`
+    state.warnings.push(`${file.path}: ${message}`)
+    addResourceIssue(state.metadataErrors, 'invalid_metadata', file.path, message)
+  }
+  return record
+}
+
+function scanFabricMetadata(state: DetectionState, file: TextFile): void {
+  const document = parseMetadata(state, file, 'JSON')
+  if (document === undefined) {
     return
   }
   addLoader(state, 'fabric', `${file.path}: fabric.mod.json`)
@@ -494,33 +524,21 @@ function scanFabricMetadata(state: DetectionState, file: TextFile): void {
       if (config !== undefined) state.mixins.push({ path: config, source: `${file.path}: mixins.config` })
     }
   }
-  const entrypoints = typeof document === 'object' && document !== null
-    ? (document as Record<string, unknown>).entrypoints
-    : undefined
+  const entrypoints = document.entrypoints
   const datagen = arrayAt(entrypoints, 'fabric-datagen')
   if (datagen !== undefined && datagen.length > 0) {
     state.datagen.push({ kind: 'fabric-datagen-entrypoint', source: file.path, detail: 'fabric.mod.json declares entrypoints.fabric-datagen' })
   }
-  const depends = typeof document === 'object' && document !== null
-    ? (document as Record<string, unknown>).depends
-    : undefined
+  const depends = document.depends
   const minecraft = stringAt(depends, 'minecraft')
   if (minecraft !== undefined) addMinecraftVersion(state, minecraft, file.path, 'depends.minecraft')
 }
 
 function scanQuiltMetadata(state: DetectionState, file: TextFile): void {
-  let document: unknown
-  try {
-    document = JSON.parse(file.text) as unknown
-  } catch (error) {
-    /* v8 ignore next -- JSON.parse always throws a SyntaxError. */
-    state.warnings.push(`${file.path}: could not parse JSON (${error instanceof Error ? error.message : String(error)})`)
-    return
-  }
+  const document = parseMetadata(state, file, 'JSON')
+  if (document === undefined) return
   addLoader(state, 'quilt', `${file.path}: quilt.mod.json`)
-  const quiltLoader = typeof document === 'object' && document !== null
-    ? (document as Record<string, unknown>).quilt_loader
-    : undefined
+  const quiltLoader = document.quilt_loader
   addModId(state, stringAt(quiltLoader, 'id'), `${file.path}: quilt_loader.id`, 'high')
   const mixins = arrayAt(quiltLoader, 'mixin') ?? arrayAt(quiltLoader, 'mixins') ?? []
   for (const mixin of mixins) {
@@ -529,14 +547,8 @@ function scanQuiltMetadata(state: DetectionState, file: TextFile): void {
 }
 
 function scanTomlMetadata(state: DetectionState, file: TextFile): void {
-  let document: unknown
-  try {
-    document = parseToml(file.text, { integersAsBigInt: false })
-  } catch (error) {
-    /* v8 ignore next -- smol-toml always throws Error instances for parser failures. */
-    state.warnings.push(`${file.path}: could not parse TOML (${error instanceof Error ? error.message : String(error)})`)
-    return
-  }
+  const document = parseMetadata(state, file, 'TOML')
+  if (document === undefined) return
   const loader: Exclude<Loader, 'unknown'> = posix.basename(file.path) === 'neoforge.mods.toml' ? 'neoforge' : 'forge'
   addLoader(state, loader, `${file.path}: ${posix.basename(file.path)}`)
   const mods = arrayAt(document, 'mods') ?? []
@@ -995,8 +1007,13 @@ async function runCommandStep(
   return commandStep(plan.step, command, result, config)
 }
 
-async function runStaticResourceStep(ctx: Context, exec: ToolExecution, config: ResolvedConfig): Promise<CheckStepResult> {
-  const validation = await validateResources(ctx, exec, config)
+async function runStaticResourceStep(
+  ctx: Context,
+  exec: ToolExecution,
+  config: ResolvedConfig,
+  scan?: DetectionScan,
+): Promise<CheckStepResult> {
+  const validation = await validateResources(ctx, exec, config, scan)
   if (validation.errors.length > 0) {
     return failedStaticStep(
       'resources:static',
@@ -1010,10 +1027,14 @@ async function runStaticResourceStep(ctx: Context, exec: ToolExecution, config: 
       config,
     )
   }
-  return passedStaticStep(
+  const step = passedStaticStep(
     'resources:static',
     `validated ${validation.checkedFiles.length} Minecraft resource file(s); warnings: ${validation.warnings.length}`,
   )
+  if (validation.warnings.length > 0) {
+    step.stdout = summarizeText(JSON.stringify({ warnings: validation.warnings }), false, undefined, config.maxOutputSummaryBytes)
+  }
+  return step
 }
 
 function issueKey(issue: ResourceIssue): string {
@@ -1048,15 +1069,15 @@ function addResourceIssue(
   list.push({ code, path, message, reference, expectedPath })
 }
 
-function parseResourceLocation(reference: string, defaultNamespace: string): { namespace: string; path: string } | undefined {
+function parseResourceLocation(reference: string): { namespace: string; path: string } | undefined {
   if (reference.startsWith('#') || !RESOURCE_LOCATION_PATTERN.test(reference)) return undefined
   const colon = reference.indexOf(':')
   if (colon >= 0) return { namespace: reference.slice(0, colon), path: reference.slice(colon + 1) }
-  return { namespace: defaultNamespace, path: reference }
+  return { namespace: 'minecraft', path: reference }
 }
 
 function shouldCheckLocalReference(namespace: string, currentNamespace: string, detectedModId: string | null): boolean {
-  return namespace === currentNamespace || namespace === detectedModId
+  return namespace !== 'minecraft' && (namespace === currentNamespace || namespace === detectedModId)
 }
 
 function texturePath(root: string, namespace: string, path: string): string {
@@ -1541,7 +1562,7 @@ function resourceValidationOutputSchema() {
   } as const
 }
 
-async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig): Promise<DetectionResult> {
+async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig): Promise<DetectionScan> {
   const warnings: string[] = []
   const root = await ctx.fs.resolve('.', sessionResolveOptions(exec))
   const rootInfo = await ctx.fs.stat(root, exec.signal)
@@ -1549,6 +1570,7 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
 
   const state: DetectionState = {
     warnings,
+    metadataErrors: [],
     loaderEvidence: new Map(),
     minecraftVersions: [],
     mappings: [],
@@ -1585,6 +1607,7 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
   }
 
   const metadataFiles: TextFile[] = []
+  const metadataWarnings: string[] = []
   const walkState: WalkState = { entries: 0, warned: false }
   for (const resourceRoot of resourceRoots) {
     const files = await walkFiles(
@@ -1593,14 +1616,15 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
       resourceRoot,
       walkState,
       config,
-      warnings,
+      metadataWarnings,
       path => METADATA_BASENAMES.has(posix.basename(path)),
     )
     for (const file of files) {
-      const text = await readTextFile(ctx, exec, file.path, file.entry.target, file.entry.size, config, warnings)
+      const text = await readTextFile(ctx, exec, file.path, file.entry.target, file.entry.size, config, metadataWarnings)
       if (text !== undefined) metadataFiles.push(text)
     }
   }
+  warnings.push(...metadataWarnings)
   for (const file of metadataFiles) {
     switch (posix.basename(file.path)) {
       case 'fabric.mod.json':
@@ -1663,7 +1687,7 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
     .map(([loader, evidence]) => ({ loader, evidence: [...evidence] }))
     .sort((a, b) => a.loader.localeCompare(b.loader))
 
-  return {
+  const project: DetectionResult = {
     workspace: root.displayPath,
     loader,
     loaderSupport: loaderSupportState,
@@ -1693,6 +1717,7 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
     },
     warnings,
   }
+  return { project, metadataErrors: state.metadataErrors, metadataWarnings }
 }
 
 async function resourceFileExists(
@@ -1755,7 +1780,7 @@ async function validateModelTextures(
     }
     const parent = stringAt(model, 'parent')
     if (parent !== undefined) {
-      const parsedParent = parseResourceLocation(parent, namespace)
+      const parsedParent = parseResourceLocation(parent)
       if (parsedParent !== undefined && shouldCheckLocalReference(parsedParent.namespace, namespace, detectedModId)) {
         const expectedParent = modelPath(root, parsedParent.namespace, parsedParent.path)
         const parentExists = await resourceFileExists(
@@ -1785,7 +1810,7 @@ async function validateModelTextures(
     if (textureRecord === undefined) continue
     for (const texture of Object.values(textureRecord)) {
       if (typeof texture !== 'string' || texture.startsWith('#')) continue
-      const parsed = parseResourceLocation(texture, namespace)
+      const parsed = parseResourceLocation(texture)
       if (parsed === undefined) continue
       if (!shouldCheckLocalReference(parsed.namespace, namespace, detectedModId)) continue
       const expectedPath = texturePath(root, parsed.namespace, parsed.path)
@@ -1822,7 +1847,7 @@ async function validateBlockstateModels(
     const models: string[] = []
     collectObjectModels(file.document, models)
     for (const model of models) {
-      const parsed = parseResourceLocation(model, namespace)
+      const parsed = parseResourceLocation(model)
       if (parsed === undefined) continue
       if (!shouldCheckLocalReference(parsed.namespace, namespace, detectedModId)) continue
       const expectedPath = modelPath(root, parsed.namespace, parsed.path)
@@ -1846,6 +1871,7 @@ async function validateDataJson(
   root: string,
   namespace: string,
   folder: typeof DATA_JSON_FOLDERS[number],
+  version: MinecraftVersionResult,
   config: ResolvedConfig,
   allowedNamespaces: ReadonlySet<string>,
   detectedModId: string | null,
@@ -1862,6 +1888,28 @@ async function validateDataJson(
   }
 
   const documents = await readJsonResourceFiles(ctx, exec, posix.join(root, `data/${namespace}/${folder}`), config, result)
+  const pair = DATA_JSON_FOLDER_PAIRS.find(names => names.some(name => name === folder))
+  if (pair !== undefined && documents.length > 0) {
+    const exactVersion = version.status === 'determined' && version.classification === 'exact'
+      ? valid(/^\d+\.\d+$/u.test(version.value) ? `${version.value}.0` : version.value, { loose: true })
+      : null
+    const base = posix.join(root, `data/${namespace}/${folder}`)
+    if (exactVersion === null) {
+      addResourceIssue(result.warnings, 'data_directory_version_unknown', base, 'The exact Minecraft version is not determined; verify whether this data directory uses the expected name.')
+    } else {
+      const expectedFolder = pair[gte(exactVersion, '1.21.0') ? 1 : 0]
+      if (folder !== expectedFolder) {
+        addResourceIssue(
+          result.warnings,
+          'data_directory_version',
+          base,
+          `Minecraft ${exactVersion} uses the ${expectedFolder} data directory; files under ${folder} are not loaded from this location.`,
+          null,
+          posix.join(root, `data/${namespace}/${expectedFolder}`),
+        )
+      }
+    }
+  }
   for (const file of documents) {
     if (objectRecord(file.document) === undefined) {
       addResourceIssue(
@@ -1875,7 +1923,7 @@ async function validateDataJson(
     const references = new Set<string>()
     collectNamespaceReferences(file.document, references)
     for (const reference of references) {
-      const parsed = parseResourceLocation(reference, namespace)
+      const parsed = parseResourceLocation(reference)
       if (parsed === undefined || allowedNamespaces.has(parsed.namespace)) continue
       addResourceIssue(
         result.warnings,
@@ -1924,14 +1972,23 @@ async function validateItemDefinitions(
   )
 }
 
-async function validateResources(ctx: Context, exec: ToolExecution, config: ResolvedConfig): Promise<ResourceValidationResult> {
+async function validateResources(
+  ctx: Context,
+  exec: ToolExecution,
+  config: ResolvedConfig,
+  scan?: DetectionScan,
+): Promise<ResourceValidationResult> {
+  const detection = scan ?? await detect(ctx, exec, config)
   const result: ResourceValidationResult = {
-    errors: [],
+    errors: [...detection.metadataErrors],
     warnings: [],
     checkedFiles: [],
     detectedModId: null,
   }
-  const detected = await detect(ctx, exec, config)
+  const detected = detection.project
+  for (const warning of detection.metadataWarnings) {
+    addResourceIssue(result.warnings, 'scan_warning', '.', warning)
+  }
   for (const path of detected.inspected.metadataFiles) result.checkedFiles.push(path)
   const detectedModId = detectedHighConfidenceModId(detected, result)
   result.detectedModId = detectedModId
@@ -1976,7 +2033,18 @@ async function validateResources(ctx: Context, exec: ToolExecution, config: Reso
       .sort()
     for (const namespace of rootDataNamespaces) {
       for (const folder of DATA_JSON_FOLDERS) {
-        await validateDataJson(ctx, exec, root, namespace, folder, config, allowedNamespaces, detectedModId, result)
+        await validateDataJson(
+          ctx,
+          exec,
+          root,
+          namespace,
+          folder,
+          detected.minecraftVersion,
+          config,
+          allowedNamespaces,
+          detectedModId,
+          result,
+        )
       }
     }
   }
@@ -1985,7 +2053,8 @@ async function validateResources(ctx: Context, exec: ToolExecution, config: Reso
 }
 
 async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedConfig, args: RunCheckArgs): Promise<CheckResult> {
-  const detected = await detect(ctx, exec, config)
+  const scan = await detect(ctx, exec, config)
+  const detected = scan.project
   const unsupportedLayout = await unsupportedGradleLayout(ctx, exec, config)
   if (unsupportedLayout !== undefined) {
     const step = unavailableStep('gradle-layout', unsupportedLayout)
@@ -2070,7 +2139,7 @@ async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedCon
   ]
   for (const plan of plans) {
     if (plan.step === 'resources:gradle') {
-      const staticStep = await runStaticResourceStep(ctx, exec, config)
+      const staticStep = await runStaticResourceStep(ctx, exec, config, steps.some(step => step.command !== undefined) ? undefined : scan)
       steps.push(staticStep)
       if (staticStep.status === 'failed') {
         return {
@@ -2129,7 +2198,7 @@ export function apply(ctx: Context, rawConfig: Config = {}): void {
       render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
     },
     isConcurrencySafe: () => true,
-    execute: (_args, exec) => detect(ctx, exec, config),
+    execute: async (_args, exec) => (await detect(ctx, exec, config)).project,
     presentCall: () => ({ card: 'generic', title: 'Detect Minecraft project', kind: 'read' }),
     presentResult: (_args, result: ToolResult) => ({
       card: 'generic',

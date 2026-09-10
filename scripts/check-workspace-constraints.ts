@@ -60,10 +60,7 @@ const releaseMemberDirectory = /^(?:packages\/(?!experimental\/)[^/]+\/[^/]+|app
 const localArtifactDirs = new Set(['node_modules'])
 const appPackageFiles: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh': ['lib/*.js', 'config'],
-  '@deepseek-ai/dsh-desktop': ['lib'],
-  // The Web build emits sourcemaps for browser debugging; publishing them is
-  // what the payload policy forbids, so the bundle ships without them.
-  '@deepseek-ai/dsh-web-frontend': ['dist', '!dist/**/*.map'],
+  '@deepseek-ai/dsh-desktop': ['lib', 'dist'],
 }
 
 /** The subset of package.json fields this constraint check cares about. */
@@ -165,6 +162,8 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh-session-persistence-sqlite': ['resources/sql/**/*.sql'],
   // The profile patch resolves bundled Minecraft skills relative to its package.
   '@deepseek-ai/dsh-mcmod-headless-bundle': ['skills'],
+  // The desktop command runner imports the shared Gradle task parser through its subpath.
+  '@deepseek-ai/dsh-tool-mc-project': ['lib/gradle-tasks.js'],
   '@deepseek-ai/dsh-skill-badge': ['assets'],
   '@deepseek-ai/dsh-subprocess-local': ['scripts/ensure-spawn-helper.mjs'],
 }

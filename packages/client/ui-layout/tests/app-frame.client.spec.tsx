@@ -167,6 +167,15 @@ describe('AppFrame', () => {
     expect(slotCalls.filter(call => call.key === 'game').at(-1)?.props).toMatchObject({ state: { status: 'starting' } })
   })
 
+  it('enters focus mode only after Minecraft connects', () => {
+    const { frame, instance } = mountFrame()
+    act(() => { instance.actions.setGameSurface(selectedCwd.current, { status: 'connected', gameName: 'Minecraft', surfaceKind: 'external-window' }) })
+    expect(frame.hasAttribute('data-game-focus')).toBe(true)
+    expect(frame.hasAttribute('data-game-mode')).toBe(true)
+    act(() => { instance.actions.setGameSurface(selectedCwd.current, { status: 'disconnected', gameName: 'Minecraft', error: 'closed' }) })
+    expect(frame.hasAttribute('data-game-focus')).toBe(false)
+  })
+
   it('never enters a game-specific three-column layout for unsupported or idle states', () => {
     const { frame, instance } = mountFrame()
     act(() => { instance.actions.setGameSurface(selectedCwd.current, { status: 'unsupported', error: '不支持' }) })

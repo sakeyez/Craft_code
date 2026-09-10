@@ -1,0 +1,35 @@
+:root { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; color: #f4f6f3; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; overflow: hidden; background: #101411; }
+#surface { position: absolute; inset: 0; touch-action: none; cursor: crosshair; outline: none; }
+#snapshot { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; user-select: none; }
+#marks { position: absolute; inset: 0; pointer-events: none; }
+.mark, #selection { position: absolute; border: 2px solid #f4cb52; background: #f4cb5230; min-width: 3px; min-height: 3px; }
+.mark button { position: absolute; left: -2px; top: -31px; background: #f4cb52; border-color: #c3a33c; color: #273017; padding: 3px 9px; min-height: 28px; min-width: 40px; pointer-events: auto; font-weight: 700; }
+.mark.at-top button { top: -2px; }
+.mark.point { width: 14px; height: 14px; border-radius: 50%; transform: translate(-50%, -50%); background: #f4cb52; box-shadow: 0 0 0 3px #10141199; }
+#selection { pointer-events: none; }
+#toolbar { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; max-width: calc(100% - 32px); padding: 10px 12px 10px 16px; border: 1px solid #d4ddcf55; background: #172019e8; box-shadow: 0 8px 24px #0009; border-radius: 6px; backdrop-filter: blur(10px); }
+.toolbar-copy { min-width: 180px; }
+.toolbar-copy strong { display: block; font-size: 14px; line-height: 20px; }
+.toolbar-copy small { display: block; margin-top: 2px; color: #b9c5b8; font-size: 11px; line-height: 16px; white-space: nowrap; }
+#count { color: #cbd7c8; font-size: 12px; white-space: nowrap; }
+.toolbar-actions { display: flex; gap: 8px; }
+button { font: inherit; cursor: pointer; padding: 7px 14px; min-height: 40px; border: 1px solid #b8c7b455; border-radius: 4px; background: #202a23; color: inherit; white-space: nowrap; }
+button.primary { background: #d7ad3f; color: #202517; border-color: #e5c668; }
+button:focus-visible, textarea:focus-visible { outline: 3px solid #f4cb52; outline-offset: 2px; }
+button:disabled { opacity: .55; cursor: default; }
+dialog { width: min(420px, calc(100vw - 32px)); padding: 20px; color: #f4f6f3; background: #1a241d; border: 1px solid #b8c7b455; border-radius: 6px; box-shadow: 0 12px 40px #000b; }
+dialog::backdrop { background: #0008; }
+textarea { width: 100%; min-height: 100px; resize: vertical; margin-top: 12px; font: inherit; padding: 10px; border: 1px solid #b8c7b477; border-radius: 4px; background: #101611; color: inherit; }
+.actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+#error { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 32px); background: #391d1c; color: #ffb6ab; padding: 12px 18px; border: 1px solid #d27c6c; border-radius: 4px; box-shadow: 0 6px 20px #0008; }
+@media (max-width: 600px) {
+  #toolbar { top: 8px; gap: 8px; padding: 8px; }
+  .toolbar-copy { min-width: 0; }
+  .toolbar-copy small { display: none; }
+  #count { display: none; }
+  .toolbar-actions { gap: 4px; }
+  button { min-height: 44px; padding: 7px 10px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }

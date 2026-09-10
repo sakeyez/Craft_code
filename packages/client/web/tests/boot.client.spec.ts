@@ -6,7 +6,7 @@ import type {
   WebBootEntry,
 } from '@deepseek-ai/dsh-client-modules/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AppWebEntry } from '../src/boot.ts'
+import { RendererBootEntry } from '../src/boot.ts'
 
 const MODULES_ID = '@deepseek-ai/dsh-client-modules'
 const win = globalThis as DshWindow
@@ -19,7 +19,7 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-/** Install the stable facade shape that the Host injects before AppWebEntry runs. */
+/** Install the stable facade shape that the Host injects before RendererBootEntry runs. */
 function installFacade(
   create?: (options: ClientModuleCreateOptions) => modulesClient.ClientModuleSystem,
 ): ClientModuleLoaderTarget {
@@ -42,7 +42,7 @@ async function expectBootFailure(setup: () => void, message: string): Promise<vo
   const container = document.createElement('div')
   document.body.append(container)
   setup()
-  const entry = new AppWebEntry(container)
+  const entry = new RendererBootEntry(container)
   await entry.run()
   expect(container.textContent).toContain(message)
   expect(error).toHaveBeenCalledOnce()
@@ -117,7 +117,7 @@ describe('plugin activation', () => {
         }),
       }],
     ])
-    const entry = new AppWebEntry(container, {
+    const entry = new RendererBootEntry(container, {
       loadBundle: async (url) => {
         const registration = registrations.get(url)
         if (registration === undefined) throw new Error(`missing fixture registration ${url}`)

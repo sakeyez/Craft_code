@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src data:; connect-src 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>游戏标注</title>
+  <link rel="stylesheet" href="./annotation.css">
+</head>
+<body>
+  <main id="surface" aria-label="Minecraft 定格标注画面" tabindex="-1">
+    <img id="snapshot" alt="Minecraft 定格画面" draggable="false">
+    <div id="marks"></div>
+    <div id="selection" hidden></div>
+  </main>
+  <header id="toolbar" aria-label="标注工具栏">
+    <div class="toolbar-copy">
+      <strong>画面已定格</strong>
+      <small>点击标记位置，拖动框选区域</small>
+    </div>
+    <span id="count" role="status" aria-live="polite">0 条标注</span>
+    <div class="toolbar-actions">
+      <button id="cancel" type="button" aria-label="取消标注">取消</button>
+      <button id="finish" class="primary" type="button" aria-label="完成并保存标注">完成</button>
+    </div>
+  </header>
+  <p id="error" role="alert" aria-live="assertive" hidden></p>
+  <dialog id="editor" aria-labelledby="editor-title">
+    <form id="edit-form">
+      <label id="editor-title" for="description">请描述这里需要修改什么</label>
+      <textarea id="description" rows="4" maxlength="10000" required></textarea>
+      <div class="actions"><button id="delete" type="button">删除</button><button id="edit-cancel" type="button">取消</button><button class="primary" type="submit">保存标注</button></div>
+    </form>
+  </dialog>
+  <dialog id="discard" aria-labelledby="discard-title">
+    <p id="discard-title">放弃本轮尚未提交的标注？</p>
+    <div class="actions"><button id="keep" type="button">继续标注</button><button id="discard-confirm" type="button">放弃标注</button></div>
+  </dialog>
+  <script src="./annotation.js"></script>
+</body>
+</html>

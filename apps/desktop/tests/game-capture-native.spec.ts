@@ -10,7 +10,7 @@ const run = process.platform === 'win32' ? it : it.skip
 const electron = createRequire(import.meta.url)('electron') as string
 
 describe('Windows external game window fixture', () => {
-  run('tracks a top-level HWND without changing native state', () => {
+  run('arranges and follows a top-level HWND while preserving styles and renderer recovery', () => {
     const fixture = fileURLToPath(new URL('./fixtures/game-capture-native.mjs', import.meta.url))
     const log = join(tmpdir(), `craftcode-native-${String(process.pid)}.log`)
     rmSync(log, { force: true })

@@ -56,11 +56,11 @@ export function apply(ctx: ClientContext): void {
       if (bridge.reconnectGameSurface === undefined) throw new Error('桌面端未提供游戏重连能力。')
       return await bridge.reconnectGameSurface(cwd) as never
     },
-    beginAnnotation: async (cwd) => {
+    beginAnnotation: async (request, commit) => {
       if (bridge.beginGameAnnotation === undefined) throw new Error('桌面端未提供游戏截图能力。')
-      return bridge.beginGameAnnotation(cwd)
+      return bridge.beginGameAnnotation(request, commit)
     },
-    endAnnotation: async (cwd) => { await bridge.endGameAnnotation?.(cwd) },
+    endAnnotation: async (operationId) => { await bridge.endGameAnnotation?.(operationId) },
     reposition: async (cwd) => { await bridge.repositionGameCompanion?.(cwd) },
   }), 'ui-desktop-menu: game surface bridge')
 

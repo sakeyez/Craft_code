@@ -1,8 +1,8 @@
-# client/ — web-GUI browser half
+# client/ — desktop renderer client half
 
 English | [中文](README.zh.md)
 
-The browser side of the dsh web GUI: shell boot, browser-host communication, shared UI services, and feature plugins. Authoring rules live in [AGENTS.md](AGENTS.md); the host half is [`host/`](../host/README.md). All except `test-runtime` are **product** packages named `@deepseek-ai/dsh-client-<name>`.
+The renderer side of the dsh desktop application: shell boot, host communication, shared UI services, and feature plugins. Authoring rules live in [AGENTS.md](AGENTS.md); the host half is [`host/`](../host/README.md). All except `test-runtime` are **product** packages named `@deepseek-ai/dsh-client-<name>`.
 
 | Package | Purpose |
 |---|---|

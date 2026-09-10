@@ -15,7 +15,7 @@ import type {
   ModelReasoningEffort, ModelSelection, SessionListMetadata, SessionProjectionsBlock, SessionSearchItem, SessionSummary,
 } from './sessions.ts'
 import type { ToolEventView } from './events.ts'
-import type { AttachmentIdType, ImageAttachmentLimits, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import type { AttachmentIdType, EncodedImageAttachment, ImageAttachmentLimits, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { WorkspaceId } from './workspace.ts'
 import {
   SESSION_SEARCH_RESULT_LIMIT,
@@ -143,16 +143,24 @@ const gameAnnotationSchema: z.ZodType<GameAnnotation> = z.object({
   screenshotRef: z.string().max(2048).optional(),
 }) as z.ZodType<GameAnnotation>
 
+const annotationScreenshotSchema = z.object({
+  mediaType: z.union([z.literal('image/png'), z.literal('image/jpeg'), z.literal('image/webp'), z.literal('image/gif')]),
+  data: z.string().min(1).max(4_000_000),
+  name: z.string().max(256).optional(),
+}) as z.ZodType<EncodedImageAttachment>
+
 /** session.annotate request payload (full-list snapshot). */
 export const sessionAnnotateRequestSchema = z.object({
   sessionId: sessionIdSchema,
   annotations: z.array(gameAnnotationSchema).max(256),
+  screenshot: annotationScreenshotSchema.optional(),
 }) satisfies z.ZodType<Wire<RequestPayload<'session.annotate'>>>
 
 /** session.annotate response value. */
 export const sessionAnnotateValueSchema = z.object({
   accepted: z.literal(true),
   seq: z.number().int().nonnegative(),
+  screenshotRef: z.string().max(2048).optional(),
 }) satisfies z.ZodType<Wire<ResponseValue<'session.annotate'>>>
 
 /** session.fork request payload (atSeq anchors the completed-turn cut). */

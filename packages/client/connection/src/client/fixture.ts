@@ -1219,6 +1219,9 @@ function pageOf(
 function logReferencesAttachment(log: readonly SessionEvent[], attachmentId: string): boolean {
   const visit = (value: unknown): boolean => {
     if (Array.isArray(value)) return value.some(visit)
+    if (typeof value === 'string' && value.startsWith('{')) {
+      try { return visit(JSON.parse(value)) } catch { return false }
+    }
     if (typeof value !== 'object' || value === null) return false
     const record = value as Record<string, unknown>
     if (record.attachmentId === attachmentId) return true
@@ -2396,15 +2399,29 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         return ok(request, { title: normalized, seq: appended.seq })
       },
       annotate: (request) => {
-        const { sessionId, annotations } = request.payload
+        const { sessionId, annotations, screenshot } = request.payload
         const missing = requireSession(request)
         if (missing !== undefined) return missing
         if (annotations.some(annotation => annotation.sessionId !== sessionId)) {
           return err(request, { code: 'internal', message: 'annotation session ownership mismatch', details: {} })
         }
-        append(sessionId, { type: 'game/annotations', data: { annotations } })
+        let screenshotRef: string | undefined
+        if (screenshot !== undefined) {
+          const attachment: ImageAttachmentRef = {
+            attachmentId: `fixture:${randomUuid()}` as AttachmentIdType,
+            mediaType: screenshot.mediaType,
+            bytes: Math.max(1, Math.floor(screenshot.data.length * 3 / 4)),
+            width: 160,
+            height: 90,
+          }
+          attachments.set(String(attachment.attachmentId), { attachment, data: screenshot.data })
+          screenshotRef = JSON.stringify(attachment)
+        }
+        const stored = screenshotRef === undefined ? annotations : annotations.map(annotation =>
+          annotation.screenshotRef === undefined ? { ...annotation, screenshotRef } : annotation)
+        append(sessionId, { type: 'game/annotations', data: { annotations: stored } })
         const event = logOf(sessionId).at(-1) as SessionEvent
-        return ok(request, { accepted: true, seq: event.seq })
+        return ok(request, { accepted: true, seq: event.seq, ...(screenshotRef === undefined ? {} : { screenshotRef }) })
       },
       fork: (request) => {
         const { sessionId, atSeq } = request.payload

@@ -19,10 +19,10 @@ DeepSeek Harness 目前处于 _开发者预览_ 阶段，正在快速迭代。**
 安装 `Node.js`，然后运行：
 
 ```sh
-npx @deepseek-ai/dsh web
+npx @deepseek-ai/dsh desktop
 ```
 
-该命令默认会在 `http://127.0.0.1:3080` 启动 Web UI，本机启动时还会用默认浏览器打开页面。通过 SSH 启动时只打印宿主机 URL，因为本地转发地址由 SSH 客户端或编辑器持有。传入 `--no-open` 可仅运行服务器而不打开浏览器。详见 [Web UI 指南](docs/user/guide/index.zh.md)。
+该命令默认启动私有 Electron 桌面应用及其 loopback renderer，内部 HTTP 地址为 `http://127.0.0.1:3080`。该 HTTP 服务只由 Electron 加载，不作为独立浏览器产品提供。
 
 <a id="run-from-source"></a>
 
@@ -35,10 +35,10 @@ git clone https://github.com/deepseek-ai/deepseek-harness.git
 cd deepseek-harness
 pnpm install
 pnpm run build
-pnpm dsh web
+pnpm dsh desktop
 ```
 
-`pnpm run build` 会准备仓库产物。`pnpm dsh web` 会直接使用这些已构建产物，不会重新构建。
+`pnpm run build` 会准备仓库产物。`pnpm dsh desktop` 会直接使用这些已构建产物，不会重新构建。
 
 ## 社区与支持
 

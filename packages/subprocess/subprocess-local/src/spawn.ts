@@ -91,6 +91,29 @@ function privateSpillDir(): string {
   return defaultSpillDir
 }
 
+/** End of the complete UTF-8 prefix; malformed bytes remain available for replacement decoding. */
+function completeUtf8End(buffer: Buffer): number {
+  let start = buffer.length - 1
+  while (start >= 0) {
+    if ((buffer.readUInt8(start) & 0xc0) !== 0x80) break
+    start -= 1
+  }
+  if (start < 0) return buffer.length
+  const first = buffer.readUInt8(start)
+  const width = first >= 0xc2 && first <= 0xdf ? 2
+    : first >= 0xe0 && first <= 0xef ? 3
+      : first >= 0xf0 && first <= 0xf4 ? 4 : 1
+  if (buffer.length - start >= width) return buffer.length
+  const second = buffer[start + 1]
+  if (second !== undefined && (
+    (first === 0xe0 && second < 0xa0)
+    || (first === 0xed && second >= 0xa0)
+    || (first === 0xf0 && second < 0x90)
+    || (first === 0xf4 && second >= 0x90)
+  )) return buffer.length
+  return start
+}
+
 /**
  * Collects one stream with a bounded in-memory tail. With a spill cap, on
  * first overflow a spill file is created and every chunk (including those
@@ -108,6 +131,7 @@ export class OutputCollector {
   private spillFd: number | undefined
   private spillFile: string | undefined
   private spillDisabled: boolean
+  private sealed = false
   /** Total bytes ever pushed (not just retained). */
   private total = 0
 
@@ -131,7 +155,15 @@ export class OutputCollector {
   push(chunk: Buffer): void {
     this.total += chunk.length
     const overflows = this.bytes + chunk.length > this.maxBytes
-    if (!this.spillDisabled && (overflows || this.spillFd !== undefined)) this.spillAll(chunk)
+    if (!this.spillDisabled && (overflows || this.spillFd !== undefined)) {
+      try {
+        this.spillAll(chunk)
+      } catch {
+        // Spill I/O is optional; stream callbacks must retain a bounded tail
+        // without throwing into the host or advertising a partial file.
+        this.discardSpill()
+      }
+    }
     this.chunks.push(chunk)
     this.bytes += chunk.length
     while (this.bytes > this.maxBytes) {
@@ -162,14 +194,24 @@ export class OutputCollector {
       // Random suffix + O_EXCL + no-follow-equivalent ('wx' fails on any
       // existing path, symlink or not) + owner-only mode: defeats spill-path
       // prediction and symlink planting in shared tmp dirs.
-      this.spillFile = join(
+      const file = join(
         this.spillDir,
         `dsh-subprocess-${process.pid}-${++spillCounter}-${randomBytes(6).toString('hex')}-${this.label}.log`,
       )
-      this.spillFd = openSync(this.spillFile, 'wx', 0o600)
-      for (const prior of this.chunks) writeSync(this.spillFd, prior)
+      this.spillFd = openSync(file, 'wx', 0o600)
+      this.spillFile = file
+      for (const prior of this.chunks) this.writeSpill(this.spillFd, prior)
     }
-    writeSync(this.spillFd, chunk)
+    this.writeSpill(this.spillFd, chunk)
+  }
+
+  private writeSpill(fd: number, chunk: Buffer): void {
+    let offset = 0
+    while (offset < chunk.length) {
+      const written = writeSync(fd, chunk, offset, chunk.length - offset)
+      if (written === 0) throw new Error('spill write made no progress')
+      offset += written
+    }
   }
 
   /** Stop spilling and remove the file once it can no longer hold the complete stream. */
@@ -198,7 +240,8 @@ export class OutputCollector {
 
   /**
    * Incremental read in whole-stream byte coordinates: returns everything
-   * pushed since `fromByte`. When `fromByte` has already slid out of the
+   * pushed since `fromByte`, withholding an incomplete UTF-8 suffix until
+   * more bytes arrive or the stream is sealed. When `fromByte` has slid out of the
    * in-memory tail window, the read is `lossy` — it returns the whole
    * retained tail and the gap is only recoverable from the spill file.
    * @param fromByte - whole-stream offset to resume from (a prior read's `nextOffset`; 0 for the first read).
@@ -207,11 +250,21 @@ export class OutputCollector {
   readFrom(fromByte: number): { text: string; nextOffset: number; lossy: boolean; spillPath?: string } {
     const windowStart = this.total - this.bytes
     const buffer = Buffer.concat(this.chunks)
-    const lossy = fromByte < windowStart
-    const slice = lossy ? buffer : buffer.subarray(fromByte - windowStart)
+    let readableStart = 0
+    // A truncated window can begin inside a character; its remaining bytes
+    // belong to the reported gap, not to the decoded tail.
+    if (windowStart > 0) {
+      while (readableStart < buffer.length) {
+        if ((buffer.readUInt8(readableStart) & 0xc0) !== 0x80) break
+        readableStart += 1
+      }
+    }
+    const lossy = fromByte < windowStart + readableStart
+    const start = Math.max(readableStart, fromByte - windowStart)
+    const end = this.sealed ? buffer.length : completeUtf8End(buffer)
     return {
-      text: slice.toString('utf8'),
-      nextOffset: this.total,
+      text: buffer.subarray(start, end).toString('utf8'),
+      nextOffset: windowStart + end,
       lossy,
       ...this.spillFile !== undefined ? { spillPath: this.spillFile } : {},
     }
@@ -225,6 +278,7 @@ export class OutputCollector {
    * never point at a still-open file.
    */
   seal(): void {
+    this.sealed = true
     if (this.spillFd === undefined) return
     try {
       closeSync(this.spillFd)
@@ -243,7 +297,7 @@ export class OutputCollector {
   finalize(): CollectedOutput {
     this.seal()
     return {
-      text: Buffer.concat(this.chunks).toString('utf8'),
+      text: this.readFrom(0).text,
       truncated: this.dropped,
       ...this.spillFile !== undefined ? { spillPath: this.spillFile } : {},
     }
@@ -364,6 +418,7 @@ export function spawnSubprocess(spec: SubprocessSpawnSpec, internals: SpawnInter
     if (!isCollect(mode) || stream === null) return undefined
     const collector = new OutputCollector(mode.maxBytes, mode.spill?.maxBytes, label, spillDir)
     stream.on('data', (chunk: Buffer) => { collector.push(chunk) })
+    stream.once('end', () => { collector.seal() })
     return collector
   }
   const stdoutCollector = collectStream(outMode, child.stdout, 'stdout')

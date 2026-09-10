@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-Profile bundle for the shipped Minecraft mod-development Web agent. The bundle is a patch-list carrier: its manifest declares `"dsh": { "bundle": { "patch": "./cordis.patch.yml" } }`, and the profile composer applies that patch after `@deepseek-ai/dsh-base` and `@deepseek-ai/dsh-web-app`.
+Profile bundle for the shipped Minecraft mod-development Web agent. The bundle is a patch-list carrier: its manifest declares `"dsh": { "bundle": { "patch": "./cordis.patch.yml" } }`, and the profile composer applies that patch after `@deepseek-ai/dsh-base` and `@deepseek-ai/dsh-desktop-app`.
 
 ## Patch contents
 
@@ -34,6 +34,6 @@ No direct request-prefix contribution. The selected preset decides the prompt pr
 
 ## Known Limitations and Deferred Work
 
-- **Web profile surface** — this bundle expects the Web agent-preset roster supplied by `@deepseek-ai/dsh-web-app`; it is not the headless task surface.
-- **JDTLS is deployment-owned and optional** — the default command name is resolved on the host PATH. If it is unavailable, the Web profile reports a diagnostic and disables only Java LSP; project-specific or machine-specific launch details belong in the profile's own overlay.
+- **desktop profile surface** — this bundle expects the Web agent-preset roster supplied by `@deepseek-ai/dsh-desktop-app`; it is not the headless task surface.
+- **JDTLS is deployment-owned and optional** — the default command name is resolved on the host PATH. If it is unavailable, the desktop profile reports a diagnostic and disables only Java LSP; project-specific or machine-specific launch details belong in the profile's own overlay.
 - **No optional tool expansion** — the patch does not enable web search, workflows, Ralph, subagents, background job controls, todo, or goal tools.

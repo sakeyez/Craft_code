@@ -5,23 +5,22 @@ import { backendArguments, readyUrlFromLine, startBackend } from '../src/backend
 const fixture = fileURLToPath(new URL('./fixtures/backend.mjs', import.meta.url))
 
 describe('desktop backend supervisor', () => {
-  it('builds the dynamic loopback Web invocation without a shell', () => {
+  it('builds the private desktop invocation without a shell', () => {
     expect(backendArguments({ cliEntry: 'cli.js', entryMode: 'source' })).toEqual([
-      '--import', 'tsx/esm', 'cli.js', 'web',
-      '--host', '127.0.0.1', '--port', '0', '--no-open',
+      '--import', 'tsx/esm', 'cli.js', 'desktop', '--port', '0',
     ])
     expect(backendArguments({ cliEntry: 'cli.js', entryMode: 'compiled' })).toEqual([
-      'cli.js', 'web', '--host', '127.0.0.1', '--port', '0', '--no-open',
+      'cli.js', 'desktop', '--port', '0',
     ])
   })
 
   it('accepts only a valid nonzero 127.0.0.1 readiness URL', () => {
-    expect(readyUrlFromLine('dsh web: http://127.0.0.1:43123')).toBe('http://127.0.0.1:43123')
-    expect(readyUrlFromLine('dsh web: http://127.0.0.1:43123 (LAN: http://10.0.0.1:43123)'))
+    expect(readyUrlFromLine('dsh desktop: http://127.0.0.1:43123')).toBe('http://127.0.0.1:43123')
+    expect(readyUrlFromLine('dsh desktop: http://127.0.0.1:43123 (LAN: http://10.0.0.1:43123)'))
       .toBe('http://127.0.0.1:43123')
-    expect(readyUrlFromLine('dsh web: http://localhost:43123')).toBeUndefined()
-    expect(readyUrlFromLine('dsh web: http://127.0.0.1:0')).toBeUndefined()
-    expect(readyUrlFromLine('prefix dsh web: http://127.0.0.1:43123')).toBeUndefined()
+    expect(readyUrlFromLine('dsh desktop: http://localhost:43123')).toBeUndefined()
+    expect(readyUrlFromLine('dsh desktop: http://127.0.0.1:0')).toBeUndefined()
+    expect(readyUrlFromLine('prefix dsh desktop: http://127.0.0.1:43123')).toBeUndefined()
   })
 
   it('stops a ready backend through the supervisor IPC message', async () => {

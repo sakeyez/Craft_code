@@ -17,11 +17,13 @@ Status: implemented
 - **`dsh-bash-local`（Consumer）**——`inject: ['subprocess']`；把每个解析后的 `ShellExecSpec` 映射为一个 `SubprocessSpawnSpec`（`['bash', '-c', command]`），并保留自身配置、`resolve()` 默认值补全、基于融合 deadline 的 `timedOut`/`aborted` 分类、带 `[stderr]` 标记的后台读取合并及其消费游标，以及 `onProcessDone` 子类钩子。`dsh-bash-sandbox` 除了重新声明继承来的 inject 之外没有变化；它仍在命令字符串层面做包装，并重新进入继承的 spawn 路径。
 - **`dsh-shell`（Service Definition）**——把迁走的词汇从 `dsh-subprocess` 重导出，因此没有任何 bash Consumer 需要改动导入；`ShellExecRequest`/`ShellExecSpec`/`ShellProcess` 与沙箱事实仍归 bash 所有。
 
+收集输出仍是可选诊断通道：本地 spill 打开或写入失败时，会停止溢写、丢弃不完整文件，同时保留有界尾部收集与子进程退出事实。只有完整流内容仍可靠时才公布文件路径；部分写入会补齐，关闭失败则不公布路径。读取会保留不完整 UTF-8 后缀，直到更多字节到达或流结束才越过它。偏移量仍归调用方所有，因此各读取器无需共享解码器状态即可独立读取；截断窗口会省略已丢失起始字符的延续字节。
+
 每个加载 bash 执行器的组合都同时加载 `@deepseek-ai/dsh-subprocess-local`：CLI（命令行界面）、各示例、Python 捆绑运行时以及各内联测试配置。
 
 后台进程的存续期从执行器移到了服务：执行器不再保有存活进程集合，于是重载执行器后，后台工作会继续运行且仍可读取，而组合拆除（服务的 dispose）仍是先终止再等待退出的边界。一条行为约定随之挪动：后台 spawn 失败不再能在管道内部被缓冲成伪造的 stderr（对一个从未真正运行的进程，服务会 reject `done`，且不缓冲任何内容），因此执行器把 `spawn failed: …` 提示注入恰好一个 `readOutput()` 增量。
 
-基于已观察到的流与生命周期需求，具备条件的进程消费方随后迁到该 seam：LSP 使用管道化协议流加收集式 stderr 尾部；ACP（Agent Client Protocol）后端使用管道化 ndjson、继承式 stderr 和消费方拥有的 stdin-EOF dispose 阶梯；PTY 使用 `spawnTerminal()`，同时保留就绪与终端策略。`dsh-subagent-subprocess` 与 LSP 私有进程树辅助函数均被删除。MCP 传输 spawn 和刻意保持轻依赖的 test-support 启动器因所有权或执行形状仍留在外部；适用的生产调用方共享凭据清除。
+基于已观察到的流与生命周期需求，具备条件的进程消费方随后迁到该 seam：LSP 使用管道化协议流加收集式 stderr 尾部；ACP（Agent Client Protocol）后端使用管道化 ndjson、继承式 stderr 和消费方拥有的 stdin-EOF dispose 阶梯；PTY 使用 `spawnTerminal()`，同时保留就绪与终端策略。`dsh-subagent-subprocess` 与 LSP 私有进程树辅助函数均被删除。MCP 传输 spawn 和刻意保持轻依赖的 test-support 启动器因所有权或执行形状仍留在外部；适用的生产调用方共享凭据清除。Electron 桌面的 shell 与 Gradle 任务发现 spawn 也直接使用 `scrubbedParentEnv()`，使本地构建脚本、Git hook 与启动的模组无法隐式继承宿主凭据。
 
 ## 曾考虑的替代方案
 
@@ -37,8 +39,10 @@ Status: implemented
 
 **把 `ENV_OVERRIDES`（TERM=dumb、PAGER=cat 等）移入服务。**否决：通用进程服务不得把终端呈现策略强加给非终端消费方；对环境中凭据形态名称与 `DSH_*` 名称的清除是安全与身份不变式，予以保留，但终端友好性是 bash 工具自己的选择，经 spec 的显式 env 表达，而调用方自己的条目依旧优先。
 
+**可选 spill 存储失败时让子进程操作失败。**否决：spill 恢复只是有界内存尾部的补充；诊断通道的文件系统故障不得覆盖子进程退出事实，也不得从流回调逸出到宿主。代价是无法恢复完整输出，由缺失的 spill 路径和截断尾部体现。
+
 ## 后果
 
-换来的是：「运行并管理一个进程」成为 Bash、LSP、PTY 与 ACP 消费方共用的可替换能力；容器化或远程进程后端可以直接接入，而无需改变各领域语义；进程树信号、升级终止、有界收集、终端机制与凭据清除各自只剩一份实现；后台进程也能在执行器重载后存活，与任务注册表的存续期模型一致。进程与终端管道通过 `dsh-subprocess-local` 测试；消费方测试套件只需针对真实服务固定各自拥有的行为。
+换来的是：「运行并管理一个进程」成为 Bash、LSP、PTY 与 ACP 消费方共用的可替换能力；容器化或远程进程后端可以直接接入，而无需改变各领域语义；进程树信号、升级终止、有界收集、终端机制与凭据清除各自只剩一份实现；后台进程也能在执行器重载后存活，与任务注册表的存续期模型一致。进程与终端管道通过 `dsh-subprocess-local` 测试；消费方测试套件只需针对真实服务固定各自拥有的行为。[输出收集测试](../../../../packages/subprocess/subprocess-local/tests/output-collector.spec.ts) 在 Windows 与 POSIX 上使用默认 Vitest 配置运行：故障注入覆盖打开、写入与关闭失败，独立 Node 宿主验证无法写入 spill 位置时仍能存活并执行另一个子进程。按字节拆分的 UTF-8、独立游标、截断窗口及流结束时的刷新共同固定增量读取语义。
 
 代价是：多出一对包，而且凡加载消费方之处都多一行组合配置；缺少 subprocess 提供方时，消费方会按标准服务注入行为保持挂起。每个后端都要实现可执行文件查找、三种 stdio 模式、进程树生命周期和一个终端原语。迁移词汇的重导出让 `dsh-shell` 的导入继续可用，但也意味着两个包命名同一批类型；进程 seam 是所有者。spawn 失败提示经由 Bash 的消费式读取游标变为单次交付，不再是可重复读取的 stderr 缓冲内容。

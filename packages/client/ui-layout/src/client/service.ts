@@ -11,7 +11,7 @@
 import type { BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
 import type { createLayoutStore } from './stores.ts'
 import type {
-  GameSurfaceBridge, GameSurfaceEvent, GameSurfaceSnapshot, GameSurfaceState,
+  GameSurfaceBridge, GameSurfaceEvent, GameAnnotationRequest, GameAnnotationDraft, GameAnnotationSnapshot, GameSurfaceState,
 } from './game.ts'
 
 /** The layout store's bound action set (framework-baked, draft params peeled). */
@@ -35,8 +35,11 @@ export interface ILayout {
   /** Attach the desktop-only privileged operations and return their disposer. */
   attachGameSurfaceBridge(bridge: GameSurfaceBridge): () => void
   reconnectGameSurface(cwd: string): Promise<GameSurfaceState>
-  beginGameAnnotation(cwd: string): Promise<GameSurfaceSnapshot>
-  endGameAnnotation(cwd: string): Promise<void>
+  beginGameAnnotation(
+    request: GameAnnotationRequest,
+    commit: (drafts: GameAnnotationDraft[], snapshot?: GameAnnotationSnapshot) => Promise<void>,
+  ): Promise<void>
+  endGameAnnotation(operationId: string): Promise<void>
   repositionGameCompanion(cwd: string): Promise<void>
 }
 
@@ -85,8 +88,11 @@ export class LayoutController implements ILayout {
   }
 
   reconnectGameSurface(cwd: string): Promise<GameSurfaceState> { return this.#requireGameBridge().reconnect(cwd) }
-  beginGameAnnotation(cwd: string): Promise<GameSurfaceSnapshot> { return this.#requireGameBridge().beginAnnotation(cwd) }
-  endGameAnnotation(cwd: string): Promise<void> { return this.#requireGameBridge().endAnnotation(cwd) }
+  beginGameAnnotation(
+    request: GameAnnotationRequest,
+    commit: (drafts: GameAnnotationDraft[], snapshot?: GameAnnotationSnapshot) => Promise<void>,
+  ): Promise<void> { return this.#requireGameBridge().beginAnnotation(request, commit) }
+  endGameAnnotation(operationId: string): Promise<void> { return this.#requireGameBridge().endAnnotation(operationId) }
   repositionGameCompanion(cwd: string): Promise<void> { return this.#requireGameBridge().reposition(cwd) }
 
   #requireGameBridge(): GameSurfaceBridge {

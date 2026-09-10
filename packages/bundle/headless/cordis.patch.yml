@@ -16,7 +16,7 @@
 
 - id: tools
   config:
-    # Keep the same temporary process-wide Code Mode opt-in as the Web surface.
+    # Keep the same temporary process-wide Code Mode opt-in as the desktop surface.
     mode: !!js process.env.DSH_TOOLS_MODE
 
 - insert:

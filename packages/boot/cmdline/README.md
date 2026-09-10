@@ -23,7 +23,7 @@ export const inject = ['cmdlineArgs']
 
 export function apply(ctx: Context): void {
   const program = webCommand()
-  program.action(() => ctx.provide('webStartup', webValuesFrom(program)))
+  program.action(() => ctx.provide('desktopStartup', desktopValuesFrom(program)))
   parseCmdline(ctx, program)
 }
 ```
@@ -31,8 +31,8 @@ export function apply(ctx: Context): void {
 Its Loader row carries no launcher marker or special kind:
 
 ```yaml
-- id: web-startup
-  name: '@deepseek-ai/dsh-web-app/startup'
+- id: desktop-startup
+  name: '@deepseek-ai/dsh-desktop-app/startup'
 ```
 
 Every row configured from those values uses ordinary service injection and direct lazy config access:
@@ -40,17 +40,17 @@ Every row configured from those values uses ordinary service injection and direc
 ```yaml
 - id: webserver
   name: '@deepseek-ai/dsh-host-webserver'
-  inject: [webStartup]
+  inject: [desktopStartup]
   config:
-    host: !!js ctx.webStartup.host ?? '127.0.0.1'
-    port: !!js ctx.webStartup.port ?? 3080
+    host: '127.0.0.1'
+    port: !!js ctx.desktopStartup.port ?? 3080
 ```
 
 `parseCmdline` refuses at load a program in which no command declares an action, routes every command's exit and output through the launcher (commander copies those settings into subcommands only at registration), and parses the immutable arguments; commander runs the invoked command's synchronous action on success. An action rejects an invalid invocation with `program.error(...)` — before publishing, since statements ahead of the rejection have already run. On `--help`, `--version`, a parse error, or that rejection, the helper writes commander's text and requests exit; the provider publishes nothing, so dependent rows never activate.
 
 ### How injection orders config
 
-Loader defers a row's `!!js` interpolation until that row's declared injections are active, then evaluates against the row's plugin context. The example above can therefore read `ctx.webStartup` directly: Cordis has already populated that injected service before Loader asks for `webserver`'s config. Include trees preserve nested expression nodes until each target row reaches this point. Provider replacement and live patch reload repeat interpolation against the current injected services, so a launch flag cannot be silently reset.
+Loader defers a row's `!!js` interpolation until that row's declared injections are active, then evaluates against the row's plugin context. The example above can therefore read `ctx.desktopStartup` directly: Cordis has already populated that injected service before Loader asks for `webserver`'s config. Include trees preserve nested expression nodes until each target row reaches this point. Provider replacement and live patch reload repeat interpolation against the current injected services, so a launch flag cannot be silently reset.
 
 ### Shared immutable arguments
 

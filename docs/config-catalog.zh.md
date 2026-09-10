@@ -577,6 +577,29 @@ export interface Config {
 
 来源：[`packages/credentials/credentials-local/src/index.ts:64`](../packages/credentials/credentials-local/src/index.ts)
 
+<a id="deepseek-aidsh-desktop-app"></a>
+
+## `@deepseek-ai/dsh-desktop-app`
+
+需要：`webServer`
+
+```ts config-catalog
+/** Plugin config: composed deployment settings plus per-invocation command-line values. */
+export interface Config {
+  /** Print the URL line on activation; a non-interactive layer can turn it off. */
+  printUrl: boolean
+  /**
+   * Register the model-visible surface context (the `app:desktop-surface` prompt
+   * section and the `DSH_DESKTOP_URL` shell variable). A one-shot non-interactive
+   * layer can turn it off when its user is not in the GUI, so the
+   * orientation text would be false.
+   */
+  surfaceContext: boolean
+}
+```
+
+来源：[`packages/bundle/desktop-app/src/index.ts:32`](../packages/bundle/desktop-app/src/index.ts)
+
 <a id="deepseek-aidsh-e2b"></a>
 
 ## `@deepseek-ai/dsh-e2b`
@@ -3102,33 +3125,6 @@ export interface WebRuntimeConfig {
 ```
 
 来源：[`packages/web/web/src/index.ts:55`](../packages/web/web/src/index.ts)
-
-<a id="deepseek-aidsh-web-app"></a>
-
-## `@deepseek-ai/dsh-web-app`
-
-需要：`webServer`
-
-```ts config-catalog
-/** Plugin config: composed deployment settings plus per-invocation command-line values. */
-export interface Config {
-  /** Permit default-browser handoff after the Loader tree settles; an SSH launch suppresses it. */
-  openBrowser: boolean
-  /** Print the URL line on activation; a non-interactive layer can turn it off. */
-  printUrl: boolean
-  /**
-   * Register the model-visible surface context (the `app:web-surface` prompt
-   * section and the `DSH_WEB_URL` bash variable). A one-shot non-interactive
-   * layer can turn it off when its user is not in the GUI, so the
-   * orientation text would be false.
-   */
-  surfaceContext: boolean
-  /** Explicit `--trusted-host` authorities from this invocation. */
-  trustedHosts: string[]
-}
-```
-
-来源：[`packages/bundle/web-app/src/index.ts:42`](../packages/bundle/web-app/src/index.ts)
 
 <a id="deepseek-aidsh-web-fetch-http"></a>
 

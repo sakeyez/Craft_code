@@ -46,7 +46,7 @@ describe('BootPage', () => {
 
   it('shows the complete sweep report', () => {
     const { el, page } = mount()
-    const report = 'web boot: 1 entry did not activate\nx: pending (waiting for service: y)'
+    const report = 'renderer boot: 1 entry did not activate\nx: pending (waiting for service: y)'
     page.fail(report)
     page.setState('a', 'active')
     expect(el.textContent).toContain(report)

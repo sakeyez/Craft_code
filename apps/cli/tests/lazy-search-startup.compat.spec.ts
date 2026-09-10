@@ -1,10 +1,10 @@
 /**
- * Node 22 startup-output smoke for the shipped Web CLI composition.
+ * Node 22 startup-output smoke for the shipped desktop composition.
  *
  * Only the dedicated Node compatibility gate opts this test in after building
  * both artifacts; ordinary Vitest inventory deterministically skips it.
  * The child runs built artifacts under plain Node with the real shipped
- * web profile (dsh-base + dsh-web-app bundle patches, auto-initialized).
+ * desktop profile (dsh-base + dsh-desktop-app bundle patches, auto-initialized).
  * Its URL line follows the settled profile boot; SIGTERM then exercises the
  * shipped quiescent disposer.
  */
@@ -20,11 +20,11 @@ import { describe, expect, it } from 'vitest'
 
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url))
 const builtBin = join(repoRoot, 'apps/cli/lib/bin.js')
-const webDist = join(repoRoot, 'apps/web/dist/index.html')
+const desktopDist = join(repoRoot, 'apps/desktop/dist/index.html')
 // Full-text session search ships off (`openAt: never` on both layers): the
 // base patch carries the default, and the web restatement must not re-enable it.
 const baseConfigPath = join(repoRoot, 'packages/bundle/base/cordis.patch.yml')
-const webConfigPath = join(repoRoot, 'packages/bundle/web-app/cordis.patch.yml')
+const desktopConfigPath = join(repoRoot, 'packages/bundle/desktop-app/cordis.patch.yml')
 const requireBuiltArtifacts = process.env.DSH_REQUIRE_BUILT_CLI_SMOKE === '1'
 
 interface ConfigRow {
@@ -43,8 +43,8 @@ const jsExprType = new yaml.Type('tag:yaml.org,2002:js', {
 })
 const configSchema = yaml.JSON_SCHEMA.extend(jsExprType)
 
-/** Boot the built Web CLI, wait for its settled URL, then dispose through SIGTERM. */
-function runBuiltWeb(cwd: string): Promise<{ stdout: string; stderr: string; code: number }> {
+/** Boot the built desktop backend, wait for readiness, then dispose through SIGTERM. */
+function runBuiltDesktop(cwd: string): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((resolveRun, rejectRun) => {
     const env: NodeJS.ProcessEnv = {
       ...process.env,
@@ -56,10 +56,7 @@ function runBuiltWeb(cwd: string): Promise<{ stdout: string; stderr: string; cod
     delete env.NODE_NO_WARNINGS
     const child = spawn(process.execPath, [
       builtBin,
-      'web',
-      '--no-open',
-      '--host',
-      '127.0.0.1',
+      'desktop',
       '--port',
       '0',
     ], {
@@ -74,7 +71,7 @@ function runBuiltWeb(cwd: string): Promise<{ stdout: string; stderr: string; cod
     child.stderr.setEncoding('utf8')
     child.stdout.on('data', (chunk: string) => {
       stdout += chunk
-      if (!settled && /dsh web: http:\/\/127\.0\.0\.1:\d+/u.test(stdout)) {
+      if (!settled && /dsh desktop: http:\/\/127\.0\.0\.1:\d+/u.test(stdout)) {
         settled = true
         child.kill('SIGTERM')
       }
@@ -102,10 +99,10 @@ function runBuiltWeb(cwd: string): Promise<{ stdout: string; stderr: string; cod
 describe.skipIf(!requireBuiltArtifacts)('built CLI lazy-search startup', () => {
   it('boots and disposes the shipped composition with full-text search off by default', async () => {
     expect(existsSync(builtBin), `missing built CLI ${resolve(builtBin)}; run pnpm build`).toBe(true)
-    expect(existsSync(webDist), `missing Web dist ${resolve(webDist)}; run pnpm run build:web`).toBe(true)
+    expect(existsSync(desktopDist), `missing desktop dist ${resolve(desktopDist)}; run pnpm run build:desktop-renderer`).toBe(true)
     const baseRows = (yaml.load(await readFile(baseConfigPath, 'utf8'), { schema: configSchema }) as PatchEntry[])
       .flatMap(entry => entry.insert ?? [entry])
-    const webRows = (yaml.load(await readFile(webConfigPath, 'utf8'), { schema: configSchema }) as PatchEntry[])
+    const webRows = (yaml.load(await readFile(desktopConfigPath, 'utf8'), { schema: configSchema }) as PatchEntry[])
       .flatMap(entry => entry.insert ?? [entry])
     const baseRow = baseRows.find(row => row.id === 'session-query-sqlite')
     const webRow = webRows.find(row => row.id === 'session-query-sqlite')
@@ -117,8 +114,8 @@ describe.skipIf(!requireBuiltArtifacts)('built CLI lazy-search startup', () => {
 
     const cwd = await mkdtemp(join(tmpdir(), 'dsh-cli-lazy-search-'))
     try {
-      const result = await runBuiltWeb(cwd)
-      expect(result.stdout).toMatch(/dsh web: http:\/\/127\.0\.0\.1:\d+/u)
+      const result = await runBuiltDesktop(cwd)
+      expect(result.stdout).toMatch(/dsh desktop: http:\/\/127\.0\.0\.1:\d+/u)
       expect(result.code).toBe(0)
       expect(result.stderr).not.toMatch(/ExperimentalWarning: SQLite/u)
     } finally {

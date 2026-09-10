@@ -1,12 +1,12 @@
 /**
- * Supervise one `dsh web` child and expose only its settled loopback URL.
+ * Supervise one private `dsh desktop` child and expose only its settled loopback URL.
  * The CLI owns profile composition and Cordis disposal; this module owns
  * readiness, parent/child lifetime, and forced termination fallback.
  */
 import { spawn, type ChildProcess } from 'node:child_process'
 import type { Readable } from 'node:stream'
 
-const READY_LINE = /^dsh web: (http:\/\/127\.0\.0\.1:\d+)(?:\s|$)/u
+const READY_LINE = /^dsh desktop: (http:\/\/127\.0\.0\.1:\d+)(?:\s|$)/u
 const SUPERVISOR_SHUTDOWN_MESSAGE = 'dsh/supervisor-shutdown'
 const START_TIMEOUT_MS = 120_000
 const STOP_TIMEOUT_MS = 7_000
@@ -37,10 +37,8 @@ export function backendArguments(options: Pick<BackendOptions, 'cliEntry' | 'ent
   return [
     ...options.entryMode === 'source' ? ['--import', 'tsx/esm'] : [],
     options.cliEntry,
-    'web',
-    '--host', '127.0.0.1',
+    'desktop',
     '--port', '0',
-    '--no-open',
   ]
 }
 
@@ -127,7 +125,7 @@ async function terminateChild(child: ChildProcess, exited: Promise<BackendExit>)
   }
 }
 
-/** Launch the existing Web profile and resolve after its Loader-ready URL line. */
+/** Launch the private desktop profile and resolve after its Loader-ready URL line. */
 export async function startBackend(options: BackendOptions): Promise<BackendHandle> {
   const args = backendArguments(options)
   options.log?.(`backend spawn node=${options.nodeExecutable} entry=${options.cliEntry} mode=${options.entryMode} cwd=${options.cwd}`)

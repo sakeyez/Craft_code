@@ -53,7 +53,7 @@ pnpm run typecheck
 |---|---|---|
 | `tsconfig.json` | solution 根：`extends` base、`files: []`、引用两个 aggregate。它是 tsserver 发现入口，也是显式执行整张 Project Reference 图时的入口；经继承的 `paths` 充当 tsx 运行 `examples/` 与 `scripts/` 时的解析配置。 | 否 |
 | `tsconfig.host.json` | Host aggregate：Host 包、示例、测试、脚本和 website，以及 `api/remotes` 的 Host 特例 project。 | 是 |
-| `tsconfig.client.json` | Client aggregate：`packages/client/*` 包及其测试、`apps/web`，以及 `api/remotes` 的 Client 特例 project。 | 是 |
+| `tsconfig.client.json` | Client aggregate：`packages/client/*` 包及其测试、`apps/desktop/renderer`，以及 `api/remotes` 的 Client 特例 project。 | 是 |
 | `tsconfig.base.json` | 共享 compilerOptions 与源码 `paths` 映射。同时是各 vitest 配置让 vite-tsconfig-paths 指向的解析门面：它没有 `include`，因此其 `paths` 适用于任何 importer。 | 否 |
 | `tsconfig.base.client.json` | 浏览器编译设置（`jsx`、DOM lib、`types: []`），由 Client aggregate 和每个 `packages/client/*` 包 extends。 | 否 |
 
@@ -72,7 +72,7 @@ tsc -b tsconfig.host.json
 tsdown --env.DSH_BUILD_FACE host
 tsc -b tsconfig.client.json
 tsdown --env.DSH_BUILD_FACE client
-pnpm run build:web
+pnpm run build:desktop-renderer
 ```
 
 两次 tsdown 都使用同一组完整 workspace 匹配，不扫描构建产物来发现 Client 包，也不维护 Host/Client 包过滤表。包内 tsdown 配置根据 `DSH_BUILD_FACE` 决定当前阶段的入口：普通 Client 插件在 Client 阶段同时生成 Node loader 与 browser bundle；`api-remotes` 通过 `hostPhase: true` 提前生成 Host 入口，再在 Client 阶段只生成 browser bundle。tsdown 只消费 `lib/types` 中由前置 tsc 发射的 JavaScript。

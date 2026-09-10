@@ -107,11 +107,19 @@ contextBridge.exposeInMainWorld('craftCodeDesktop', {
     if (!isGameCaptureState(value)) throw new Error('主进程返回了无效的游戏状态。')
     return value
   },
-  async beginGameAnnotation(cwd) {
-    const value = await ipcRenderer.invoke('desktop:game-annotation-begin', cwd)
-    if (!isGameCaptureSnapshot(value)) throw new Error('主进程返回了无效的游戏截图。')
-    return value
+  async beginGameAnnotation(request, commit) {
+    const receive = (_event, value) => {
+      if (value.operationId !== request.operationId || value.sessionId !== request.sessionId) return
+      void (async () => {
+        let error
+        try { await commit(value.drafts, value.snapshot) } catch (failure) { error = (failure instanceof Error ? failure.message : String(failure)).slice(0, 10000) }
+        await ipcRenderer.invoke('desktop:game-annotation-result', request.operationId, value.attempt, error)
+      })().catch(() => {})
+    }
+    ipcRenderer.on('desktop:game-annotation-commit', receive)
+    try { await ipcRenderer.invoke('desktop:game-annotation-begin', request) }
+    finally { ipcRenderer.removeListener('desktop:game-annotation-commit', receive) }
   },
-  endGameAnnotation(cwd) { return ipcRenderer.invoke('desktop:game-annotation-end', cwd) },
+  endGameAnnotation(operationId) { return ipcRenderer.invoke('desktop:game-annotation-end', operationId) },
   repositionGameCompanion(cwd) { return ipcRenderer.invoke('desktop:game-companion-reposition', cwd) },
 })

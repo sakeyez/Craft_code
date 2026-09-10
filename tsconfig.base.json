@@ -157,7 +157,7 @@
       "@deepseek-ai/dsh-host-*/invariant": ["./packages/host/*/src/invariant.ts"],
       "@deepseek-ai/dsh-client-*/invariant": ["./packages/client/*/src/invariant.ts"],
       "@deepseek-ai/dsh-headless/startup": ["./packages/bundle/headless/src/startup.ts"],
-      "@deepseek-ai/dsh-web-app/startup": ["./packages/bundle/web-app/src/startup.ts"],
+      "@deepseek-ai/dsh-desktop-app/startup": ["./packages/bundle/desktop-app/src/startup.ts"],
       "@deepseek-ai/dsh-client-*/client": ["./packages/client/*/src/client"],
        // One wildcard maps every @deepseek-ai/dsh-<name> to its source. Package
       // dir names are unique across groups, so first-on-disk-wins resolution is
@@ -202,6 +202,7 @@
       "@deepseek-ai/dsh-client-test-runtime": ["./packages/test-support/client-runtime/src"],
       "@deepseek-ai/dsh-client-test-runtime/invariant": ["./packages/test-support/client-runtime/src/invariant.ts"],
       "@deepseek-ai/dsh-client-ui-layout": ["./packages/client/ui-layout/src"],
+      "@deepseek-ai/dsh-client-ui-desktop-menu": ["./packages/client/ui-desktop-menu/src"],
       "@deepseek-ai/dsh-client-ui-sidebar": ["./packages/client/ui-sidebar/src"],
       "@deepseek-ai/dsh-client-ui-brand-official": ["./packages/client/ui-brand-official/src"],
       "@deepseek-ai/dsh-client-ui-conversation": ["./packages/client/ui-conversation/src"],

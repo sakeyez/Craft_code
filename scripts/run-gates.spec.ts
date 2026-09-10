@@ -407,7 +407,7 @@ describe('Node 24 lane ownership', () => {
       ]),
     )
     expect(subject.find(item => item.id === 'web-snapshot')).toMatchObject({
-      displayCommand: 'DSH_SNAPSHOT=replay pnpm run test:web:built',
+      displayCommand: 'DSH_SNAPSHOT=replay pnpm run test:desktop-renderer:built',
       env: { DSH_SNAPSHOT: 'replay' },
     })
   })
@@ -419,7 +419,7 @@ describe('Linux primary graph', () => {
     const web = subject.find(item => item.id === 'web-snapshot')
 
     expect(web).toMatchObject({
-      displayCommand: 'DSH_SNAPSHOT=replay pnpm run test:web:built',
+      displayCommand: 'DSH_SNAPSHOT=replay pnpm run test:desktop-renderer:built',
       env: { DSH_SNAPSHOT: 'replay' },
       needs: ['built-package-invariants'],
     })

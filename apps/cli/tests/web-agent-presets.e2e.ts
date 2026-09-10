@@ -23,9 +23,9 @@ import type {} from '@deepseek-ai/dsh-token-meter'
 
 const CONFIG_DIR = fileURLToPath(new URL('../config/', import.meta.url))
 const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url))
-/** The shipped Web surface: the dsh-base and dsh-web-app bundle patches over an empty preset root. */
+/** The shipped desktop surface: the dsh-base and dsh-desktop-app bundle patches over an empty preset root. */
 const BASE_PATCH = join(REPO_ROOT, 'packages/bundle/base/cordis.patch.yml')
-const WEB_PATCH = join(REPO_ROOT, 'packages/bundle/web-app/cordis.patch.yml')
+const WEB_PATCH = join(REPO_ROOT, 'packages/bundle/desktop-app/cordis.patch.yml')
 const CODEX_PACKAGE_DIR = join(REPO_ROOT, 'packages/subagent/subagent-codex')
 const CLAUDE_CODE_PACKAGE_DIR = join(REPO_ROOT, 'packages/subagent/subagent-claude-code')
 const MCMOD_BUNDLE_PACKAGE_DIR = join(REPO_ROOT, 'packages/bundle/mcmod')
@@ -86,7 +86,7 @@ async function bootWeb(
     // activate without the bound port disabled above. It owns dist serving
     // and the URL prompt line — surface glue, not anything that decides an
     // agent's capabilities, which is all this file asserts.
-    { id: 'web-runtime', disabled: true },
+    { id: 'desktop-runtime', disabled: true },
     { id: 'session-telemetry-otel', disabled: true },
     // A deployment-level skill on the host registry's GLOBAL layer — the same
     // registration shape a repository plugin's skill root uses. The layered
@@ -308,7 +308,7 @@ describe('the shipped Web composition', () => {
       },
     ], [MCMOD_BUNDLE_PACKAGE_DIR], [
       '@deepseek-ai/dsh-base',
-      '@deepseek-ai/dsh-web-app',
+      '@deepseek-ai/dsh-desktop-app',
       '@deepseek-ai/dsh-mcmod-bundle',
     ])
     const handle = await minecraftCtx.agents.create({
@@ -591,7 +591,7 @@ describe('product Bundle and user-preset intersection', () => {
       },
     ], installed.map(packageDir), [
       '@deepseek-ai/dsh-base',
-      '@deepseek-ai/dsh-web-app',
+      '@deepseek-ai/dsh-desktop-app',
       ...installed.map(packageName),
     ])
   }

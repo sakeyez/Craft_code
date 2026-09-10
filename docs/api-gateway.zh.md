@@ -94,7 +94,7 @@ API Gateway 包同时拥有 Host dispatcher 与 Client Remote endpoint 两个对
 
 ## 严格生成流水线
 
-根构建依次执行 `build:lib:host`、`build:lib:client` 与 `build:web`。Host lib 阶段先运行 `tsc -b tsconfig.host.json`，再运行 `tsdown --env.DSH_BUILD_FACE host`；Typert generator 由正常 Host Project Reference 图编译，并在这次 tsdown 中以 Host aggregate 为唯一 `ts.Program` 种子运行。Client lib 阶段随后运行 `tsc -b tsconfig.client.json` 与 `tsdown --env.DSH_BUILD_FACE client`，使用刚生成的 Remote Client 声明和运行时贡献，但不再次启动 Typert。
+根构建依次执行 `build:lib:host`、`build:lib:client` 与 `build:desktop-renderer`。Host lib 阶段先运行 `tsc -b tsconfig.host.json`，再运行 `tsdown --env.DSH_BUILD_FACE host`；Typert generator 由正常 Host Project Reference 图编译，并在这次 tsdown 中以 Host aggregate 为唯一 `ts.Program` 种子运行。Client lib 阶段随后运行 `tsc -b tsconfig.client.json` 与 `tsdown --env.DSH_BUILD_FACE client`，使用刚生成的 Remote Client 声明和运行时贡献，但不再次启动 Typert。
 
 两次 tsdown 都接收完整 workspace，且都只打包 `lib/types` 中由对应 tsc 阶段发射的 JavaScript。根配置不扫描 Client 产物、不按包名分类，也不向 tsdown 传维护式 filter；各包的本地配置根据 `DSH_BUILD_FACE` 返回当前阶段的入口。普通 Client 插件在 Client 阶段一起生成 Node loader 入口与 browser bundle。
 
@@ -141,11 +141,11 @@ SRC 只解决 Host 源码进程的分发问题。Client 不会从运行中的 Ho
 Web 开发先使用 `pnpm run build` 准备当前 Host、Client 与 Web 产物，然后在两个终端中分别运行源码 Host 和 Client plugin watcher：
 
 ```sh
-pnpm dsh web
-pnpm run dev:web
+pnpm dsh desktop
+pnpm run dev:desktop-renderer
 ```
 
-`dsh` 通过 tsx 启动 Host 源码，所以 Host 可以使用 SRC 回退；`dev:web` 只监听带 `dsh.client` 声明的 Client 插件并重写其 `lib/client.js`，它不会分析 Host decorator，也不会生成 Remote Client DTS。
+`dsh` 通过 tsx 启动 Host 源码，所以 Host 可以使用 SRC 回退；`dev:desktop-renderer` 只监听带 `dsh.client` 声明的 Client 插件并重写其 `lib/client.js`，它不会分析 Host decorator，也不会生成 Remote Client DTS。
 
 只修改 Remote 方法实现体而不改变约定时，无需重新生成 Typert 文件。新增或删除 decorator、修改导出名、namespace、参数、返回值、lookup、Context 或取消签名时，重新执行有序 lib 构建，让 Host 先生成严格约定，再让 Client 编译并打包新的贡献：
 

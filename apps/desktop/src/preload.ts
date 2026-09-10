@@ -1,9 +1,10 @@
+import type { AnnotationRequest, AnnotationDraft, AnnotationSnapshot } from './game-annotation-contract.ts'
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import {
   isDesktopMenuAction, type DesktopMenuAction, type DesktopMenuId, type DesktopMenuOpenRequest,
 } from './menu.ts'
-import { isDesktopGameEvent, isGameCaptureEvent, isGameCaptureSnapshot, isGameCaptureState } from './preload-validation.ts'
-import type { GameCaptureEvent, GameCaptureSnapshot, GameCaptureState } from './game-capture.ts'
+import { isDesktopGameEvent, isGameCaptureEvent, isGameCaptureState } from './preload-validation.ts'
+import type { GameCaptureEvent, GameCaptureState } from './game-capture.ts'
 
 export interface DesktopCommandRequest {
   kind: 'project-settings-read' | 'project-settings-write' | 'export-jar' | 'game-toggle'
@@ -47,8 +48,11 @@ export interface DesktopBridge {
   invokeProjectCommand: (request: DesktopCommandRequest) => Promise<DesktopCommandResult>
   onGameSurfaceState?: (listener: (event: GameCaptureEvent) => void) => () => void
   reconnectGameSurface?: (cwd: string) => Promise<GameCaptureState>
-  beginGameAnnotation?: (cwd: string) => Promise<GameCaptureSnapshot>
-  endGameAnnotation?: (cwd: string) => Promise<void>
+  beginGameAnnotation?: (
+    request: AnnotationRequest,
+    commit: (drafts: AnnotationDraft[], snapshot?: AnnotationSnapshot) => Promise<void>,
+  ) => Promise<void>
+  endGameAnnotation?: (operationId: string) => Promise<void>
   repositionGameCompanion?: (cwd: string) => Promise<void>
 }
 
@@ -95,11 +99,29 @@ contextBridge.exposeInMainWorld('craftCodeDesktop', {
     if (!isGameCaptureState(value)) throw new Error('主进程返回了无效的游戏状态。')
     return value
   },
-  beginGameAnnotation: async (cwd: string) => {
-    const value: unknown = await ipcRenderer.invoke('desktop:game-annotation-begin', cwd)
-    if (!isGameCaptureSnapshot(value)) throw new Error('主进程返回了无效的游戏截图。')
-    return value
+  beginGameAnnotation: async (
+    request: AnnotationRequest,
+    commit: (drafts: AnnotationDraft[], snapshot?: AnnotationSnapshot) => Promise<void>,
+  ) => {
+    const receive = (
+      _event: IpcRendererEvent,
+      value: { operationId: string; sessionId: string; attempt: number; drafts: AnnotationDraft[]; snapshot?: AnnotationSnapshot },
+    ): void => {
+      if (value.operationId !== request.operationId || value.sessionId !== request.sessionId) return
+      void (async () => {
+        let error: string | undefined
+        try {
+          await commit(value.drafts, value.snapshot)
+        } catch (failure: unknown) {
+          error = (failure instanceof Error ? failure.message : String(failure)).slice(0, 10000)
+        }
+        await ipcRenderer.invoke('desktop:game-annotation-result', request.operationId, value.attempt, error)
+      })().catch(() => {})
+    }
+    ipcRenderer.on('desktop:game-annotation-commit', receive)
+    try { await ipcRenderer.invoke('desktop:game-annotation-begin', request) }
+    finally { ipcRenderer.removeListener('desktop:game-annotation-commit', receive) }
   },
-  endGameAnnotation: (cwd: string) => ipcRenderer.invoke('desktop:game-annotation-end', cwd),
+  endGameAnnotation: (operationId: string) => ipcRenderer.invoke('desktop:game-annotation-end', operationId),
   repositionGameCompanion: (cwd: string) => ipcRenderer.invoke('desktop:game-companion-reposition', cwd),
 } satisfies DesktopBridge)

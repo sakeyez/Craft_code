@@ -1,4 +1,6 @@
-/** Electron development shell over the existing loopback `dsh web` runtime. */
+import { GameAnnotationController } from './game-annotation.ts'
+import { isAnnotationRequest } from './game-annotation-contract.ts'
+/** Electron application shell over the private loopback desktop runtime. */
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { copyFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -18,7 +20,7 @@ import type { DesktopCommandRequest, DesktopCommandResult } from './preload.ts'
 import { resolveDesktopRuntime } from './runtime.ts'
 import { desktopAppUserModelId, desktopWindowOptions, navigationDisposition } from './window.ts'
 import {
-  createGameCaptureProvider, type GameCaptureProvider, type GameCaptureSnapshot, type GameCaptureState,
+  createGameCaptureProvider, type GameCaptureProvider, type GameCaptureState,
 } from './game-capture.ts'
 
 const REPOSITORY_ROOT = fileURLToPath(new URL('../../..', import.meta.url))
@@ -31,6 +33,7 @@ let backend: BackendHandle | undefined
 let mainWindow: BrowserWindow | undefined
 let shutdown: Promise<void> | undefined
 let gameCapture: GameCaptureProvider | undefined
+let gameAnnotation: GameAnnotationController | undefined
 
 app.setName('CraftCode')
 app.on('child-process-gone', (_event, details) => {
@@ -64,15 +67,15 @@ function openExternal(target: string): void {
   } catch { /* malformed external navigation is denied */ }
 }
 
-/** Load the desktop title-bar icon from the Web application's canonical brand asset. */
+/** Load the desktop title-bar icon from the renderer's canonical brand asset. */
 function loadDesktopIcon(): NativeImage {
   if (existsSync(DESKTOP_ICON_PATH)) {
     const packagedIcon = nativeImage.createFromPath(DESKTOP_ICON_PATH)
     if (!packagedIcon.isEmpty()) return packagedIcon
   }
-  const favicon = readFileSync(join(REPOSITORY_ROOT, 'apps', 'web', 'public', 'favicon.svg'), 'utf8')
+  const favicon = readFileSync(join(REPOSITORY_ROOT, 'apps', 'desktop', 'renderer', 'public', 'favicon.svg'), 'utf8')
   const icon = nativeImage.createFromBuffer(decodeEmbeddedPng(favicon))
-  if (icon.isEmpty()) throw new Error('Web favicon could not be decoded as a desktop icon')
+  if (icon.isEmpty()) throw new Error('Renderer brand asset could not be decoded as a desktop icon')
   return icon
 }
 
@@ -133,6 +136,8 @@ function shutdownAndQuit(): Promise<void> {
     const active = backend
     backend = undefined
     try {
+      gameAnnotation?.dispose()
+      gameAnnotation = undefined
       await gameCapture?.dispose()
       gameCapture = undefined
       await stopActiveCommands()
@@ -154,7 +159,7 @@ app.on('before-quit', (event) => {
 
 app.on('window-all-closed', () => { void shutdownAndQuit() })
 
-/** Start the supervised Web profile after Electron finishes initialization. */
+/** Start the supervised desktop profile after Electron finishes initialization. */
 async function startDesktop(): Promise<void> {
   let activeProjectCwd: string | undefined
   const knownProjects = new Set<string>()
@@ -264,25 +269,26 @@ async function startDesktop(): Promise<void> {
     return gameCapture.reconnect(canonical)
   })
   ipcMain.removeHandler('desktop:game-annotation-begin')
-  ipcMain.handle('desktop:game-annotation-begin', async (event, cwd: unknown): Promise<GameCaptureSnapshot> => {
-    const canonical = canonicalProjectCwd(cwd)
+  ipcMain.handle('desktop:game-annotation-begin', async (event, raw: unknown): Promise<void> => {
+    if (!isAnnotationRequest(raw)) throw new Error('标注请求无效。')
+    const canonical = canonicalProjectCwd(raw.cwd)
     if (mainWindow === undefined || event.sender !== mainWindow.webContents || canonical === undefined
-      || canonical !== activeProjectCwd || !knownProjects.has(canonical) || gameCapture === undefined) throw new Error('请求来源或项目无效。')
-    return gameCapture.beginAnnotation(canonical)
+      || canonical !== activeProjectCwd || !knownProjects.has(canonical) || gameCapture === undefined
+      || gameAnnotation === undefined) throw new Error('请求来源或项目无效。')
+    const provider = gameCapture
+    return gameAnnotation.begin({ ...raw, cwd: canonical }, () => provider.annotationTarget(canonical))
   })
   ipcMain.removeHandler('desktop:game-annotation-end')
-  ipcMain.handle('desktop:game-annotation-end', async (event, cwd: unknown): Promise<void> => {
-    const canonical = canonicalProjectCwd(cwd)
-    if (mainWindow === undefined || event.sender !== mainWindow.webContents || canonical === undefined
-      || !knownProjects.has(canonical) || gameCapture === undefined) throw new Error('请求来源或项目无效。')
-    await gameCapture.endAnnotation(canonical)
+  ipcMain.handle('desktop:game-annotation-end', (event, operationId: unknown): void => {
+    if (mainWindow === undefined || event.sender !== mainWindow.webContents || typeof operationId !== 'string') throw new Error('请求来源无效。')
+    gameAnnotation?.cancel(operationId)
   })
   ipcMain.removeHandler('desktop:game-companion-reposition')
   ipcMain.handle('desktop:game-companion-reposition', async (event, cwd: unknown): Promise<void> => {
     const canonical = canonicalProjectCwd(cwd)
     if (mainWindow === undefined || event.sender !== mainWindow.webContents || canonical === undefined
       || canonical !== activeProjectCwd || !knownProjects.has(canonical) || gameCapture === undefined) throw new Error('请求来源或项目无效。')
-    await gameCapture.select(canonical)
+    await gameCapture.reposition(canonical)
   })
   ipcMain.removeHandler('desktop:command')
   ipcMain.handle('desktop:command', async (event, rawRequest: unknown): Promise<DesktopCommandResult> => {
@@ -330,6 +336,7 @@ async function startDesktop(): Promise<void> {
     backend = await startBackend(runtime)
     desktopLog(`backend ready pid=${String(backend.child.pid)} url=${backend.url}`)
     mainWindow = await createWindow(backend.url)
+    gameAnnotation = new GameAnnotationController(mainWindow.webContents)
     gameCapture = await createGameCaptureProvider({
       window: mainWindow,
       publish: (gameEvent) => {
@@ -342,7 +349,7 @@ async function startDesktop(): Promise<void> {
     void backend.exited.then(({ code, signal }) => {
       desktopLog(`backend exit code=${String(code)} signal=${String(signal)}`)
       if (shutdown !== undefined) return
-      dialog.showErrorBox('Desktop backend stopped', `dsh web exited unexpectedly (${String(code ?? signal)}).`)
+      dialog.showErrorBox('Desktop backend stopped', `dsh desktop exited unexpectedly (${String(code ?? signal)}).`)
       mainWindow?.destroy()
       void shutdownAndQuit()
     }, (error: unknown) => {

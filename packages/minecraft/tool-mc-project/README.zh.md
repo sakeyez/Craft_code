@@ -63,7 +63,7 @@
 
 #### What the model sees
 
-模型会看到 [`validate_mc_resources`](../../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-mc-project) 工具 schema。该工具没有参数；其规范结果包含 `errors`、`warnings`、`checkedFiles` 和 `detectedModId`，每个 issue 都携带 `code`、`path`、`message`、`reference` 和 `expectedPath`。静态检查会拒绝格式错误或截断的 PNG 与缺失的本地 model parent；已有的 item-definition JSON 文件会被解析，并在检测到确定版本时检查其 Minecraft 版本兼容性。vanilla 与依赖 namespace 不纳入本地文件缺失检查。Native render 是同一个对象的格式化 JSON。`presentCall` 把 pending card 标为 `Validate Minecraft resources`；`presentResult` 在 generic result card 中展示渲染后的 JSON。
+模型会看到 [`validate_mc_resources`](../../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-mc-project) 工具 schema。该工具没有参数；其规范结果包含 `errors`、`warnings`、`checkedFiles` 和 `detectedModId`，每个 issue 都携带 `code`、`path`、`message`、`reference` 和 `expectedPath`。静态检查会拒绝格式错误的 metadata、格式错误或截断的 PNG 与缺失的本地 model parent；已有的 item-definition JSON 文件会被解析，并在检测到确定版本时检查其 Minecraft 版本兼容性。Minecraft 1.21 引入的 data 单数目录（`recipe`、`loot_table`、`advancement`、`predicate`、`item_modifier`）和旧版本复数目录都会检查，确定版本使用错误拼写时会报告问题。未带 namespace 的资源引用按 `minecraft` namespace 解析；vanilla 与依赖 namespace 不纳入本地文件缺失检查。Native render 是同一个对象的格式化 JSON。`presentCall` 把 pending card 标为 `Validate Minecraft resources`；`presentResult` 在 generic result card 中展示渲染后的 JSON。
 
 #### Token effect
 
@@ -80,4 +80,4 @@
 - **Gradle 求值仍受限** — 只有在 inspected 文本没有 datagen/runtime task 时，`run_mc_check` 才探测 `tasks --all --console=plain`；变量、convention plugin、included build 与生成的 source-set 仍需要项目级检查。
 - **只支持根项目命令** — `run_mc_check` 会拒绝声明 subproject 或 included build 的 settings，因为它无法推断限定 task path。不支持 Maven build 与自定义 launcher。
 - **shell 执行由 composition 负责** — 没有 `ctx.shell` 时不会出现 `run_mc_check`；sandbox denial 与 timeout limit 来自已挂载 executor，工具不会绕过它们。
-- **资源校验是静态检查** — `validate_mc_resources` 只检查检测到或约定资源根下的 workspace 文件，包括 JSON 根和值类型、有界 PNG 结构与 CRC、本地 model parent 与 `assets/<namespace>/items` 定义。缺失的 vanilla、依赖、生成或运行时提供 asset 会被忽略，除非引用目标属于当前 mod namespace。版本未知、只有范围或存在冲突时只产生 warning，不臆断 item-definition 格式。
+- **资源校验是静态检查** — `validate_mc_resources` 只检查检测到或约定资源根下的 workspace 文件，包括 metadata 解析错误、JSON 根和值类型、有界 PNG 结构与 CRC、本地 model parent、本地引用、两种版本化 data 目录与 `assets/<namespace>/items` 定义。缺失的 vanilla、依赖、生成或运行时提供 asset 会被忽略，除非引用目标属于当前 mod namespace。版本未知、只有范围或存在冲突时只产生 warning，不臆断 item-definition 或 data 目录格式。

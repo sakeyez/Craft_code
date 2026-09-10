@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-面向随包 Minecraft 模组开发 Web agent 的 profile bundle。该 bundle 是一个 patch 列表载体：其 manifest 声明 `"dsh": { "bundle": { "patch": "./cordis.patch.yml" } }`，profile composer 在 `@deepseek-ai/dsh-base` 和 `@deepseek-ai/dsh-web-app` 之后应用这个 patch。
+面向随包 Minecraft 模组开发 Web agent 的 profile bundle。该 bundle 是一个 patch 列表载体：其 manifest 声明 `"dsh": { "bundle": { "patch": "./cordis.patch.yml" } }`，profile composer 在 `@deepseek-ai/dsh-base` 和 `@deepseek-ai/dsh-desktop-app` 之后应用这个 patch。
 
 ## Patch 内容
 
@@ -34,6 +34,6 @@ Java 命令刻意使用普通的 `jdtls`。安装该 bundle 的 profile 可以�
 
 ## 已知限制与暂缓事项
 
-- **Web profile 表层** —— 本 bundle 预期使用 `@deepseek-ai/dsh-web-app` 提供的 Web agent-preset roster；它不是 headless 任务表层。
-- **JDTLS 由部署拥有且可选** —— 默认命令名会从宿主 PATH 解析。命令不可用时，Web profile 只报告诊断并禁用 Java LSP；项目或机器专用的 JDTLS 启动细节应放在 profile 自己的 overlay 中。
+- **desktop profile 表层** —— 本 bundle 预期使用 `@deepseek-ai/dsh-desktop-app` 提供的 Web agent-preset roster；它不是 headless 任务表层。
+- **JDTLS 由部署拥有且可选** —— 默认命令名会从宿主 PATH 解析。命令不可用时，desktop profile 只报告诊断并禁用 Java LSP；项目或机器专用的 JDTLS 启动细节应放在 profile 自己的 overlay 中。
 - **不扩展可选工具** —— 该 patch 不启用 web search、workflow、Ralph、subagent、后台 job 控制、todo 或 goal 工具。

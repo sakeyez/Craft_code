@@ -45,7 +45,7 @@ function write(path: string, content: string): void {
 function buildFixture(environment: Record<string, string>): string {
   const fixtureRoot = mkdtempSync(join(tmpdir(), 'dsh-client-build-'))
   roots.push(fixtureRoot)
-  write(join(fixtureRoot, 'apps/web/dist/index.html'), '<main></main>')
+  write(join(fixtureRoot, 'apps/desktop/dist/index.html'), '<main></main>')
   write(join(fixtureRoot, 'packages/client/example/lib/client.js'), 'module.exports = {}\n')
   writeClientBuildRecord(fixtureRoot, environment)
   return fixtureRoot
@@ -130,7 +130,7 @@ describe('client build environment', () => {
       [PROBE_KEY]: '"shared-value"',
     })
 
-    const viteConfigPath = '../apps/web/vite.config.ts'
+    const viteConfigPath = '../apps/desktop/renderer/vite.config.ts'
     const viteModule: unknown = await import(viteConfigPath)
     if (typeof viteModule !== 'object' || viteModule === null) {
       throw new TypeError('web Vite config module must be an object')
@@ -159,7 +159,7 @@ describe('client build environment', () => {
     expect(() => { readClientBuildRecord(defaultBuild, officialEnvironment) }).toThrow(/DSH_CLIENT_/)
     expect(() => { readClientBuildRecord(join(defaultBuild, 'missing')) }).toThrow(/record.*missing/)
 
-    write(join(official, 'apps/web/dist/index.html'), '<main>changed</main>')
+    write(join(official, 'apps/desktop/dist/index.html'), '<main>changed</main>')
     expect(() => { readClientBuildRecord(official) }).toThrow(/artifacts differ/)
   })
 

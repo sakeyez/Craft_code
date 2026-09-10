@@ -1,4 +1,4 @@
-import type { GameAnnotation, AnnotationShape, NormalizedPoint } from '@deepseek-ai/dsh-session/types'
+import type { GameAnnotation, NormalizedPoint } from '@deepseek-ai/dsh-session/types'
 
 /** Lifecycle status reported by the desktop external-window provider. */
 export type GameSurfaceStatus = 'idle' | 'starting' | 'connected' | 'failed' | 'disconnected' | 'reconnecting' | 'unsupported'
@@ -10,13 +10,18 @@ export type GameSurfaceState =
   | { status: 'failed' | 'disconnected' | 'unsupported'; gameName?: string; error: string }
 /** Project-scoped external-game update from the desktop host. */
 export interface GameSurfaceEvent { cwd: string; state: GameSurfaceState }
-/** JPEG snapshot returned for the current annotation interaction. */
-export interface GameSurfaceSnapshot { dataUrl: string; width: number; height: number }
+/** Identifies the original conversation for the complete overlay lifetime. */
+export interface GameAnnotationRequest { operationId: string; cwd: string; sessionId: string; labels: string[] }
+/** JPEG still frame captured for one annotation transaction. */
+export interface GameAnnotationSnapshot { dataUrl: string; width: number; height: number }
 /** Renderer operations backed by the desktop game capture provider. */
 export interface GameSurfaceBridge {
   reconnect(cwd: string): Promise<GameSurfaceState>
-  beginAnnotation(cwd: string): Promise<GameSurfaceSnapshot>
-  endAnnotation(cwd: string): Promise<void>
+  beginAnnotation(
+    request: GameAnnotationRequest,
+    commit: (drafts: GameAnnotationDraft[], snapshot?: GameAnnotationSnapshot) => Promise<void>,
+  ): Promise<void>
+  endAnnotation(operationId: string): Promise<void>
   reposition(cwd: string): Promise<void>
 }
 
@@ -29,9 +34,12 @@ export function gameProjectKey(cwd: string): string {
 }
 /** Unsaved annotation data collected by the game workspace. */
 export interface GameAnnotationDraft {
-  shape: AnnotationShape
+  id: string
+  label: string
+  createdAt: number
   description: string
-  screenshotRef?: string
+  shape: { type: 'point'; geometry: { x: number; y: number } }
+    | { type: 'rect'; geometry: { x: number; y: number; width: number; height: number } }
 }
 /** Clamp a coordinate or dimension to the normalized captured-game range.
  * @param value Coordinate or dimension to clamp.
@@ -68,7 +76,9 @@ export function annotationLabel(index: number): string {
  * @returns Bounding rectangle in normalized coordinates.
  */
 export function annotationBounds(annotation: GameAnnotation): { x: number; y: number; width: number; height: number } {
-  if (annotation.shape.type === 'point') return { x: annotation.shape.geometry.x, y: annotation.shape.geometry.y, width: 0, height: 0 }
+  if (annotation.shape.type === 'point') {
+    return { x: annotation.shape.geometry.x, y: annotation.shape.geometry.y, width: 0, height: 0 }
+  }
   if (annotation.shape.type === 'rect') return annotation.shape.geometry
   const points = annotation.shape.geometry.points
   const xs = points.map(point => point.x)

@@ -606,7 +606,7 @@
         "tests/**/*.tsx"
       ]
     },
-    "apps/web": {
+    "apps/desktop/renderer": {
       "entry": [
         "tests/**/*.e2e.ts",
         "tests/**/*.perf.ts",
@@ -676,7 +676,7 @@
         "@deepseek-ai/dsh-tool-mc-project"
       ]
     },
-    "packages/bundle/web-app": {
+    "packages/bundle/desktop-app": {
       "ignoreDependencies": [
         "@deepseek-ai/.+"
       ]

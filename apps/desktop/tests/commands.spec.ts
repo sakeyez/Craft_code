@@ -2,14 +2,31 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync }
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   desktopGameMenuState, executeDesktopCommand, gradleInvocation, onDesktopGameEvent, onDesktopGameLifecycle, stopActiveCommands,
 } from '../src/commands.ts'
 import type { DesktopGameEvent } from '../src/preload.ts'
 
 const roots: string[] = []
+beforeEach(() => {
+  vi.stubEnv('CRAFTCODE_DUMMY_SECRET', 'synthetic-only')
+  vi.stubEnv('DSH_REVIEW_CONTEXT', 'parent-session')
+  vi.stubEnv('CRAFTCODE_TEST_MARKER', 'ready')
+})
+afterEach(() => { vi.unstubAllEnvs() })
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }) })
+
+const windowsEnvironmentChecks = [
+  'if defined CRAFTCODE_DUMMY_SECRET exit /b 91',
+  'if defined DSH_REVIEW_CONTEXT exit /b 92',
+  'if not "%CRAFTCODE_TEST_MARKER%"=="ready" exit /b 93',
+]
+const posixEnvironmentChecks = [
+  '[ -z "$CRAFTCODE_DUMMY_SECRET" ] || exit 91',
+  '[ -z "$DSH_REVIEW_CONTEXT" ] || exit 92',
+  '[ "$CRAFTCODE_TEST_MARKER" = "ready" ] || exit 93',
+]
 
 function project(): string {
   const root = join(tmpdir(), `dsh-desktop-command-${randomUUID()}`)
@@ -23,6 +40,7 @@ function gameWrapper(cwd: string, tasks = ['runClient']): void {
   if (process.platform === 'win32') {
     writeFileSync(join(cwd, 'gradlew.bat'), [
       '@echo off',
+      ...windowsEnvironmentChecks,
       'if "%~2"=="tasks" (',
       ...tasks.map(task => `  echo ${task} - Minecraft task`),
       '  exit /b 0',
@@ -38,6 +56,7 @@ function gameWrapper(cwd: string, tasks = ['runClient']): void {
   const wrapper = join(cwd, 'gradlew')
   writeFileSync(wrapper, [
     '#!/bin/sh',
+    ...posixEnvironmentChecks,
     'if [ "$2" = "tasks" ]; then',
     ...tasks.map(task => `  echo "${task} - Minecraft task"`),
     '  exit 0',
@@ -94,11 +113,12 @@ describe('desktop project commands', () => {
     })
   })
 
-  it('builds through the platform wrapper and discovers the generated JAR', async () => {
+  it('builds with a scrubbed environment and discovers the generated JAR', async () => {
     const cwd = project()
     if (process.platform === 'win32') {
       writeFileSync(join(cwd, 'gradlew.bat'), [
         '@echo off',
+        ...windowsEnvironmentChecks,
         'if not "%~1"=="--no-daemon" exit /b 41',
         'if not "%~2"=="build" exit /b 42',
         'mkdir build\\libs',
@@ -108,6 +128,7 @@ describe('desktop project commands', () => {
       const wrapper = join(cwd, 'gradlew')
       writeFileSync(wrapper, [
         '#!/bin/sh',
+        ...posixEnvironmentChecks,
         '[ "$1" = "--no-daemon" ] || exit 41',
         '[ "$2" = "build" ] || exit 42',
         'mkdir -p build/libs',
@@ -133,7 +154,7 @@ describe('desktop project commands', () => {
     expect(gradleInvocation(cwd, ['tasks'], 'linux')).toEqual({ command: 'gradle', args: ['tasks'] })
   })
 
-  it('discovers, starts, and stops one development client for a project', async () => {
+  it('discovers and starts a client with scrubbed environments, then stops it', async () => {
     const cwd = project()
     gameWrapper(cwd)
     const lifecycle: Array<{ type: string; cwd: string; rootPid?: number }> = []

@@ -1,3 +1,4 @@
+import type { GameAnnotationRequest, GameAnnotationDraft, GameAnnotationSnapshot } from '@deepseek-ai/dsh-client-ui-layout/client'
 import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 
 /** Native menu actions admitted by the sandboxed desktop preload bridge. */
@@ -70,8 +71,11 @@ export interface DesktopBridge {
       | { status: 'failed' | 'disconnected' | 'unsupported'; gameName?: string; error: string }
   }) => void) => () => void
   reconnectGameSurface?: (cwd: string) => Promise<unknown>
-  beginGameAnnotation?: (cwd: string) => Promise<{ dataUrl: string; width: number; height: number }>
-  endGameAnnotation?: (cwd: string) => Promise<void>
+  beginGameAnnotation?: (
+    request: GameAnnotationRequest,
+    commit: (drafts: GameAnnotationDraft[], snapshot?: GameAnnotationSnapshot) => Promise<void>,
+  ) => Promise<void>
+  endGameAnnotation?: (operationId: string) => Promise<void>
   repositionGameCompanion?: (cwd: string) => Promise<void>
 }
 

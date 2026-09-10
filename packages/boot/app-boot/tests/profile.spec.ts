@@ -146,7 +146,7 @@ describe('loadProfile', () => {
   it('auto-initializes only shipped templates and fails loud otherwise', () => {
     const anchor = stageInstallation({
       '@deepseek-ai/dsh-base': { patch: '[]\n' },
-      '@deepseek-ai/dsh-web-app': { patch: '[]\n' },
+      '@deepseek-ai/dsh-desktop-app': { patch: '[]\n' },
       '@deepseek-ai/dsh-mcmod-bundle': { patch: '[]\n' },
       '@deepseek-ai/dsh-headless': { patch: '[]\n' },
       '@deepseek-ai/dsh-mcmod-headless-bundle': { patch: '[]\n' },
@@ -157,14 +157,14 @@ describe('loadProfile', () => {
     // The web template auto-initializes on first load. Bundle resolution
     // cannot be asserted to fail here: the source-plane test runner resolves
     // @deepseek-ai/* through tsconfig paths regardless of the staged anchor.
-    expect(PROFILE_TEMPLATES.web).toContain('@deepseek-ai/dsh-base')
+    expect(PROFILE_TEMPLATES.desktop).toContain('@deepseek-ai/dsh-base')
     try {
-      loadProfile('t', 'web', anchor, home)
+      loadProfile('t', 'desktop', anchor, home)
     } catch {
       // Resolution failure is the plain-Node outcome for this empty anchor.
     }
-    expect(readProfileManifest('t', resolveProfileDir('web', home)).dsh?.profile?.bundles)
-      .toEqual([...PROFILE_TEMPLATES.web ?? []])
+    expect(readProfileManifest('t', resolveProfileDir('desktop', home)).dsh?.profile?.bundles)
+      .toEqual([...PROFILE_TEMPLATES.desktop ?? []])
     const minecraftTemplate = PROFILE_TEMPLATES['mcmod']
     if (minecraftTemplate === undefined) throw new Error('mcmod template must ship')
     const minecraft = loadProfile('t', 'mcmod', anchor, home)
@@ -177,44 +177,40 @@ describe('loadProfile', () => {
   it('normalizes only exact installation-owned bundle tuples', () => {
     const anchor = stageInstallation({
       '@deepseek-ai/dsh-base': { patch: '[]\n' },
-      '@deepseek-ai/dsh-web-app': { patch: '[]\n' },
+      '@deepseek-ai/dsh-desktop-app': { patch: '[]\n' },
       '@deepseek-ai/dsh-mcmod-bundle': { patch: '[]\n' },
       '@deepseek-ai/dsh-headless': { patch: '[]\n' },
       'custom-bundle': { patch: '[]\n' },
     })
     const home = tmp()
     const stock = resolveProfileDir('headless', home)
-    initProfile(stock, [
-      '@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', '@deepseek-ai/dsh-headless',
-    ])
+    initProfile(stock, ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-headless'])
     loadProfile('t', 'headless', anchor, home)
     expect(readProfileManifest('t', stock).dsh?.profile?.bundles)
       .toEqual(['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-headless'])
 
-    const webHome = tmp()
-    const web = resolveProfileDir('web', webHome)
-    initProfile(web, ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'])
-    loadProfile('t', 'web', anchor, webHome)
-    expect(readProfileManifest('t', web).dsh?.profile?.bundles).toEqual([
-      '@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', '@deepseek-ai/dsh-mcmod-bundle',
+    const desktopHome = tmp()
+    const desktop = resolveProfileDir('desktop', desktopHome)
+    initProfile(desktop, ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-desktop-app'])
+    loadProfile('t', 'desktop', anchor, desktopHome)
+    expect(readProfileManifest('t', desktop).dsh?.profile?.bundles).toEqual([
+      '@deepseek-ai/dsh-base', '@deepseek-ai/dsh-desktop-app', '@deepseek-ai/dsh-mcmod-bundle',
     ])
 
-    const customWebHome = tmp()
-    const customWeb = resolveProfileDir('web', customWebHome)
-    initProfile(customWeb, ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', 'custom-bundle'])
-    loadProfile('t', 'web', anchor, customWebHome)
-    expect(readProfileManifest('t', customWeb).dsh?.profile?.bundles).toEqual([
-      '@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', 'custom-bundle',
+    const customDesktopHome = tmp()
+    const customDesktop = resolveProfileDir('desktop', customDesktopHome)
+    initProfile(customDesktop, ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-desktop-app', 'custom-bundle'])
+    loadProfile('t', 'desktop', anchor, customDesktopHome)
+    expect(readProfileManifest('t', customDesktop).dsh?.profile?.bundles).toEqual([
+      '@deepseek-ai/dsh-base', '@deepseek-ai/dsh-desktop-app', 'custom-bundle',
     ])
 
     const customHome = tmp()
     const custom = resolveProfileDir('headless', customHome)
-    initProfile(custom, [
-      '@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', '@deepseek-ai/dsh-headless', 'custom-bundle',
-    ])
+    initProfile(custom, ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-headless', 'custom-bundle'])
     loadProfile('t', 'headless', anchor, customHome)
     expect(readProfileManifest('t', custom).dsh?.profile?.bundles).toEqual([
-      '@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', '@deepseek-ai/dsh-headless', 'custom-bundle',
+      '@deepseek-ai/dsh-base', '@deepseek-ai/dsh-headless', 'custom-bundle',
     ])
   })
 

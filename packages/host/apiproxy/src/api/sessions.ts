@@ -5,7 +5,7 @@
  */
 
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
-import type { AttachmentIdType, ImageAttachmentLimits, ImageAttachmentRef, ImageMediaType } from '@deepseek-ai/dsh-attachment'
+import type { AttachmentIdType, EncodedImageAttachment, ImageAttachmentLimits, ImageAttachmentRef, ImageMediaType } from '@deepseek-ai/dsh-attachment'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm/types'
 import type { GameAnnotation, SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
 // The pure-type outlet: api/ is browser-importable, and the package root's
@@ -317,8 +317,8 @@ export interface SessionsApi {
   Promise<RpcResponse<{ title: string; seq: number }>>
 
   /** Replace the durable game annotation snapshot for a session. */
-  annotate?(request: RpcRequest<{ sessionId: SessionId; annotations: GameAnnotation[] }>):
-  Promise<RpcResponse<{ accepted: true; seq: number }>>
+  annotate?(request: RpcRequest<{ sessionId: SessionId; annotations: GameAnnotation[]; screenshot?: EncodedImageAttachment }>):
+  Promise<RpcResponse<{ accepted: true; seq: number; screenshotRef?: string }>>
 
   /**
    * Sends a message. content is core's ContentBlock[] verbatim; mode maps 1:1 — queue→send, steer→steer.

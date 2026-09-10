@@ -347,6 +347,7 @@
 
 .heroWorkspaceRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 2px;
   min-width: 0;
@@ -354,6 +355,10 @@
   /* figma drew px 8; nudged +12 so the chip's folder glyph lines up closer to
      the card's inner controls below. */
   padding-left: 20px;
+}
+
+:global([data-game-focus]) .heroWorkspaceRow {
+  display: none;
 }
 
 /* Hero: the composer sits inside the session scroll body; center there so

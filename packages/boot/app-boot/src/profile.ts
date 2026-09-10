@@ -112,9 +112,9 @@ export function resolveProfileDir(name: string, home: string = resolveDshHome())
 
 /** The shipped profile templates auto-initialized on first use, by name. */
 export const PROFILE_TEMPLATES: Record<string, readonly string[]> = {
-  web: [
+  desktop: [
     '@deepseek-ai/dsh-base',
-    '@deepseek-ai/dsh-web-app',
+    '@deepseek-ai/dsh-desktop-app',
     '@deepseek-ai/dsh-mcmod-bundle',
   ],
   headless: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-headless'],
@@ -127,8 +127,8 @@ export const PROFILE_TEMPLATES: Record<string, readonly string[]> = {
 
 /** Installation-owned bundle tuples normalized to the shipped template. */
 const INSTALLATION_OWNED_PROFILE_TUPLES: Record<string, readonly string[]> = {
-  web: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'],
-  headless: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', '@deepseek-ai/dsh-headless'],
+  desktop: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-desktop-app'],
+  headless: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-headless'],
 }
 
 /** The bundle list a `dsh plugin` init uses for a name with no shipped template. */

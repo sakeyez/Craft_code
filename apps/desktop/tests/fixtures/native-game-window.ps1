@@ -1,8 +1,10 @@
+param([string]$Title = 'CraftCode Native Game Fixture')
+
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = 'CraftCode Native Game Fixture'
+$form.Text = $Title
 $form.ClientSize = New-Object System.Drawing.Size(640, 480)
 $form.StartPosition = 'Manual'
 $form.Location = New-Object System.Drawing.Point(300, 200)

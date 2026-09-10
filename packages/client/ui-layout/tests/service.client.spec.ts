@@ -69,7 +69,7 @@ describe('LayoutController', () => {
     const service = new LayoutController()
     const bridge = {
       reconnect: vi.fn(async () => ({ status: 'reconnecting' as const })),
-      beginAnnotation: vi.fn(async () => ({ dataUrl: 'data:image/jpeg;base64,AA==', width: 1, height: 1 })),
+      beginAnnotation: vi.fn(async () => {}),
       endAnnotation: vi.fn(async () => {}),
       reposition: vi.fn(async () => {}),
     }
@@ -78,6 +78,6 @@ describe('LayoutController', () => {
     await service.repositionGameCompanion('C:\\Project')
     expect(bridge.reposition).toHaveBeenCalledWith('C:\\Project')
     dispose()
-    expect(() => service.beginGameAnnotation('C:\\Project')).toThrow(/not attached/)
+    expect(() => service.beginGameAnnotation({ cwd: 'C:\\Project', sessionId: 's', operationId: 'id', labels: [] }, async () => {})).toThrow(/not attached/)
   })
 })

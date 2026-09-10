@@ -49,7 +49,7 @@ The repository uses isolated Host and Client aggregates. An ordinary package is 
 |---|---|---|
 | `tsconfig.json` | Solution root: `extends` base, `files: []`, and references to the two aggregates. It is the tsserver discovery entry and the entry for explicitly running the complete Project Reference graph; through the inherited `paths`, it is also the resolution config for tsx running `examples/` and `scripts/`. | No |
 | `tsconfig.host.json` | Host aggregate: Host packages, examples, tests, scripts, website, and the exceptional Host project of `api/remotes`. | Yes |
-| `tsconfig.client.json` | Client aggregate: `packages/client/*` packages and their tests, `apps/web`, and the exceptional Client project of `api/remotes`. | Yes |
+| `tsconfig.client.json` | Client aggregate: `packages/client/*` packages and their tests, `apps/desktop/renderer`, and the exceptional Client project of `api/remotes`. | Yes |
 | `tsconfig.base.json` | Shared compilerOptions and the source `paths` map. Also the resolution facade the vitest configs point vite-tsconfig-paths at: it has no `include`, so its `paths` apply to every importer. | No |
 | `tsconfig.base.client.json` | Browser compiler settings (`jsx`, DOM libs, `types: []`) extended by the Client aggregate and every `packages/client/*` package. | No |
 
@@ -68,7 +68,7 @@ tsc -b tsconfig.host.json
 tsdown --env.DSH_BUILD_FACE host
 tsc -b tsconfig.client.json
 tsdown --env.DSH_BUILD_FACE client
-pnpm run build:web
+pnpm run build:desktop-renderer
 ```
 
 Both tsdown passes use the same complete workspace match. They neither scan build artifacts to discover Client packages nor maintain a Host/Client package filter list. Package-local tsdown configs select entries for the current phase through `DSH_BUILD_FACE`: an ordinary Client plugin produces both its Node loader and browser bundle during the Client phase; `api-remotes` uses `hostPhase: true` to produce its Host entry early and only its browser bundle during the Client phase. Tsdown consumes only the JavaScript emitted to `lib/types` by the preceding tsc phase.

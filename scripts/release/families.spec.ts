@@ -29,7 +29,7 @@ function write(path: string, content: string): void {
 function buildFixture(environment: Record<string, string>): string {
   const root = mkdtempSync(join(tmpdir(), 'dsh-release-build-'))
   roots.push(root)
-  write(join(root, 'apps/web/dist/index.html'), '<main></main>')
+  write(join(root, 'apps/desktop/dist/index.html'), '<main></main>')
   write(join(root, 'packages/client/example/lib/client.js'), 'module.exports = {}\n')
   writeClientBuildRecord(root, environment)
   return root
@@ -82,7 +82,7 @@ describe('release families', () => {
 
   it('rejects a family whose members disagree on the shared version', () => {
     const dsh = releaseFamily('dsh')
-    const members = [member('apps/cli', '@deepseek-ai/dsh'), { ...member('apps/web', '@deepseek-ai/dsh-web-frontend'), version: '0.0.2' }]
+    const members = [member('apps/cli', '@deepseek-ai/dsh'), { ...member('apps/desktop', '@deepseek-ai/dsh-desktop'), version: '0.0.2' }]
 
     expect(() => { dsh.verifyVersions(members) }).toThrow(/must share one version/)
     expect(() => { dsh.verifyVersions([members[0]!]) }).not.toThrow()

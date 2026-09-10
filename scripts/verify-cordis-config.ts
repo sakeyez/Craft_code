@@ -5,7 +5,7 @@
  * activate, against that plugin context) and the entry `disabled` field (at
  * every mount decision, against the loader context). Every other entry
  * metadata field stays static, so an expression there remains truthy data and
- * silently changes composition. Example configs and the dsh Web composition
+ * silently changes composition. Example configs and the dsh desktop composition
  * resolve named plugins from their owning workspace manifests. Local example
  * packages must also be in the root TypeScript project graph.
  */
@@ -126,7 +126,7 @@ function validateClientHalvesDeclared(): string[] {
  * contributor to that service reaches nobody; a row that registers into a host
  * singleton registers once per live session, so the second one collides.
  *
- * Both have happened. `shell-env` in a preset realm left `DSH_WEB_URL` reaching
+ * Both have happened. `shell-env` in a preset realm left `DSH_DESKTOP_URL` reaching
  * no shell, and `tool-subagent-report` handed every child `report` once per live
  * session until the second registration threw. Neither changes a tool catalog,
  * so no catalog assertion can see them — and the shipped presets are near-copies
@@ -135,9 +135,9 @@ function validateClientHalvesDeclared(): string[] {
  */
 function validatePresetPlaneSeparation(): string[] {
   const problems: string[] = []
-  // The shipped Web surface is two bundle patch layers over an empty root.
+  // The shipped desktop surface is two bundle patch layers over an empty root.
   const hostFile = 'packages/bundle/base/cordis.patch.yml'
-  const overlayFile = 'packages/bundle/web-app/cordis.patch.yml'
+  const overlayFile = 'packages/bundle/desktop-app/cordis.patch.yml'
   const hostRows = rowIds(hostFile)
   const overlay = loadEntries(overlayFile)
   const disabled = new Set<string>()

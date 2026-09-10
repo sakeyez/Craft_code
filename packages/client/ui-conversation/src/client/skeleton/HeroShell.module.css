@@ -11,6 +11,10 @@
   padding: 0 24px;
 }
 
+:global([data-game-focus]) .root {
+  display: none;
+}
+
 /* Cap matches the InputBar card. Glow may paint past the sides. */
 .stack {
   display: flex;
@@ -39,6 +43,8 @@
 .headlineText {
   grid-row: 1;
   grid-column: 2;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* Keep hover detection on a stationary box while the mark moves within it. */
@@ -198,4 +204,9 @@
 .workspace[aria-expanded='true'] {
   background: var(--dsh-mc-moss);
   color: var(--dsh-mc-on-accent);
+}
+
+@media (max-width: 480px) {
+  .root { padding: 0 12px; }
+  .headline { font-size: 20px; line-height: 28px; grid-template-columns: 34px minmax(0, auto); }
 }

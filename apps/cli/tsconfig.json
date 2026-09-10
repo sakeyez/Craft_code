@@ -30,7 +30,7 @@
       "path": "../../packages/bundle/headless"
     },
     {
-      "path": "../../packages/bundle/web-app"
+      "path": "../../packages/bundle/desktop-app"
     },
     {
       "path": "../../packages/host/apiproxy"

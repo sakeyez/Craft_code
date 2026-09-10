@@ -1,3 +1,4 @@
+import type { AnnotationTarget } from './game-annotation.ts'
 import type { BrowserWindow } from 'electron'
 
 /** Lifecycle states published for one project-owned external game window. */
@@ -35,7 +36,10 @@ export interface GameCaptureProvider {
   start(cwd: string, rootPid: number): Promise<GameCaptureState>
   reconnect(cwd: string): Promise<GameCaptureState>
   select(cwd: string | undefined): Promise<void>
+  /** Arrange the selected game's ordinary window and companion; reject on failure. */
+  reposition(cwd: string): Promise<void>
   stop(cwd: string): Promise<void>
+  annotationTarget(cwd: string): Promise<AnnotationTarget>
   beginAnnotation(cwd: string): Promise<GameCaptureSnapshot>
   endAnnotation(cwd: string): Promise<void>
   dispose(): Promise<void>
@@ -67,9 +71,14 @@ export class UnsupportedGameCaptureProvider implements GameCaptureProvider {
   }
 
   select(_cwd: string | undefined): Promise<void> { return Promise.resolve() }
+  reposition(_cwd: string): Promise<void> { return Promise.resolve() }
   stop(cwd: string): Promise<void> {
     this.publish?.({ cwd, state: { status: 'idle' } })
     return Promise.resolve()
+  }
+
+  annotationTarget(_cwd: string): Promise<AnnotationTarget> {
+    return Promise.reject(new Error('当前平台不支持游戏原位标注。'))
   }
 
   beginAnnotation(_cwd: string): Promise<GameCaptureSnapshot> {

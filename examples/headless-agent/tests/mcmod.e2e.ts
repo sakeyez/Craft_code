@@ -1,4 +1,4 @@
-import { readdir, readFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -46,6 +46,27 @@ interface JsonObject {
   [key: string]: unknown
 }
 
+function isJsonObject(value: unknown): value is JsonObject {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function persistedToolValue(rows: readonly JsonObject[], callId: string): unknown {
+  for (const row of rows) {
+    if (row.type !== 'tool/result' || !isJsonObject(row.data)) continue
+    const message = row.data.message
+    if (!isJsonObject(message) || !Array.isArray(message.content)) continue
+    for (const block of message.content as unknown[]) {
+      if (!isJsonObject(block) || block.type !== 'tool-result' || block.toolCallId !== callId) continue
+      expect(block.isError).toBe(false)
+      if (!Array.isArray(block.content)) throw new Error(`Missing tool result content for ${callId}`)
+      const text = (block.content as unknown[]).filter(isJsonObject).find(part => part.type === 'text')?.text
+      if (typeof text !== 'string') throw new Error(`Missing tool result text for ${callId}`)
+      return JSON.parse(text) as unknown
+    }
+  }
+  throw new Error(`Missing persisted tool result for ${callId}`)
+}
+
 async function readPersistedLog(path: string): Promise<string> {
   const content = await readFile(path)
   if (!path.endsWith('.zstd')) return content.toString('utf8')
@@ -83,7 +104,7 @@ function toolCallNames(rows: readonly JsonObject[]): string[] {
 }
 
 describe('mcmod headless agent e2e', () => {
-  it('edits a minimal Fabric fixture and verifies it through Minecraft project tools keylessly', async () => {
+  it.each([false, true])('edits a minimal Fabric fixture and records resource validation keylessly (invalid resources: %s)', async (invalid) => {
     let calls: string[] = []
     const result = await runLoaderSmoke({
       label: 'mcmod headless keyless e2e',
@@ -101,10 +122,32 @@ describe('mcmod headless agent e2e', () => {
       prepare: async (cwd) => {
         await createMinimalFabricFixture(cwd)
         await prepareScriptedProfile(cwd)
+        const modelRoot = join(cwd, 'src/main/resources/assets/minimalmod/models/item')
+        const recipeRoot = join(cwd, 'src/main/resources/data/minimalmod/recipe')
+        await mkdir(modelRoot, { recursive: true })
+        await mkdir(recipeRoot, { recursive: true })
+        await writeFile(join(modelRoot, 'vanilla.json'), JSON.stringify({ parent: 'item/generated', textures: { layer0: 'item/apple' } }))
+        await writeFile(join(recipeRoot, 'example.json'), invalid ? '{broken' : '{}')
+        if (invalid) await writeFile(join(cwd, 'src/main/resources/fabric.mod.json'), '{broken')
       },
       inspect: async (cwd) => {
         await assertFabricFixture(cwd)
-        calls = toolCallNames(await sessionRows(cwd))
+        const rows = await sessionRows(cwd)
+        calls = toolCallNames(rows)
+        const validation = persistedToolValue(rows, 'mcmod-scripted-4')
+        if (!isJsonObject(validation)) throw new Error('Expected a resource validation result object')
+        expect(validation).toMatchObject({
+          errors: invalid ? [
+            expect.objectContaining({ code: 'invalid_json', path: 'src/main/resources/data/minimalmod/recipe/example.json' }),
+            expect.objectContaining({ code: 'invalid_metadata', path: 'src/main/resources/fabric.mod.json' }),
+          ] : [],
+          warnings: [],
+        })
+        expect(validation.checkedFiles).toEqual(expect.arrayContaining([
+          'src/main/resources/assets/minimalmod/models/item/vanilla.json',
+          'src/main/resources/data/minimalmod/recipe/example.json',
+          'src/main/resources/fabric.mod.json',
+        ]))
       },
     })
 

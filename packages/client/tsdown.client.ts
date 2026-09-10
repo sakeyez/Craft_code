@@ -124,7 +124,7 @@ export function clientBundle(
 
 /**
  * Build the tsdown config for a client library the compile shell links
- * statically (the static assembly channel: `apps/web` resolves the package
+ * statically (the static assembly channel: `apps/desktop/renderer` resolves the package
  * name, bundles the artifact, and owns the chunk layout and the CSS pipeline).
  *
  * Calling this preset is what puts a package in the static assembly channel,

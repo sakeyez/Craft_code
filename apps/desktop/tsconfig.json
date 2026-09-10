@@ -9,6 +9,9 @@
   ],
   "references": [
     {
+      "path": "../../packages/subprocess/subprocess"
+    },
+    {
       "path": "../../packages/minecraft/tool-mc-project"
     }
   ]

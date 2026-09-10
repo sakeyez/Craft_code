@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  companionBounds, descendantPids,
+  descendantPids,
   selectWindowCandidate, windowCandidateScore,
 } from '../src/game-capture-win32.ts'
 
@@ -23,10 +23,8 @@ describe('Windows game capture decisions', () => {
     ))).toEqual(glfw)
   })
 
-  it('places the companion beside the game and clips to the work area', () => {
-    expect(companionBounds({ x: 1200, y: 100, width: 600, height: 900 }, { x: 0, y: 0, width: 1920, height: 1080 })).toEqual({
-      mode: 'side', bounds: { x: 712, y: 100, width: 480, height: 900 },
-    })
-    expect(companionBounds({ x: 100, y: 100, width: 1700, height: 900 }, { x: 0, y: 0, width: 1920, height: 1080 }).mode).toBe('compact')
+  it('rejects untracked windows even when both creation identities are missing', () => {
+    const candidate = { hwnd: 1n, pid: 10, className: 'GLFW30', title: 'Minecraft', width: 800, height: 600 }
+    expect(selectWindowCandidate([candidate], new Map(), () => undefined)).toBeUndefined()
   })
 })

@@ -242,7 +242,7 @@ export function gatesForMode(selected: Mode): Gate[] {
         pnpmScript('duplication', 'duplication'),
         snapshotGate(),
         pnpmScript('build', 'build'),
-        pnpmScript('build:web', 'build:web'),
+        pnpmScript('build:desktop-renderer', 'build:desktop-renderer'),
         ...hygieneLeafGates({ artifactNeeds: ['build'] }),
         ...docSyncLeafGates({
           docTypecheckNeeds: ['build'],
@@ -320,7 +320,7 @@ function nodeCompatGates(): Gate[] {
     pnpmScript('build', 'build', {
       ...typecheck.length === 0 ? {} : { needs: ['typecheck'] },
     }),
-    pnpmScript('build:web', 'build:web', {
+    pnpmScript('build:desktop-renderer', 'build:desktop-renderer', {
       label: 'Web frontend build',
       needs: ['build'],
     }),
@@ -360,7 +360,7 @@ function nodeCompatSmokeGates(options: { cliSmoke?: boolean } = {}): Gate[] {
       ], {
         label: 'CLI lazy-search startup smoke',
         env: { DSH_REQUIRE_BUILT_CLI_SMOKE: '1' },
-        needs: ['build:web'],
+        needs: ['build:desktop-renderer'],
       }),
     )
   }
@@ -445,17 +445,17 @@ function webSnapshotGate(needs: string[]): Gate {
     if (!Number.isSafeInteger(workers) || workers < 2 || String(workers) !== workerRaw) {
       throw new Error(`run-gates: DSH_WEB_SNAPSHOT_WORKERS must be an integer greater than 1, got ${JSON.stringify(workerRaw)}.`)
     }
-    return pnpmScript('web-snapshot', 'test:web:ci', {
+    return pnpmScript('web-snapshot', 'test:desktop-renderer:ci', {
       label: 'web browser snapshot',
-      displayCommand: `DSH_SNAPSHOT=replay DSH_WEB_SNAPSHOT_WORKERS=${workers} pnpm run test:web:ci`,
+      displayCommand: `DSH_SNAPSHOT=replay DSH_WEB_SNAPSHOT_WORKERS=${workers} pnpm run test:desktop-renderer:ci`,
       env: { DSH_SNAPSHOT: 'replay' },
       needs,
       streamOutput: true,
     })
   }
-  return pnpmScript('web-snapshot', 'test:web:built', {
+  return pnpmScript('web-snapshot', 'test:desktop-renderer:built', {
     label: 'web browser snapshot',
-    displayCommand: 'DSH_SNAPSHOT=replay pnpm run test:web:built',
+    displayCommand: 'DSH_SNAPSHOT=replay pnpm run test:desktop-renderer:built',
     env: { DSH_SNAPSHOT: 'replay' },
     needs,
   })

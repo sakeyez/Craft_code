@@ -1,7 +1,7 @@
 // Sessions remain resident after creation so they continue consuming mux frames off-screen.
 
 import type { Context } from '@deepseek-ai/cordis'
-import type { AttachmentIdType, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import type { AttachmentIdType, EncodedImageAttachment, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { GameAnnotation, SessionEvent } from '@deepseek-ai/dsh-session/types'
 import type {
   HistoryEntry, IApiClient, MessageId, MuxFrame, PromptContentPart, QueueAction, RpcError,
@@ -335,12 +335,24 @@ export class Session implements SessionFace {
   }
 
   /** Replace and persist the session's complete game annotation snapshot. */
-  async annotate(annotations: GameAnnotation[]): Promise<RpcResult<{ accepted: true; seq: number }>> {
+  async annotate(
+    annotations: GameAnnotation[],
+    screenshot?: EncodedImageAttachment,
+  ): Promise<RpcResult<{ accepted: true; seq: number; screenshotRef?: string }>> {
     try {
       if (this.api.sessions.annotate === undefined) return { ok: false, error: { code: 'internal', message: 'annotations unavailable', details: {} } }
-      const result = (await this.api.sessions.annotate({ sessionId: this.sessionId, annotations })).result
+      const result = (await this.api.sessions.annotate({
+        sessionId: this.sessionId,
+        annotations,
+        ...(screenshot === undefined ? {} : { screenshot }),
+      })).result
       if (result.ok) {
-        this.annotations = annotations.map(annotation => ({ ...annotation, sessionId: this.sessionId }))
+        const screenshotRef = result.value.screenshotRef
+        this.annotations = annotations.map(annotation => ({
+          ...annotation,
+          sessionId: this.sessionId,
+          ...(screenshotRef !== undefined && annotation.screenshotRef === undefined ? { screenshotRef } : {}),
+        }))
         this.notifier.markDirty()
       }
       return result

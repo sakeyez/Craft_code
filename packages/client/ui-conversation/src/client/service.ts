@@ -76,9 +76,9 @@ interface ImageUrlEntry {
 }
 
 /** Append deterministic, model-visible annotation context to the existing prompt text. */
-function annotationContext(session: SessionFace, text: string): string {
+async function annotationContext(session: SessionFace, text: string): Promise<Parameters<SessionFace['prompt']>[0]> {
   const annotations = session.getSnapshot().annotations ?? []
-  if (annotations.length === 0) return text
+  if (annotations.length === 0) return text === '' ? [] : [{ type: 'text', text }]
   const context = annotations.map((annotation) => {
     const shape = annotation.shape.type
     const coordinates = annotation.shape.type === 'point'
@@ -86,9 +86,25 @@ function annotationContext(session: SessionFace, text: string): string {
       : annotation.shape.type === 'rect'
         ? `x=${annotation.shape.geometry.x.toFixed(4)}, y=${annotation.shape.geometry.y.toFixed(4)}, width=${annotation.shape.geometry.width.toFixed(4)}, height=${annotation.shape.geometry.height.toFixed(4)}`
         : `points=${annotation.shape.geometry.points.map(point => `(${point.x.toFixed(4)},${point.y.toFixed(4)})`).join(' ')}`
-    return `[标注 ${annotation.label}] shape=${shape}; ${coordinates}; 说明=${annotation.description}${annotation.screenshotRef === undefined ? '' : `; screenshot=${annotation.screenshotRef}`}`
+    return `[标注 ${annotation.label}] shape=${shape}; ${coordinates}; 说明=${annotation.description}`
   }).join('\n')
-  return text === '' ? `游戏标注上下文:\n${context}` : `${text}\n\n游戏标注上下文:\n${context}`
+  const body = text === '' ? `游戏标注上下文:\n${context}` : `${text}\n\n游戏标注上下文:\n${context}`
+  // Reads are intentionally awaited after building the deterministic text so
+  // the image blocks are sent in a stable annotation order.
+  const refs = [...new Set(annotations.map(annotation => annotation.screenshotRef).filter((ref): ref is string => ref !== undefined))]
+  const images = new Map<string, { mediaType: ImageMediaType; data: string }>()
+  for (const refText of refs) {
+    try {
+      const ref = JSON.parse(refText) as { attachmentId?: unknown }
+      if (typeof ref.attachmentId !== 'string') continue
+      const result = await session.readAttachment(ref.attachmentId as never)
+      if (result.ok) images.set(refText, { mediaType: result.value.attachment.mediaType, data: bytesToBase64(result.value.data) })
+    } catch { /* annotations created before image persistence remain usable as text */ }
+  }
+  return [
+    ...[...images.values()].map(image => ({ type: 'image' as const, ...image })),
+    { type: 'text' as const, text: body },
+  ]
 }
 
 /** Unsupported browser-declared image type, localized by the UI boundary. */
@@ -145,7 +161,7 @@ export class ConversationController extends Service implements IConversation {
    */
   async send(text: string): Promise<void> {
     const session = this.scopedSession('send')
-    const result = await session.prompt([{ type: 'text', text: annotationContext(session, text) }], 'queue')
+    const result = await session.prompt(await annotationContext(session, text), 'queue')
     if (!result.ok) throw new Error(`conversation.send failed: ${result.error.code}: ${result.error.message}`)
   }
 
@@ -170,8 +186,8 @@ export class ConversationController extends Service implements IConversation {
       throw new Error('conversation.sendSession: one or more draft images are no longer available')
     }
     const uploaded = await this.serializeImages(attachments.map(attachment => attachment.file))
-    const annotatedText = annotationContext(session, text)
-    const content = [...uploaded, ...(annotatedText === '' ? [] : [{ type: 'text' as const, text: annotatedText }])]
+    const annotationParts = await annotationContext(session, text)
+    const content = [...uploaded, ...annotationParts]
     const result = await session.prompt(content, mode, signal)
     if (!result.ok) return { kind: 'error' }
     this.releaseDraftImages(attachments)

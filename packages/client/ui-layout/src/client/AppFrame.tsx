@@ -104,6 +104,7 @@ export function AppFrame({
   const bodyRef = useRef<HTMLDivElement | null>(null)
   const [viewport, setViewport] = useState(() => window.innerWidth)
   const gameState = currentProject.cwd === undefined ? { status: 'idle' as const } : panels.gameByCwd[gameProjectKey(currentProject.cwd)] ?? { status: 'idle' as const }
+  const gameFocus = gameState.status === 'connected'
 
   const lastSession = useRef(detailsSession)
   useLayoutEffect(() => {
@@ -174,6 +175,8 @@ export function AppFrame({
       className={css.frame}
       data-sidebar-collapsed={sidebarCollapsed || undefined}
       data-details-collapsed={cols.details === 0 || undefined}
+      data-game-focus={gameFocus || undefined}
+      data-game-mode={gameFocus || undefined}
       data-dragging={dragging || undefined}
     >
       <div className={css.topbar} data-shell-topbar>

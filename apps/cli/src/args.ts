@@ -8,9 +8,9 @@
  * `@deepseek-ai/dsh-cmdline`). Launcher flags therefore come first: the first
  * token this parser does not recognize starts the inner arguments, so
  * `dsh --profile tui --resume abc` boots the tui profile with `--resume abc`,
- * and `dsh --profile web -h` prints the web app's help, not this one's.
+ * and `dsh --profile desktop -h` prints the web app's help, not this one's.
  *
- * `web` is a hardcoded alias for `--profile web`; `plugin` manages a profile's
+ * `desktop` is a private alias for `--profile desktop`; `plugin` manages a profile's
  * plugin dependencies by forwarding to pnpm.
  * @module @deepseek-ai/dsh/args
  */
@@ -63,12 +63,12 @@ const collect = (value: string, previous: string[] = []): string[] => [...previo
 /** The launcher's own help text; each app prints its own. */
 const HELP_EXAMPLES = `
 Examples:
-  dsh --profile web                          boot the web profile (same as: dsh web)
+  dsh --profile desktop                      boot the desktop application profile (same as: dsh desktop)
   dsh --profile headless "run the tests"     answer one task, print the result, and exit
   dsh --profile mcmod "task"               run one Minecraft mod-development task headlessly
   dsh --profile tui --patch ./extra.yml      boot a custom profile with one extra overlay
   dsh --profile tui --resume <session>       arguments after the launcher flags reach the app
-  dsh --profile web --help                   the web app's own flags and help
+  dsh --profile desktop --help               the desktop app's own flags and help
   dsh plugin --profile tui add <package>     install a plugin into the tui profile
 `
 
@@ -154,19 +154,19 @@ export function parseDshArgs(argv: readonly string[], version: string): DshInvoc
     }
   }
 
-  const web = program.command('web').description('boot the web profile (alias of --profile web); the web app\'s own flags follow')
-  web
+  const desktop = program.command('desktop').description('boot the private desktop profile; the desktop app\'s own flags follow')
+  desktop
     .helpOption(false)
     .allowUnknownOption()
     .passThroughOptions()
     .enablePositionalOptions()
-    .argument('[args...]', 'arguments for the web app (see: dsh web --help)')
+    .argument('[args...]', 'arguments for the desktop app')
     .option('--patch <path>', 'extra patch-list overlay applied after the profile layer (repeatable)', collect)
-    .option('--dump-config', 'print the composed web-profile tree (with the user layer and any --patch) and exit')
-    .option('--dump-default-config', 'print the web profile\'s bundle layers (no user layer) and exit')
+    .option('--dump-config', 'print the composed desktop-profile tree (with the user layer and any --patch) and exit')
+    .option('--dump-default-config', 'print the desktop profile\'s bundle layers (no user layer) and exit')
     .action((args: string[], options: BootOptions) => {
-      rejectParentOptions('web')
-      resolved = resolveBoot(web, 'web', options, args)
+      rejectParentOptions('desktop')
+      resolved = resolveBoot(desktop, 'desktop', options, args)
     })
 
   const plugin = program.command('plugin').description('manage a profile\'s plugins by forwarding the remaining arguments to pnpm in the profile directory')

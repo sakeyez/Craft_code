@@ -6,7 +6,7 @@
 
 AppFrame 始终挂载会话栏和详情栏；已连接 Session 通过 `SessionProvider` 渲染。布局 store 是瞬时状态，侧边栏以默认宽度启动，详情栏则保持关闭，且该 store 从不读写 `localStorage`。hero 和其他未选中状态也会将详情栏的渲染宽度派生为零，但不会改变存储的宽度偏好。AppFrame 会跨越这些状态保留最后一个非 blank 会话 id：首个会话保持关闭；显式打开详情栏的操作会使用约定默认宽度；返回同一会话时恢复其未改变的宽度；选择不同会话时，详情栏会在绘制前关闭。会话 owner share 为空，侧边栏 owner share 只包含 `collapsed` 和 `width`；注册方通过标准钩子获取业务数据，并从各自的 inject 接口获取操作。
 
-同一个瞬时 store 会按规范化项目路径保存严格的外部游戏状态。AppFrame 始终保留普通的侧边栏、对话和详情布局；所选项目的 `game` slot 会在 `starting`、`connected`、`failed`、`disconnected`、`reconnecting` 或 `unsupported` 时显示轻量陪伴状态条。其他项目的事件不会改变所选项目的控件。Windows 宿主跟随独立的 Minecraft 顶层窗口；Linux 和 macOS 保持普通布局，并提示 Minecraft 在独立窗口运行。注入的 `ctx.layout` 操作用于重连或重新定位陪伴面板并限定标注捕获生命周期；返回的 JPEG 只存在于组件状态中，会话标注事件仍只保留归一化几何与描述。
+同一个瞬时 store 会按规范化项目路径保存严格的外部游戏状态。所选项目的 `game` slot 会在 `starting`、`connected`、`failed`、`disconnected`、`reconnecting` 或 `unsupported` 时显示陪伴控件。游戏连接后隐藏项目菜单、侧边栏、详情和空会话项目选择器，同时保持对话挂载；断开后恢复普通布局。其他项目的事件不会改变所选项目的控件。Windows 桌面宿主会将 Minecraft 与 CraftCode 陪伴面板自动并排，并跟随游戏移动或缩放；Linux 和 macOS 保持普通布局，并提示 Minecraft 在独立窗口运行。点击标注后，桌面宿主在游戏客户区原位置显示一次性静帧覆盖层，标注期间只冻结画面、不挂起游戏进程，结束后恢复并排布局。注入的 `ctx.layout` 操作用于重连或重新定位陪伴面板并限定标注捕获生命周期；静帧只存在于标注事务中，会话标注事件仍只保留归一化几何与描述。已有标注的描述可以在没有捕获静帧时编辑。保存失败时显示错误，并保留草稿以便重试。
 
 `/client` 导出表层包含插件主体（`apply`／`inject`）、`LayoutController` 和四个 owner-share 接口。AppFrame、面板 store 与让步求解器仍属于包内部。
 

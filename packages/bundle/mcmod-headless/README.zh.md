@@ -47,6 +47,6 @@ Java 命令刻意保持为普通的 `jdtls` 并标记为可选。启动日志会
 
 ## 已知限制与暂缓事项
 
-- **仅限 headless** — 该 bundle 不挂载 Web Host 行，也不挂载 Web agent-preset roster。Web profile 层使用 [`mcmod/`](../mcmod/README.zh.md)。
+- **仅限 headless** — 该 bundle 不挂载 Web Host 行，也不挂载 Web agent-preset roster。desktop profile 层使用 [`mcmod/`](../mcmod/README.zh.md)。
 - **JDTLS 由部署拥有且可选** — 默认命令名在启动时解析。缺少 JDTLS 会产生诊断并只禁用 Java provider；项目或机器特定的启动细节属于 profile 自己的 overlay。
 - **v1 不提供后台 jobs** — shell 工具不暴露 `run_in_background`，因此调用方应优先选择有界检查；需要后台进程控制时，应在 profile overlay 中同时重新启用 jobs 与 shell 后台支持。

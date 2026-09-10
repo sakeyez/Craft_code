@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-client-web",
-  "description": "Web boot kernel: static module table, Cordis loader, framework-free boot page, and UI-renderer handoff",
+  "description": "Internal desktop renderer boot kernel: module table, Cordis loader, boot page, and UI handoff",
   "version": "0.1.1-rc.2",
   "publishConfig": {
     "access": "public"

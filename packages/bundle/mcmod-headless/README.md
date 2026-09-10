@@ -47,6 +47,6 @@ The profile has a stable prefix for a given installed patch and skill catalog. C
 
 ## Known Limitations and Deferred Work
 
-- **Headless only** - this bundle does not mount Web Host rows or the Web agent-preset roster. Use [`mcmod/`](../mcmod/README.md) for the Web profile layer.
+- **Headless only** - this bundle does not mount Web Host rows or the Web agent-preset roster. Use [`mcmod/`](../mcmod/README.md) for the desktop profile layer.
 - **JDTLS is deployment-owned and optional** - the default command name is resolved at startup. Missing JDTLS produces a diagnostic and disables only the Java provider; project-specific launch details belong in the profile's own overlay.
 - **No background jobs in v1** - shell tools omit `run_in_background`, so callers should prefer bounded checks or re-enable jobs and shell background support together in a profile overlay when they need background process controls.

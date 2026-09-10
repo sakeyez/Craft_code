@@ -11,7 +11,10 @@ export const name = 'client-ui-desktop-menu-invariant'
 /** Service required before the companion can reserve package ownership. */
 export const inject = ['invariants']
 
-/** The slot registration and Electron boundary are covered by package tests. */
+/**
+ * No runtime invariant: the host entry is empty; menu and game subscriptions
+ * live in the browser bundle and cannot be observed by this host companion.
+ */
 const install: InvariantInstaller = () => {}
 
 /** Register this package's invariant companion. */

@@ -143,6 +143,7 @@ export interface SubprocessOutputReader {
    * retained tail and the gap is only recoverable from the spill file.
    * @param fromByte - whole-stream offset to resume from (a prior read's `nextOffset`; 0 for the first read).
    * @returns the delta text, the next offset, the `lossy` flag, and the spill path when one exists.
+   * An incomplete trailing UTF-8 sequence is held until more bytes arrive or the stream ends.
    */
   readFrom(fromByte: number): SubprocessOutputRead
 }

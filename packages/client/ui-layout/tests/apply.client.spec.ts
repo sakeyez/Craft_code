@@ -29,6 +29,7 @@ async function bench() {
   ctx.provide('connection', { api: { settings: {} }, isLoopback: false } as never)
   // ui-theme's Appearance row binds a durable scope through these two.
   ctx.provide('remote', { $on: () => () => {} } as never)
+  ctx.provide('sessions', { binding: () => undefined } as never)
   ctx.provide('settingsScope', { bind: () => stubSettingsScope().scope } as never)
   await ctx.plugin({ inject: themeInject, apply: themeApply }).await()
   await slotsFiber.await()
@@ -37,7 +38,7 @@ async function bench() {
 
 describe('ui-layout client apply', () => {
   it('declares its service dependencies', () => {
-    expect(inject).toEqual(['slots', 'theme'])
+    expect(inject).toEqual(['slots', 'theme', 'sessions'])
   })
 
   it('provides ctx.layout and registers AppFrame into root with the three child declarations', async () => {
