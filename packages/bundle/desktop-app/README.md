@@ -10,11 +10,19 @@ The client-plugin HMR receiver is always mounted and stays idle until `pnpm run 
 
 ## Model Experience
 
+### Desktop surface
+
+#### What the model sees
+
 When `surfaceContext` is enabled, the bundle adds the Harness source location and `app:desktop-surface` orientation to model requests. The orientation identifies the loopback desktop renderer and tells the model not to start a replacement server.
+
+#### Token effect
+
+The orientation is a short fixed prefix and adds only its rendered text to each assembled request.
 
 #### KV Cache effect
 
-None; this bundle's prompt section is assembled by the shared system-prompt service.
+The fixed orientation remains reusable in the request prefix; the dynamic local port is supplied through the shell environment instead of the prompt.
 
 ## Known Limitations and Deferred Work
 

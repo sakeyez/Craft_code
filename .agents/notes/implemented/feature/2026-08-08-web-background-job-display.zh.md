@@ -115,7 +115,7 @@ abstract onJobsChanged(listener: JobsChangedListener): () => void
 
 ## 测试
 
-[web e2e 场景](../../../../apps/web/tests/background-job-list.e2e.ts)是端到端的证据，且无需密钥：一次真实的 `run_in_background` bash 调用注册进 `ctx.jobs`，header 的计数与行在没有任何用户操作的情况下出现，通过注册表杀掉该任务后打开着的列表翻到生产者给出的 detail。它断言的是整条投递链路，而不是其中某一层。
+[web e2e 场景](../../../../apps/desktop/renderer/tests/background-job-list.e2e.ts)是端到端的证据，且无需密钥：一次真实的 `run_in_background` bash 调用注册进 `ctx.jobs`，header 的计数与行在没有任何用户操作的情况下出现，通过注册表杀掉该任务后打开着的列表翻到生产者给出的 detail。它断言的是整条投递链路，而不是其中某一层。
 
 在它之下，[`jobs-local`](../../../../packages/jobs/jobs-local/tests/jobs.spec.ts) 钉住变更订阅的全部四个提交点、对抛错观察者的包容，以及显式销毁与 fiber 拆除两条路径上的注销；[`api-proxy-jobs`](../../../../packages/host/apiproxy/tests/api-proxy-jobs.spec.ts) 钉住「非空才发 baseline」、三次变更推送、被丢弃的内部字段、无主扇出、不 resume 的保证，以及没有注册表的组合；客户端各套件钉住 last-wins 折叠、缺失键表示、两处清理，以及组件的排序、时长与关闭行为。
 

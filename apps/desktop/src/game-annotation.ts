@@ -18,6 +18,7 @@ interface Transaction {
   window?: BrowserWindow
   close: (error?: Error) => void
   snapshot?: GameCaptureSnapshot
+  snapshotPromise?: Promise<GameCaptureSnapshot>
   saving?: { attempt: number; resolve: (error?: string) => void }
   attempt: number
   ready: boolean
@@ -35,7 +36,9 @@ export class GameAnnotationController {
     }
     ipcMain.handle('annotation:load', (event) => {
       const active = trusted(event.sender)
-      return { snapshot: active.snapshot, labels: active.request.labels }
+      if (active.snapshot !== undefined) return { snapshot: active.snapshot, labels: active.request.labels }
+      if (active.snapshotPromise === undefined) throw new Error('标注截图为空，请重试。')
+      return active.snapshotPromise.then(snapshot => ({ snapshot, labels: active.request.labels }))
     })
     ipcMain.handle('annotation:ready', (event) => {
       const active = trusted(event.sender)
@@ -115,10 +118,12 @@ export class GameAnnotationController {
         const target = await prepare()
         if (this.#active !== active) return
         active.target = target
-        const snapshot = await target.capture()
-        if (this.#active !== active) return
-        if (!target.valid()) throw new Error('游戏窗口已变化，请重新标注。')
-        active.snapshot = snapshot
+        // Capture and renderer startup are independent, so overlap them while
+        // the window stays hidden. annotation:load waits for the same snapshot.
+        active.snapshotPromise = target.capture().then((snapshot) => {
+          if (this.#active === active) active.snapshot = snapshot
+          return snapshot
+        })
         const window = new BrowserWindow({
           ...target.bounds, show: false, frame: false, resizable: false, movable: false,
           minimizable: false, maximizable: false, skipTaskbar: true, alwaysOnTop: true,
@@ -132,6 +137,10 @@ export class GameAnnotationController {
         window.webContents.once('render-process-gone', () => { active.close(new Error('标注窗口意外关闭，请重新标注。')) })
         window.once('closed', () => { active.close() })
         await window.loadFile(fileURLToPath(new URL('./annotation.html', import.meta.url)))
+        const snapshot = await active.snapshotPromise
+        if (this.#active !== active) return
+        if (!target.valid()) throw new Error('游戏窗口已变化，请重新标注。')
+        active.snapshot = snapshot
       })().catch((error: unknown) => {
         active.close(error instanceof Error ? error : new Error(String(error)))
       })

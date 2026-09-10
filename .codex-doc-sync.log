@@ -1,0 +1,124 @@
+$ tsx scripts/run-gates.ts doc-sync
+run-gates: doc-sync running 28 gate(s) with 4 worker(s) from 16 available CPU(s), doc-sync cap 4.
+run-gates: start doc-typecheck
+run-gates: start documentation build
+run-gates: start doc graphs
+run-gates: start markdown links
+
+== FAILED markdown links (31.14s) ==
+[ELIFECYCLE] Command failed with exit code 1.
+command: pnpm run verify-md-links
+outcome: exit 1
+$ tsx scripts/verify-md-links.ts
+verify-md-links: broken relative cross-links found:
+  .agents\notes\implemented\feature\2026-07-31-even-out-shipped-tool-rosters.md:47  ../../../../apps/web/tests/shipped-composition.e2e.ts  (target does not exist)
+  .agents\notes\implemented\feature\2026-07-31-even-out-shipped-tool-rosters.zh.md:47  ../../../../apps/web/tests/shipped-composition.e2e.ts  (target does not exist)
+  .agents\notes\implemented\feature\2026-08-08-web-background-job-display.md:118  ../../../../apps/web/tests/background-job-list.e2e.ts  (target does not exist)
+  .agents\notes\implemented\feature\2026-08-08-web-background-job-display.zh.md:118  ../../../../apps/web/tests/background-job-list.e2e.ts  (target does not exist)
+  .agents\notes\implemented\bug-fix\2026-07-31-composer-text-layers-share-one-scrollport.md:78  ../../../../apps/web/tests/composer-draft-scroll.e2e.ts  (target does not exist)
+  .agents\notes\implemented\bug-fix\2026-07-31-composer-text-layers-share-one-scrollport.zh.md:78  ../../../../apps/web/tests/composer-draft-scroll.e2e.ts  (target does not exist)
+  .agents\notes\implemented\bug-fix\2026-08-04-conversation-column-one-axis-scroll.md:31  ../../../../apps/web/tests/conversation-column-overflow.e2e.ts  (target does not exist)
+  .agents\notes\implemented\bug-fix\2026-08-04-conversation-column-one-axis-scroll.zh.md:31  ../../../../apps/web/tests/conversation-column-overflow.e2e.ts  (target does not exist)
+  .agents\notes\implemented\architecture\2026-07-30-command-row-copy-contract.md:35  ../../../../apps/web/tests/snapshots/seeded-history/command-row.expected.md  (target does not exist)
+  .agents\notes\implemented\architecture\2026-07-30-command-row-copy-contract.zh.md:35  ../../../../apps/web/tests/snapshots/seeded-history/command-row.expected.md  (target does not exist)
+  .agents\notes\implemented\architecture\2026-08-08-bounded-session-persistence-write-batching.md:15  ../../../../apps/web/tests/snapshots/goal-multi-turn-actions/session.jsonl  (target does not exist)
+  .agents\notes\implemented\architecture\2026-08-08-bounded-session-persistence-write-batching.md:15  ../../../../apps/web/tests/snapshots/permission-policy-context/session.jsonl  (target does not exist)
+  .agents\notes\implemented\architecture\2026-08-08-bounded-session-persistence-write-batching.zh.md:15  ../../../../apps/web/tests/snapshots/goal-multi-turn-actions/session.jsonl  (target does not exist)
+  .agents\notes\implemented\architecture\2026-08-08-bounded-session-persistence-write-batching.zh.md:15  ../../../../apps/web/tests/snapshots/permission-policy-context/session.jsonl  (target does not exist)
+  packages\host\apiproxy\README.md:5  ../../bundle/web-app/cordis.patch.yml  (target does not exist)
+  packages\host\apiproxy\README.zh.md:5  ../../bundle/web-app/cordis.patch.yml  (target does not exist)
+run-gates: start type equivalence
+run-gates: PASS type equivalence (32.58s)
+run-gates: start cordis catalog
+run-gates: PASS doc graphs (82.92s)
+run-gates: start verify-mermaid
+run-gates: PASS doc-typecheck (88.52s)
+run-gates: start scoped events
+run-gates: PASS cordis catalog (36.41s)
+run-gates: start translation pairing
+run-gates: PASS documentation build (123.98s)
+run-gates: start markdown wrap
+run-gates: PASS scoped events (35.51s)
+run-gates: start client catalog
+
+[ELIFECYCLE] Command failed with exit code 1.
+== FAILED client catalog (6.49s) ==
+command: pnpm run verify-client-catalog
+outcome: exit 1
+$ tsx scripts/gen-client-catalog.ts --check
+gen-client-catalog: stale — packages/extensions/cordis-client-runner/src/client/slot-catalog.ts. Run `pnpm run gen-client-catalog` and commit the result.
+run-gates: start export jsdoc
+run-gates: PASS verify-mermaid (48.59s)
+run-gates: start tool catalog
+run-gates: PASS translation pairing (38.64s)
+run-gates: start config catalog
+
+[ELIFECYCLE] Command failed with exit code 1.
+== FAILED export jsdoc (10.32s) ==
+command: pnpm run verify-export-jsdoc
+outcome: exit 1
+$ tsx scripts/verify-export-jsdoc.ts
+verify-export-jsdoc: 1 JSDoc completeness violation(s) (see AGENTS.md):
+  exported function 'desktopRuntimeValues' (packages/bundle/desktop-app/src/index.ts:62) is missing @returns (return type: DesktopRuntimeValues).
+run-gates: start persistence catalog
+run-gates: PASS markdown wrap (18.15s)
+run-gates: start public repository links
+run-gates: PASS config catalog (3.57s)
+run-gates: start doc refs
+run-gates: PASS persistence catalog (3.31s)
+run-gates: start package paths
+run-gates: PASS doc refs (2.30s)
+run-gates: start config source ownership
+run-gates: PASS config source ownership (1.08s)
+run-gates: start package README model experience
+run-gates: PASS package paths (4.06s)
+run-gates: start agent note classification
+run-gates: PASS agent note classification (1.00s)
+run-gates: start agent note format
+run-gates: PASS public repository links (7.46s)
+run-gates: start archived agent notes
+run-gates: PASS agent note format (1.39s)
+run-gates: start skill invocation metadata
+run-gates: PASS archived agent notes (1.25s)
+run-gates: start translation prompt
+
+== FAILED package README model experience (5.43s) ==
+[ELIFECYCLE] Command failed with exit code 1.
+command: pnpm run verify-package-readme-model-experience
+outcome: exit 1
+$ tsx scripts/verify-package-readme-model-experience.ts
+verify-package-readme-model-experience failed:
+  packages\bundle\desktop-app\README.md: must contain one or more complete model-context entries
+run-gates: start doc budgets
+run-gates: PASS skill invocation metadata (0.93s)
+run-gates: start documentation site checks
+run-gates: PASS translation prompt (0.88s)
+run-gates: start package README limitations
+
+== FAILED doc budgets (0.85s) ==
+command: pnpm run verify-doc-budgets
+outcome: exit 1
+$ tsx scripts/verify-doc-budgets.ts
+verify-doc-budgets failed:
+
+  packages/README.md: 995 words exceeds the 994-word ceiling — relocate or condense per docs/AGENTS.md (raising the ceiling requires justification in the PR)
+
+See docs/AGENTS.md for the documentation standard and the relocation-first rule.
+[ELIFECYCLE] Command failed with exit code 1.
+run-gates: PASS tool catalog (21.09s)
+run-gates: PASS package README limitations (4.40s)
+run-gates: PASS documentation site checks (10.85s)
+
+run-gates: 23 passed, 5 failed, 0 skipped in 162.40s.
+run-gates: unsuccessful gates:
+  - FAILED markdown links (31.14s, exit 1)
+    pnpm run verify-md-links
+  - FAILED client catalog (6.49s, exit 1)
+    pnpm run verify-client-catalog
+  - FAILED export jsdoc (10.32s, exit 1)
+    pnpm run verify-export-jsdoc
+  - FAILED package README model experience (5.43s, exit 1)
+    pnpm run verify-package-readme-model-experience
+  - FAILED doc budgets (0.85s, exit 1)
+    pnpm run verify-doc-budgets
+[ELIFECYCLE] Command failed with exit code 1.

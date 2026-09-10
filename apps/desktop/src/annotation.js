@@ -118,7 +118,7 @@ void (async () => {
   await snapshot.decode()
   if (!snapshot.naturalWidth || !snapshot.naturalHeight) throw new Error('标注截图为空，请重试。')
   render()
-  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+  await new Promise(resolve => requestAnimationFrame(resolve))
   await bridge.ready()
   surface.focus({ preventScroll: true })
 })().catch(failure => { report(messageOf(failure)); void bridge.cancel().catch(() => {}) })

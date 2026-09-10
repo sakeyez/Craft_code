@@ -10,11 +10,19 @@
 
 ## 模型体验
 
+### 桌面表面
+
+#### What the model sees
+
 启用 `surfaceContext` 时，组合包向模型请求加入 Harness 源码位置和 `app:desktop-surface` 说明。该说明指出 loopback 桌面 renderer，并要求模型不要启动替代服务器。
 
-#### KV Cache 影响
+#### Token effect
 
-无；本组合包的提示词段落由共享 system-prompt 服务组装。
+该说明是简短的固定前缀，只把渲染后的文本加入每次组装的请求。
+
+#### KV Cache effect
+
+固定说明可在请求前缀中复用；动态本地端口通过 shell 环境提供，不写入提示词。
 
 ## 已知限制与延期工作
 

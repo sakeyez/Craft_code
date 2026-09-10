@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-07-30-command-row-copy-contract.md
-2026-07-30-command-row-copy-contract.md: f6d5199389b3907780c501894e2861e6add85e77
-2026-07-30-command-row-copy-contract.zh.md: 86f0c044e841a6a0148b1f785582868bba5bb3d0
+2026-07-30-command-row-copy-contract.md: 29d6abf94006e4612bcaf312acad287ea8432103
+2026-07-30-command-row-copy-contract.zh.md: ac54038581f1b9e6affdd65a484cac67929c76e9

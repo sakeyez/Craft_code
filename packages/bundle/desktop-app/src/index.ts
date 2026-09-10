@@ -58,7 +58,9 @@ const DSH_DESKTOP_URL = 'DSH_DESKTOP_URL' as const
 // Display-only mirror of the webserver schema's loopback host: the address the
 // local URL always prints. Not a source of truth — the schema is.
 const LOOPBACK_HOST = '127.0.0.1'
-/** Return the fixed trust values for the loopback-only desktop runtime. */
+/** Return the fixed trust values for the loopback-only desktop runtime.
+ * @returns The desktop runtime values used by the shared connection service.
+ */
 export function desktopRuntimeValues(): DesktopRuntimeValues {
   return { trustedHosts: [] }
 }

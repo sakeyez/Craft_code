@@ -166,8 +166,8 @@ export function apply(ctx: ClientContext): void {
         annotate: sessionId === undefined ? undefined : async (annotations: import('@deepseek-ai/dsh-session/types').GameAnnotation[]) => {
           const session = ctx.sessions.binding(sessionId)?.session
           const annotate = session?.annotate
-          if (annotate === undefined) throw new Error('当前会话无法保存游戏标注。')
-          const result = await annotate(annotations)
+          if (session === undefined || annotate === undefined) throw new Error('当前会话无法保存游戏标注。')
+          const result = await annotate.call(session, annotations)
           if (!result.ok) throw new Error(result.error.message)
         },
         reconnect: (cwd: string) => layout.reconnectGameSurface(cwd),
@@ -175,15 +175,14 @@ export function apply(ctx: ClientContext): void {
           if (sessionId === undefined || request.sessionId !== sessionId) throw new Error('标注会话无效。')
           const session = ctx.sessions.binding(sessionId)?.session
           const annotate = session?.annotate
-          if (annotate === undefined) throw new Error('当前会话无法保存游戏标注。')
-          if (session === undefined) throw new Error('当前会话无法保存游戏标注。')
+          if (session === undefined || annotate === undefined) throw new Error('当前会话无法保存游戏标注。')
           await layout.beginGameAnnotation(request, async (drafts, snapshot) => {
             const ids = new Set(drafts.map(draft => draft.id))
             const existing = (session.getSnapshot().annotations ?? []).filter(annotation => !ids.has(annotation.id))
             const labels = new Set(existing.map(annotation => annotation.label))
             if (drafts.some(draft => labels.has(draft.label))) throw new Error('标注编号已变化，请取消后重新标注。')
             const image = snapshot === undefined ? undefined : annotationImage(snapshot.dataUrl)
-            const result = await annotate([...existing, ...drafts.map(draft => ({ ...draft, sessionId }))], image)
+            const result = await annotate.call(session, [...existing, ...drafts.map(draft => ({ ...draft, sessionId }))], image)
             if (!result.ok) throw new Error(result.error.message)
           })
         },

@@ -352,7 +352,9 @@ export class WindowsGameCaptureProvider implements GameCaptureProvider {
     }
     const size = thumbnail.getSize()
     this.#log(`annotation captured cwd=${cwd} hwnd=${String(hwnd)}`)
-    return { dataUrl: `data:image/jpeg;base64,${thumbnail.toJPEG(85).toString('base64')}`, width: size.width, height: size.height }
+    // A slightly lower quality keeps the frozen frame visually sharp while
+    // reducing JPEG encoding and IPC payload time during annotation startup.
+    return { dataUrl: `data:image/jpeg;base64,${thumbnail.toJPEG(75).toString('base64')}`, width: size.width, height: size.height }
   }
 
   async endAnnotation(_cwd: string): Promise<void> {}

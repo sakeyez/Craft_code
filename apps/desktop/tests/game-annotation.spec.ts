@@ -91,7 +91,7 @@ describe('annotation transaction', () => {
     expect(target.focus).toHaveBeenCalledOnce()
   })
 
-  it('cancels a delayed capture without showing a late window or closing a newer operation', async () => {
+  it('cancels a delayed capture without showing its preloaded window or closing a newer operation', async () => {
     let resolveCapture: (value: Awaited<ReturnType<AnnotationTarget['capture']>>) => void = () => {
       throw new Error('capture resolver not initialized')
     }
@@ -103,7 +103,9 @@ describe('annotation transaction', () => {
     await done
     resolveCapture({ dataUrl: 'data:image/jpeg;base64,AA==', width: 800, height: 600 })
     await tick()
-    expect(fixture.windows).toHaveLength(0)
+    expect(fixture.windows).toHaveLength(1)
+    expect(fixture.windows[0]?.destroyed).toBe(true)
+    expect(fixture.windows[0]?.show).not.toHaveBeenCalled()
     expect(target.focus).not.toHaveBeenCalled()
   })
 
