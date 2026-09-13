@@ -42,6 +42,8 @@ interface CaptureEntry {
   panelWidth?: number
 }
 export interface Win32Bindings {
+  shortcutHeld?(): boolean
+  foregroundWindow?(): Hwnd
   processSnapshot(): ProcessEntry[]
   processIdentity(pid: number): string | undefined
   enumerateWindows(): WindowCandidate[]
@@ -122,6 +124,8 @@ async function loadBindings(): Promise<Win32Bindings> {
   const getClassName = bind(user32, 'GetClassNameW', 'int', ['void *', 'void *', 'int'])
   const getWindowText = bind(user32, 'GetWindowTextW', 'int', ['void *', 'void *', 'int'])
   const clientToScreen = bind(user32, 'ClientToScreen', 'int', ['void *', 'void *'])
+  const keyState = bind(user32, 'GetAsyncKeyState', 'int16', ['int'])
+  const getForeground = bind(user32, 'GetForegroundWindow', 'void *', [])
   const foreground = bind(user32, 'SetForegroundWindow', 'int', ['void *'])
   const getClientRect = bind(user32, 'GetClientRect', 'int', ['void *', 'void *'])
   const getWindowRect = bind(user32, 'GetWindowRect', 'int', ['void *', 'void *'])
@@ -140,6 +144,8 @@ async function loadBindings(): Promise<Win32Bindings> {
   }
 
   return {
+    shortcutHeld: () => (Number(keyState(0x50)) & 0x8000) !== 0,
+    foregroundWindow: () => getForeground() as Hwnd,
     processSnapshot: () => {
       const snapshot = createSnapshot(0x2, 0) as Hwnd | null
       if (snapshot === null || snapshot === 0n || snapshot === -1n) return []
@@ -242,7 +248,7 @@ export class WindowsGameCaptureProvider implements GameCaptureProvider {
     this.#window.maximize()
   }
 
-  constructor(options: GameCaptureProviderOptions, bindings?: Win32Bindings) {
+  constructor(private readonly options: GameCaptureProviderOptions, bindings?: Win32Bindings) {
     this.#window = options.window
     this.#publish = options.publish
     this.#log = options.log ?? (() => {})
@@ -266,6 +272,7 @@ export class WindowsGameCaptureProvider implements GameCaptureProvider {
   async reconnect(cwd: string): Promise<GameCaptureState> {
     const entry = this.#entries.get(cwd)
     if (entry === undefined) return { status: 'failed', error: '该项目没有正在运行的游戏进程。' }
+    this.options.stream?.stop()
     entry.abort.abort(); entry.abort = new AbortController(); delete entry.hwnd; delete entry.lastWindow
     entry.stableSamples = 0
     if (entry.layout === 'arranging') entry.layout = 'pending'
@@ -278,6 +285,7 @@ export class WindowsGameCaptureProvider implements GameCaptureProvider {
     if (cwd === this.#selectedCwd) return
     const previous = this.#selectedCwd === undefined ? undefined : this.#entries.get(this.#selectedCwd)
     if (previous !== undefined && this.#companion && !this.#window.isDestroyed()) previous.panelWidth = this.#panelWidth(previous)
+    this.options.stream?.stop()
     this.#selectedCwd = cwd
     const generation = ++this.#selectionGeneration
     await this.#leaveCompanion()
@@ -291,10 +299,21 @@ export class WindowsGameCaptureProvider implements GameCaptureProvider {
   }
 
   async stop(cwd: string, publish = true): Promise<void> {
+    if (cwd === this.#selectedCwd) this.options.stream?.stop()
     const entry = this.#entries.get(cwd)
     if (entry !== undefined) { entry.abort.abort(); this.#entries.delete(cwd) }
     if (publish) this.#publish({ cwd, state: { status: 'idle' } })
     if (cwd === this.#selectedCwd) await this.#leaveCompanion()
+  }
+
+  async annotationShortcutHeld(): Promise<boolean> { return (await this.#bindings()).shortcutHeld?.() ?? false }
+
+  async isAnnotationForeground(cwd: string): Promise<boolean> {
+    const entry = this.#connected(cwd)
+    const bindings = await this.#bindings()
+    const foreground = bindings.foregroundWindow?.()
+    return cwd === this.#selectedCwd && this.#ownsWindow(entry, bindings)
+      && (foreground === entry.hwnd || this.#window.isFocused())
   }
 
   async annotationTarget(cwd: string): Promise<AnnotationTarget> {
@@ -337,9 +356,21 @@ export class WindowsGameCaptureProvider implements GameCaptureProvider {
     const hwnd = entry.hwnd as Hwnd
     const width = snapshot.rect.right - snapshot.rect.left; const height = snapshot.rect.bottom - snapshot.rect.top
     const scale = Math.min(1, MAX_SNAPSHOT_WIDTH / width, MAX_SNAPSHOT_HEIGHT / height)
+    const started = performance.now()
+    if (this.options.stream) {
+      try {
+        const result = await this.options.stream.capture(hwnd, client === undefined ? { x: 0, y: 0, width: 1, height: 1 } : {
+          x: (client.left - snapshot.rect.left) / width, y: (client.top - snapshot.rect.top) / height,
+          width: (client.right - client.left) / width, height: (client.bottom - client.top) / height,
+        })
+        this.#log(`annotation frame encoded path=stream ms=${(performance.now() - started).toFixed(1)}`)
+        return result
+      } catch (error) { this.#log(`annotation fallback: ${String(error)}`) }
+    }
     const sources = await desktopCapturer.getSources({ types: ['window'], thumbnailSize: { width: Math.max(1, Math.floor(width * scale)), height: Math.max(1, Math.floor(height * scale)) }, fetchWindowIcons: false })
     const source = sources.find(candidate => { try { return BigInt(candidate.id.split(':')[1] ?? '') === hwnd } catch { return false } })
     if (source === undefined || source.thumbnail.isEmpty()) throw new Error('无法从 Minecraft 窗口获取标注截图，请确认窗口可见后重试。')
+    this.#log(`annotation frame received path=thumbnail ms=${(performance.now() - started).toFixed(1)}`)
     let thumbnail = source.thumbnail
     if (client !== undefined) {
       const size = thumbnail.getSize()
@@ -412,6 +443,10 @@ export class WindowsGameCaptureProvider implements GameCaptureProvider {
         continue
       }
       const next = this.#snapshot(entry.hwnd, rect, bindings)
+      if (entry.cwd === this.#selectedCwd) {
+        if (next.visible && !next.minimized && !next.fullscreen) this.options.stream?.warm(entry.hwnd)
+        else this.options.stream?.stop()
+      }
       const changed = JSON.stringify(next) !== JSON.stringify(entry.lastWindow)
       entry.stableSamples = next.visible && !next.minimized && !next.fullscreen
         ? (entry.lastWindow !== undefined && JSON.stringify(next) === JSON.stringify(entry.lastWindow) ? entry.stableSamples + 1 : 1) : 0
@@ -438,7 +473,7 @@ export class WindowsGameCaptureProvider implements GameCaptureProvider {
 
   #connected(cwd: string): CaptureEntry { const entry = this.#entries.get(cwd); if (entry?.state.status !== 'connected' || entry.hwnd === undefined) throw new Error('该项目没有已连接的 Minecraft 窗口。'); return entry }
   #set(cwd: string, state: GameCaptureState): GameCaptureState { this.#publish({ cwd, state }); return state }
-  #emit(entry: CaptureEntry, state: GameCaptureState): void { entry.state = state; this.#publish({ cwd: entry.cwd, state }); if (entry.cwd === this.#selectedCwd && (state.status === 'idle' || state.status === 'failed' || state.status === 'disconnected')) void this.#leaveCompanion() }
+  #emit(entry: CaptureEntry, state: GameCaptureState): void { if (entry.cwd === this.#selectedCwd && state.status !== 'connected') this.options.stream?.stop(); entry.state = state; this.#publish({ cwd: entry.cwd, state }); if (entry.cwd === this.#selectedCwd && (state.status === 'idle' || state.status === 'failed' || state.status === 'disconnected')) void this.#leaveCompanion() }
 
   async #refreshCompanion(force: boolean, generation = this.#selectionGeneration): Promise<void> {
     const entry = this.#selectedCwd === undefined ? undefined : this.#entries.get(this.#selectedCwd)

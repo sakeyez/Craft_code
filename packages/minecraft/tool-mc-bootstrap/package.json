@@ -1,0 +1,14 @@
+{
+  "name": "@deepseek-ai/dsh-tool-mc-bootstrap",
+  "description": "Deterministic Minecraft mod project bootstrap tool",
+  "version": "0.1.1-rc.2",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": { ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" } },
+  "files": ["lib"],
+  "license": "MIT",
+  "dependencies": { "@deepseek-ai/schemastery": "workspace:^" },
+  "peerDependencies": { "@deepseek-ai/cordis": "workspace:^", "@deepseek-ai/dsh-tools": "workspace:^", "@deepseek-ai/dsh-shell": "workspace:^" },
+  "devDependencies": { "@deepseek-ai/cordis": "workspace:^", "@deepseek-ai/dsh-tools": "workspace:^", "@types/node": "^22.20.0" }
+}

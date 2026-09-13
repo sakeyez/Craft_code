@@ -52,14 +52,20 @@ describe('Minecraft focus layout', () => {
           window.addEventListener('test-game-state', receive)
           return () => { window.removeEventListener('test-game-state', receive) }
         },
-        beginGameAnnotation: async () => {
+        bindGameAnnotationShortcut: (_request: unknown, listener: (error?: string) => void) => {
+          const receive = () => { listener() }
+          window.addEventListener('test-annotation-shortcut', receive)
+          return () => { window.removeEventListener('test-annotation-shortcut', receive) }
+        },
+        beginGameAnnotation: async (_request: unknown,
+          commit: (drafts: unknown[], snapshot: { dataUrl: string; width: number; height: number }) => Promise<void>) => {
           const canvas = document.createElement('canvas')
           canvas.width = 800
           canvas.height = 450
           const context = canvas.getContext('2d')!
           context.fillStyle = '#4d8b43'
           context.fillRect(0, 0, 800, 450)
-          return { dataUrl: canvas.toDataURL('image/jpeg'), width: 800, height: 450 }
+          await commit([{ id: crypto.randomUUID(), label: 'B', description: 'Native shortcut annotation', createdAt: Date.now(), shape: { type: 'point', geometry: { x: .5, y: .5 } } }], { dataUrl: canvas.toDataURL('image/jpeg'), width: 800, height: 450 })
         },
         endGameAnnotation: noop, repositionGameCompanion: noop,
       } })
@@ -117,7 +123,9 @@ describe('Minecraft focus layout', () => {
       await page.setViewportSize({ width, height: 1000 })
       await expect.poll(async () => (await input.boundingBox())?.width).toBeGreaterThan(200)
       await visibleInViewport(input)
-      await visibleInViewport(page.getByRole('button', { name: '标注 Minecraft 窗口' }))
+      expect((await page.locator('[data-composer-card]').boundingBox())!.y).toBeGreaterThan(700)
+      expect(await page.getByText('在游戏上标注，将问题带入对话。').count()).toBe(0)
+      await visibleInViewport(page.getByRole('button', { name: '在游戏画面上标注' }))
       await visibleInViewport(page.getByRole('button', { name: /选择模型/ }))
       expect(await page.getByRole('navigation', { name: '应用菜单' }).isVisible()).toBe(false)
       expect(await page.getByText('开始打造新想法', { exact: true }).isVisible()).toBe(false)
@@ -143,13 +151,8 @@ describe('Minecraft focus layout', () => {
       }) })
     })
     await page.getByRole('button', { name: /移除图片/ }).waitFor()
-    await page.getByRole('button', { name: '标注 Minecraft 窗口' }).click()
-    await page.getByAltText('Minecraft 标注截图').waitFor()
-    await visibleInViewport(page.getByAltText('Minecraft 标注截图'))
-    await visibleInViewport(input)
     await mkdir('.artifacts/game-focus', { recursive: true })
     await page.screenshot({ path: '.artifacts/game-focus/connected.png' })
-    await page.getByRole('button', { name: '退出标注', exact: true }).click()
     await state('disconnected')
     await page.locator('[data-game-focus]').waitFor({ state: 'detached' })
     await page.setViewportSize({ width: 1280, height: 1000 })
@@ -193,6 +196,7 @@ describe('Minecraft focus layout', () => {
     })
     expect(seeded.result.ok).toBe(true)
     await page.getByRole('treeitem', { name: /Annotation editing/ }).click()
+    await page.getByRole('button', { name: /1 条标注/ }).hover()
     await page.getByText('Original description', { exact: true }).waitFor()
     expect(await page.getByAltText('Minecraft 标注截图').count()).toBe(0)
     await page.getByRole('button', { name: '编辑', exact: true }).click()
@@ -204,6 +208,115 @@ describe('Minecraft focus layout', () => {
     await expect.poll(async () => (await scaffold.ctx.sessionPersistence.inspect(sessionId)).events
       .filter(event => event.type === 'game/annotations').at(-1)?.data.annotations)
       .toEqual([{ ...annotation, description: 'Updated through the browser' }])
+    await state('connected')
+    await page.locator('[data-game-focus]').waitFor()
+    await page.evaluate(() => { window.dispatchEvent(new Event('test-annotation-shortcut')) })
+    await page.getByRole('button', { name: /2 条标注/ }).hover()
+    await page.getByText('Native shortcut annotation', { exact: true }).waitFor()
+    await page.getByAltText('Minecraft 标注截图', { exact: true }).waitFor()
+    await page.getByRole('button', { name: '查看标注截图', exact: true }).click()
+    await page.getByRole('dialog', { name: '标注截图预览' }).waitFor()
+    await page.getByRole('button', { name: '关闭截图' }).click()
+    await page.setViewportSize({ width: 480, height: 800 })
+    await page.getByRole('button', { name: /2 条标注/ }).hover()
+    await visibleInViewport(page.locator('[data-annotation-items]'))
+    await page.screenshot({ path: '.artifacts/game-focus/annotation-hover.png' })
+    await page.mouse.move(450, 85)
+    await page.locator('[data-composer-card] textarea').focus()
+    await page.screenshot({ path: '.artifacts/game-focus/annotation-chip.png' })
+    await expect.poll(async () => (await scaffold.ctx.sessionPersistence.inspect(sessionId)).events
+      .filter(event => event.type === 'game/annotations').at(-1)?.data.annotations.at(-1)?.screenshotRef)
+      .toBeTruthy()
+    await state('disconnected')
     expect(consoleWatch.pageErrors).toEqual([])
   }, 60_000)
+  it('measures companion layout and interaction without remounting the composer', async () => {
+    const sessionId = SessionId('game-annotation-edit')
+    const density = await scaffold.ctx.apiProxy.sessions.annotate!({
+      rpcId: 'annotation-density' as never,
+      payload: { sessionId, annotations: Array.from({ length: 20 }, (_, index) => ({
+        sessionId, id: `density-${index}`, label: String.fromCharCode(65 + index), createdAt: index,
+        shape: { type: 'point' as const, geometry: { x: .25, y: .5 } },
+        description: index === 0 ? '检查这个方块的材质与名称' : `标注 ${index + 1}：检查方块的显示效果`,
+      })) },
+    })
+    expect(density.result).toMatchObject({ ok: true })
+    await page.setViewportSize({ width: 1280, height: 1000 })
+    await page.reload()
+    await page.getByRole('treeitem', { name: /Annotation editing/ }).click()
+    await state('connected')
+    await page.getByRole('button', { name: /20 条标注/ }).waitFor()
+    const input = page.locator('[data-composer-card] textarea')
+    const identity = await input.elementHandle()
+    const baseline = process.env.COMPANION_BASELINE === '1'
+    const output = `.artifacts/annotation-composer-${baseline ? 'before' : 'after'}`
+    await mkdir(output, { recursive: true })
+    const layouts = []
+    const cdp = await page.context().newCDPSession(page)
+    for (const height of [600, 800]) for (const width of [360, 480, 640]) for (const scale of [1, 1.25, 1.5]) {
+      await page.setViewportSize({ width, height })
+      await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: scale, mobile: false })
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+      await expect.poll(async () => (await page.locator('[data-game-status]').boundingBox())?.width).toBeGreaterThanOrEqual(width - 1)
+      await visibleInViewport(input)
+      const layout = await page.locator('[data-game-status]').evaluate((element) => {
+        const box = element.getBoundingClientRect()
+        let parent = element.parentElement!
+        while (getComputedStyle(parent).display === 'contents') parent = parent.parentElement!
+        return { height: box.height, parentHeight: parent.clientHeight, scrollWidth: element.scrollWidth, width: box.width,
+          heightRule: getComputedStyle(element).height, maxHeight: getComputedStyle(element).maxHeight,
+          overflow: getComputedStyle(element).overflow, flex: getComputedStyle(element).flex }
+      })
+      layouts.push({ viewportWidth: width, scale, ...layout })
+      if (!baseline) {
+        expect(layout.height).toBeLessThanOrEqual(layout.parentHeight * .35 + 1)
+        expect(layout.scrollWidth).toBeLessThanOrEqual(layout.width + 1)
+      }
+      await page.screenshot({ path: `${output}/${width}-${height}-${scale}.png` })
+    }
+    await cdp.send('Emulation.clearDeviceMetricsOverride')
+    await page.setViewportSize({ width: 480, height: 800 })
+    const timings = await page.evaluate(async () => {
+      const paint = () => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+      const samples: Record<string, number[]> = { input: [], scroll: [], collapse: [] }
+      const input = document.querySelector<HTMLTextAreaElement>('[data-composer-card] textarea')!
+      const list = document.querySelector<HTMLElement>('[aria-label="游戏标注上下文"]')!
+      for (let i = 0; i < 30; i++) {
+        const disclosure = list.querySelector<HTMLButtonElement>('button[aria-expanded]')
+        if (disclosure?.getAttribute('aria-expanded') === 'false') { disclosure.click(); await paint() }
+        let start = performance.now()
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(input, `响应测试 ${i}`)
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+        await paint(); samples.input!.push(performance.now() - start)
+        start = performance.now()
+        const scroller = list.querySelector<HTMLElement>('[data-annotation-items]') ?? list
+        scroller.scrollTop = i % 2 ? 0 : scroller.scrollHeight
+        await paint(); samples.scroll!.push(performance.now() - start)
+        const toggle = list.querySelector<HTMLButtonElement>('button[aria-expanded]')
+        if (toggle) { start = performance.now(); toggle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await paint(); samples.collapse!.push(performance.now() - start) }
+      }
+      return samples
+    })
+    await writeFile(`${output}/measurements.json`, JSON.stringify({ layouts, timings }, null, 2))
+    expect(await identity!.evaluate(element => element.isConnected)).toBe(true)
+    expect(await input.inputValue()).toBe('响应测试 29')
+    if (!baseline) for (const samples of Object.values(timings)) {
+      expect(samples).toHaveLength(30)
+      expect([...samples].sort((a, b) => a - b)[28]).toBeLessThanOrEqual(100)
+    }
+    await page.screenshot({ path: `${output}/collapsed.png` })
+    if (!baseline) {
+      await page.setViewportSize({ width: 360, height: 600 })
+      await page.getByRole('button', { name: /20 条标注/ }).click()
+      await page.getByRole('button', { name: '编辑', exact: true }).first().click()
+      const editor = page.getByRole('dialog', { name: '编辑游戏标注' }).getByRole('textbox')
+      await editor.fill('保留草稿，取消后不保存')
+      await visibleInViewport(editor)
+      await editor.press('Escape')
+      expect(await page.getByRole('dialog', { name: '编辑游戏标注' }).count()).toBe(0)
+      expect(await input.inputValue()).toBe('响应测试 29')
+    }
+    await cdp.detach()
+  }, 90_000)
+
 })

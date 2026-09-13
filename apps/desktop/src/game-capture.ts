@@ -1,3 +1,4 @@
+import type { GameCaptureStream } from './game-capture-stream.ts'
 import type { AnnotationTarget } from './game-annotation.ts'
 import type { BrowserWindow } from 'electron'
 
@@ -33,6 +34,9 @@ export interface GameCaptureSnapshot {
 
 /** Native game-window ownership behind the desktop IPC boundary. */
 export interface GameCaptureProvider {
+  /** True only when the selected owned game or desktop is foreground. */
+  annotationShortcutHeld?(): Promise<boolean>
+  isAnnotationForeground?(cwd: string): Promise<boolean>
   start(cwd: string, rootPid: number): Promise<GameCaptureState>
   reconnect(cwd: string): Promise<GameCaptureState>
   select(cwd: string | undefined): Promise<void>
@@ -46,6 +50,7 @@ export interface GameCaptureProvider {
 }
 
 export interface GameCaptureProviderOptions {
+  stream?: GameCaptureStream
   window: BrowserWindow
   publish: (event: GameCaptureEvent) => void
   log?: (line: string) => void

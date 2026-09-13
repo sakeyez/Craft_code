@@ -99,12 +99,41 @@ export interface SessionCapture {
 }
 
 export interface RuntimeResult {
-  status: 'passed' | 'failed' | 'environment_unavailable' | 'not_run'
+  status: 'passed' | 'failed' | 'inconclusive' | 'environment_unavailable' | 'not_run'
   durationMs: number
   exitCode: number | null
   timedOut: boolean
   checks: AcceptanceCheck[]
   error?: string
+}
+
+function runtimeTestName(prompt: BenchmarkPrompt): string {
+  return prompt.id === 'accuracy' ? 'positionRecorderBehavior' : prompt.id === 'speed' ? 'registeredBlocks' : 'processorBehavior'
+}
+
+async function runtimeEvidence(workspace: string, prompt: BenchmarkPrompt, output: string): Promise<'passed' | 'failed' | 'inconclusive'> {
+  const name = runtimeTestName(prompt)
+  let candidates: string[] = []
+  try {
+    const reportRoot = join(workspace, 'build')
+    candidates = (await readdir(reportRoot, { recursive: true }))
+      .map(path => path.replaceAll('\\', '/'))
+      .filter(path => /^(?:reports|test-results)\//u.test(path) && /\.(?:xml|json|log|txt)$/iu.test(path))
+      .map(path => join('build', path))
+  } catch { /* report directories are optional; absence is inconclusive below */ }
+  const documents = await Promise.all(candidates.map(async path => {
+    try {
+      const content = await readFile(join(workspace, path), 'utf8')
+      return content.length <= 4 * 1024 * 1024 ? content : ''
+    } catch { return '' }
+  }))
+  const evidence = [...documents, output].join('\n')
+  if (/GameTest.*(?:failed|error)|required tests failed|Test failed|ModLoadingException/iu.test(evidence)) return 'failed'
+  const hasNamedTest = new RegExp(`(?:${name}|${prompt.id === 'accuracy' ? 'agent_accuracy_test' : prompt.id === 'speed' ? 'agent_speed_test' : 'agent_complex_test'})`, 'u').test(evidence)
+  const hasReport = candidates.length > 0
+  if (!hasReport || !hasNamedTest) return 'inconclusive'
+  if (!/(?:passed|success|successful|failures="0")/iu.test(evidence)) return 'inconclusive'
+  return 'passed'
 }
 
 export interface AgentClaims {
@@ -739,7 +768,7 @@ function emptyStructureNbt(): Buffer {
   return Buffer.concat(chunks)
 }
 
-export async function runRuntime(workspace: string, timeout: number, artifactDir: string): Promise<RuntimeResult> {
+export async function runRuntime(workspace: string, prompt: BenchmarkPrompt, timeout: number, artifactDir: string): Promise<RuntimeResult> {
   await mkdir(artifactDir, { recursive: true })
   const wrapper = process.platform === 'win32' ? join(workspace, 'gradlew.bat') : join(workspace, 'gradlew')
   const runtimeArgs = ['runGameTestServer', '--no-daemon', '--console=plain']
@@ -756,14 +785,14 @@ export async function runRuntime(workspace: string, timeout: number, artifactDir
     const output = `${result.stdout}\n${result.stderr}`
     const failed = RUNTIME_FAILURE.test(output)
     const environmentUnavailable = ENVIRONMENT_UNAVAILABLE.test(output)
-    const status = environmentUnavailable ? 'environment_unavailable' : result.timedOut || result.exitCode !== 0 || failed ? 'failed' : 'passed'
+    const status = environmentUnavailable ? 'environment_unavailable' : result.timedOut || result.exitCode !== 0 || failed ? 'failed' : await runtimeEvidence(workspace, prompt, output)
     return {
       status,
       durationMs: performance.now() - startedAt,
       exitCode: result.exitCode ?? null,
       timedOut: result.timedOut,
-      checks: [check('server GameTest process', status === 'passed', status === 'passed' ? 'runGameTestServer completed without failures' : status === 'environment_unavailable' ? 'runtime environment was unavailable' : 'runtime process reported failure')],
-      ...status !== 'passed' ? { error: status === 'environment_unavailable' ? 'runtime environment unavailable' : result.timedOut ? 'runtime timed out' : failed ? 'runtime output reported a crash or test failure' : `runtime exited with ${String(result.exitCode)}` } : {},
+      checks: [check('server GameTest process', status === 'passed', status === 'passed' ? 'runGameTestServer completed with named-test evidence' : status === 'environment_unavailable' ? 'runtime environment unavailable' : status === 'inconclusive' ? 'named GameTest report evidence was missing or incomplete' : 'runtime process reported failure')],
+      ...status !== 'passed' ? { error: status === 'environment_unavailable' ? 'runtime environment unavailable' : status === 'inconclusive' ? 'named GameTest report evidence was missing or incomplete' : result.timedOut ? 'runtime timed out' : failed ? 'runtime output reported a crash or test failure' : `runtime exited with ${String(result.exitCode)}` } : {},
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
@@ -840,7 +869,7 @@ async function runOne(options: Options, prompt: BenchmarkPrompt, run: number, ba
   await configureRuntimeNamespaces(workspace, prompt.id === 'accuracy' ? 'agent_accuracy_test' : prompt.id === 'speed' ? 'agent_speed_test' : 'agent_complex_test')
   const build = await independentBuild(workspace, options.buildTimeoutMs, runRoot)
   const runtime = build.passed
-    ? await runRuntime(workspace, options.runtimeTimeoutMs, runRoot)
+    ? await runRuntime(workspace, prompt, options.runtimeTimeoutMs, runRoot)
     : {
       status: 'not_run' as const,
       durationMs: 0,
@@ -852,7 +881,7 @@ async function runOne(options: Options, prompt: BenchmarkPrompt, run: number, ba
   const acceptancePassed = acceptance.checks.filter(item => item.passed).length
   const automatedSuccess = agent.exitCode === 0 && !agent.timedOut && build.passed
     && acceptancePassed === acceptance.checks.length && runtime.status === 'passed'
-  const verdict: BenchmarkVerdict = build.environmentUnavailable || runtime.status === 'environment_unavailable'
+  const verdict: BenchmarkVerdict = build.environmentUnavailable || runtime.status === 'environment_unavailable' || runtime.status === 'inconclusive'
     ? 'inconclusive'
     : automatedSuccess ? 'passed' : 'failed'
   const estimatedCost = estimateCost(efficiency, options.prices)

@@ -10,7 +10,7 @@
 
 | Tool | 用途 |
 |---|---|
-| `detect_mc_project` | 检测 loader 证据、Minecraft 版本候选、mappings 候选、mod id 候选、Java/Kotlin 使用、source set、resource root、mixin config、datagen 线索、已声明的 Gradle task 候选、已检查文件、warning 与推荐 Gradle 验证命令。`loaderSupport` 明确表示当前 profile 是否支持该 loader；Forge、Quilt 和 Architectury 等 loader 可被识别，但不会被当成 Fabric/NeoForge 目标执行 loader-specific 检查。版本与 mappings 结果保留 `determined`、`unknown` 或 `conflict` 状态及候选证据；精确版本与范围版本明确区分。 |
+| `detect_mc_project` | 检测 loader 证据、Minecraft 版本候选、mappings 候选、mod id 候选、Java/Kotlin 使用、source set、约定目录和静态声明的 Gradle resource root、mixin config、datagen 线索、已声明的 Gradle task 候选、已检查文件、warning、扫描完整性与推荐 Gradle 验证命令。`loaderSupport` 明确表示当前 profile 是否支持该 loader；Forge、Quilt 和 Architectury 等 loader 可被识别，但不会被当成 Fabric/NeoForge 目标执行 loader-specific 检查。版本与 mappings 结果保留 `determined`、`unknown` 或 `conflict` 状态及候选证据；精确版本与范围版本明确区分。 |
 | `validate_mc_resources` | 校验语言值、model、blockstate、recipe、tag、loot table、advancement、predicate、item modifier 与 item-definition JSON 文件；检查有界 PNG 签名/分块/CRC、本地 model parent、本地 model texture 与 blockstate model 引用、可疑 namespace，以及 asset namespace 与 metadata mod id 不一致。 |
 | `run_mc_check` | 根据检测到的项目事实选择 Gradle wrapper 或 `gradle` 命令，并运行 `build`、`test`、`datagen`、`resources`、`runtime` 或 `all`。需要时从声明或有界的 `tasks --all` 输出发现 datagen/runtime task；runtime 必须提供明确且已获批准的 `runtimeMode`。 |
 
@@ -20,7 +20,7 @@
 |---|---:|---|
 | `maxEntries` | `2000` | 发现 source/resource 与 metadata 线索时最多遍历的目录项数量。 |
 | `maxFileBytes` | `524288` | 单个候选文本文件最多读取的字节数。更大的文件会跳过并写入 warning。 |
-| `maxOutputSummaryBytes` | `4096` | shell 已完成截断或 spill 后，`run_mc_check` 每个 stdout/stderr tail 最多内联保留的 UTF-8 字节数。 |
+| `maxOutputSummaryBytes` | `4096` | shell 已完成截断或 spill 后，`run_mc_check` 每个 stdout/stderr 首尾摘要最多内联保留的 UTF-8 字节数。 |
 | `maxTaskDiscoveryBytes` | `65536` | 发现 Gradle task 时最多捕获的 stdout 字节数。输出被截断时视为无法确定，不会选择 task。 |
 
 所有字段都必须是正整数。只读工具不执行 Gradle task 或 shell 命令。
@@ -63,7 +63,7 @@
 
 #### What the model sees
 
-模型会看到 [`validate_mc_resources`](../../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-mc-project) 工具 schema。该工具没有参数；其规范结果包含 `errors`、`warnings`、`checkedFiles` 和 `detectedModId`，每个 issue 都携带 `code`、`path`、`message`、`reference` 和 `expectedPath`。静态检查会拒绝格式错误的 metadata、格式错误或截断的 PNG 与缺失的本地 model parent；已有的 item-definition JSON 文件会被解析，并在检测到确定版本时检查其 Minecraft 版本兼容性。Minecraft 1.21 引入的 data 单数目录（`recipe`、`loot_table`、`advancement`、`predicate`、`item_modifier`）和旧版本复数目录都会检查，确定版本使用错误拼写时会报告问题。未带 namespace 的资源引用按 `minecraft` namespace 解析；vanilla 与依赖 namespace 不纳入本地文件缺失检查。Native render 是同一个对象的格式化 JSON。`presentCall` 把 pending card 标为 `Validate Minecraft resources`；`presentResult` 在 generic result card 中展示渲染后的 JSON。
+模型会看到 [`validate_mc_resources`](../../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-mc-project) 工具 schema。该工具没有参数；其规范结果包含 `errors`、`warnings`、`checkedFiles`、`detectedModId` 和 `scanComplete`，每个 issue 都携带 `code`、`path`、`message`、`reference` 和 `expectedPath`。静态检查会拒绝格式错误的 metadata、格式错误或截断的 PNG 与缺失的本地 model parent 与确定版本下不会被加载的 data 目录；扫描不完整时不能报告完整通过；已有的 item-definition JSON 文件会被解析，并在检测到确定版本时检查其 Minecraft 版本兼容性。Minecraft 1.21 引入的 data 单数目录（`recipe`、`loot_table`、`advancement`、`predicate`、`item_modifier`）和旧版本复数目录都会检查，确定版本使用错误拼写时会报告为 error。未带 namespace 的资源引用按 `minecraft` namespace 解析；vanilla 与依赖 namespace 不纳入本地文件缺失检查。Native render 是同一个对象的格式化 JSON。`presentCall` 把 pending card 标为 `Validate Minecraft resources`；`presentResult` 在 generic result card 中展示渲染后的 JSON。
 
 #### Token effect
 
@@ -75,7 +75,7 @@
 
 ## Known Limitations and Deferred Work
 
-- **不求值 Gradle** — 变量、convention plugin、included build 与生成的 source-set 声明，只有在文本里留下直接线索时才会被识别。
+- **不求值 Gradle** — 变量、convention plugin、included build 与生成的 source-set 声明，只有在文本里留下直接线索时才会被识别。常见静态 `srcDir` 和 `srcDirs` resource 声明会被纳入检查；动态声明会明确报告扫描不完整。
 - **证据冲突与 unsupported 保持显式** — loader 证据冲突时返回 `loader: "unknown"` 并附 warning，而不是任选一个；Forge、Quilt 和 Architectury 等可检测但不支持的 loader 返回 `loaderSupport: "unsupported"`；版本或 mappings 候选冲突时返回 `conflict` 并保留全部候选证据。
 - **Gradle 求值仍受限** — 只有在 inspected 文本没有 datagen/runtime task 时，`run_mc_check` 才探测 `tasks --all --console=plain`；变量、convention plugin、included build 与生成的 source-set 仍需要项目级检查。
 - **只支持根项目命令** — `run_mc_check` 会拒绝声明 subproject 或 included build 的 settings，因为它无法推断限定 task path。不支持 Maven build 与自定义 launcher。

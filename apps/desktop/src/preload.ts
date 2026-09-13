@@ -48,6 +48,8 @@ export interface DesktopBridge {
   invokeProjectCommand: (request: DesktopCommandRequest) => Promise<DesktopCommandResult>
   onGameSurfaceState?: (listener: (event: GameCaptureEvent) => void) => () => void
   reconnectGameSurface?: (cwd: string) => Promise<GameCaptureState>
+  /** Bind the active conversation; dispose releases only this subscription. */
+  bindGameAnnotationShortcut?: (request: AnnotationRequest, listener: (error?: string) => void) => () => void
   beginGameAnnotation?: (
     request: AnnotationRequest,
     commit: (drafts: AnnotationDraft[], snapshot?: AnnotationSnapshot) => Promise<void>,
@@ -57,6 +59,20 @@ export interface DesktopBridge {
 }
 
 contextBridge.exposeInMainWorld('craftCodeDesktop', {
+  bindGameAnnotationShortcut(request: AnnotationRequest, listener: (error?: string) => void) {
+    let disposed = false
+    const wrapped = (_event: IpcRendererEvent, value: unknown) => {
+      if (!disposed && value !== null && typeof value === 'object' && 'operationId' in value && value.operationId === request.operationId
+        && (!('error' in value) || typeof value.error === 'string')) listener('error' in value ? value.error as string : undefined)
+    }
+    ipcRenderer.on('desktop:annotation-shortcut', wrapped)
+    void ipcRenderer.invoke('desktop:annotation-shortcut-bind', request).catch((error: unknown) => { if (!disposed) listener(String(error)) })
+    return () => {
+      disposed = true
+      ipcRenderer.removeListener('desktop:annotation-shortcut', wrapped)
+      void ipcRenderer.invoke('desktop:annotation-shortcut-bind', undefined, request.operationId).catch(() => {})
+    }
+  },
   menuPresentation: process.platform === 'darwin' ? 'native' : 'web',
   onMenuAction: (listener: (action: DesktopMenuAction) => void) => {
     const wrapped = (_event: IpcRendererEvent, action: unknown): void => {

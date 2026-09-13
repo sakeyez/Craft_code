@@ -176,6 +176,7 @@ interface DetectionResult {
     resourceRoots: string[]
   }
   warnings: string[]
+  scanComplete: boolean
 }
 
 interface ResourceIssue {
@@ -191,6 +192,7 @@ interface ResourceValidationResult {
   warnings: ResourceIssue[]
   checkedFiles: string[]
   detectedModId: string | null
+  scanComplete: boolean
 }
 
 interface DetectionScan {
@@ -263,6 +265,7 @@ interface DetectionState {
   mixins: MixinConfig[]
   datagen: DatagenClue[]
   gradleTaskCandidates: string[]
+  customResourceRoots: string[]
 }
 
 const ROOT_GRADLE_FILES = [
@@ -462,6 +465,22 @@ function scanGradleText(state: DetectionState, file: TextFile): void {
 
   if (/\b(?:runDatagen|runData|DataGeneratorEntrypoint|GatherDataEvent|datagen)\b/u.test(file.text)) {
     state.datagen.push({ kind: 'gradle', source: file.path, detail: 'Gradle text contains datagen task or API clues' })
+  }
+}
+
+/** Extract statically declared Gradle resource directories. */
+function scanCustomResourceRoots(state: DetectionState, text: string): void {
+  const calls = /\b(?:resources\s*\.\s*)?srcDirs?\s*\(([^)]*)\)/giu
+  let match: RegExpExecArray | null
+  while ((match = calls.exec(text)) !== null) {
+    const literals = [...(match[1] ?? '').matchAll(/['"]([^'"]+)['"]/gu)].map(item => item[1]!)
+    if (literals.length === 0 && (match[1] ?? '').trim().length > 0) {
+      state.warnings.push('Gradle resource directory declaration could not be statically inspected')
+    }
+    for (const literal of literals) {
+      if (literal.includes('$') || literal.includes('{')) continue
+      pushUnique(state.customResourceRoots, literal.replaceAll('\\', '/').replace(/^\.\//u, ''))
+    }
   }
 }
 
@@ -690,9 +709,17 @@ function summarizeText(text: string, alreadyTruncated: boolean, spillPath: strin
       ...spillPath !== undefined ? { spillPath } : {},
     }
   }
-  const tail = bytes.subarray(bytes.length - maxBytes).toString('utf8').replace(/^\uFFFD/u, '')
+  const markerFull = Buffer.from('\n… output elided …\n', 'utf8')
+  const marker = markerFull.length > maxBytes
+    ? Buffer.from(maxBytes < 3 ? '.'.repeat(maxBytes) : '…', 'utf8')
+    : markerFull
+  const available = Math.max(0, maxBytes - marker.length)
+  const headBytes = Math.floor(available / 2)
+  const tailBytes = available - headBytes
+  const head = bytes.subarray(0, headBytes).toString('utf8').replace(/\uFFFD$/u, '')
+  const tail = bytes.subarray(bytes.length - tailBytes).toString('utf8').replace(/^\uFFFD/u, '')
   return {
-    text: tail,
+    text: `${head}${marker.toString('utf8')}${tail}`,
     truncated: true,
     /* v8 ignore next -- spillPath is an optional provider-owned artifact path. */
     ...spillPath !== undefined ? { spillPath } : {},
@@ -1027,6 +1054,14 @@ async function runStaticResourceStep(
       config,
     )
   }
+  if (!validation.scanComplete) {
+    return failedStaticStep(
+      'resources:static',
+      'Minecraft resource validation was incomplete because the scan budget or a declared resource root was not fully inspected.',
+      { warnings: validation.warnings, checkedFiles: validation.checkedFiles, detectedModId: validation.detectedModId },
+      config,
+    )
+  }
   const step = passedStaticStep(
     'resources:static',
     `validated ${validation.checkedFiles.length} Minecraft resource file(s); warnings: ${validation.warnings.length}`,
@@ -1055,6 +1090,7 @@ function sortValidation(result: ResourceValidationResult): ResourceValidationRes
     warnings: uniq(result.warnings, issueKey).sort(sortIssue),
     checkedFiles: [...new Set(result.checkedFiles)].sort(),
     detectedModId: result.detectedModId,
+    scanComplete: result.scanComplete,
   }
 }
 
@@ -1534,6 +1570,7 @@ function projectOutputSchema() {
         },
       },
       warnings: { ...stringArray, required: true },
+      scanComplete: { type: 'boolean', required: true },
     },
   } as const
 }
@@ -1558,6 +1595,7 @@ function resourceValidationOutputSchema() {
       warnings: { type: 'array', required: true, items: issue },
       checkedFiles: { type: 'array', required: true, items: { type: 'string' } },
       detectedModId: { oneOf: [{ type: 'string' }, { type: 'null' }], required: true },
+      scanComplete: { type: 'boolean', required: true },
     },
   } as const
 }
@@ -1578,6 +1616,7 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
     mixins: [],
     datagen: [],
     gradleTaskCandidates: [],
+    customResourceRoots: [],
   }
 
   const gradleFiles: TextFile[] = []
@@ -1588,6 +1627,7 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
   for (const file of gradleFiles) {
     if (file.path === 'gradle/libs.versions.toml') scanVersionsToml(state, file)
     else scanGradleText(state, file)
+    scanCustomResourceRoots(state, file.text)
   }
 
   const sourceSets: SourceSetInfo[] = []
@@ -1604,6 +1644,12 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
     for (const path of java) pushUnique(sourceRoots, path)
     for (const path of kotlin) pushUnique(sourceRoots, path)
     for (const path of resources) pushUnique(resourceRoots, path)
+  }
+
+  for (const path of state.customResourceRoots) {
+    const info = await optionalStat(ctx, exec, path)
+    if (info?.type === 'directory') pushUnique(resourceRoots, path)
+    else warnings.push(`Gradle resource directory ${path} was declared but could not be inspected`)
   }
 
   const metadataFiles: TextFile[] = []
@@ -1687,6 +1733,7 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
     .map(([loader, evidence]) => ({ loader, evidence: [...evidence] }))
     .sort((a, b) => a.loader.localeCompare(b.loader))
 
+  const scanComplete = !warnings.some(warning => warning.includes('scan stopped') || warning.includes('could not be inspected'))
   const project: DetectionResult = {
     workspace: root.displayPath,
     loader,
@@ -1716,6 +1763,7 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
       resourceRoots: [...resourceRoots].sort(),
     },
     warnings,
+    scanComplete,
   }
   return { project, metadataErrors: state.metadataErrors, metadataWarnings }
 }
@@ -1900,7 +1948,7 @@ async function validateDataJson(
       const expectedFolder = pair[gte(exactVersion, '1.21.0') ? 1 : 0]
       if (folder !== expectedFolder) {
         addResourceIssue(
-          result.warnings,
+          result.errors,
           'data_directory_version',
           base,
           `Minecraft ${exactVersion} uses the ${expectedFolder} data directory; files under ${folder} are not loaded from this location.`,
@@ -1984,6 +2032,7 @@ async function validateResources(
     warnings: [],
     checkedFiles: [],
     detectedModId: null,
+    scanComplete: detection.project.scanComplete,
   }
   const detected = detection.project
   for (const warning of detection.metadataWarnings) {
@@ -1996,7 +2045,10 @@ async function validateResources(
   const roots = detected.resourceRoots.length > 0
     ? [...detected.resourceRoots].sort()
     : await fallbackResourceRoots(ctx, exec, result.warnings)
-  if (roots.length === 0) return sortValidation(result)
+  if (roots.length === 0) {
+    result.scanComplete = result.scanComplete && !result.warnings.some(issue => issue.code === 'scan_warning' || issue.code === 'file_too_large')
+    return sortValidation(result)
+  }
 
   const assetNamespaces = await resourceNamespaces(ctx, exec, roots, 'assets')
   const dataNamespaces = await resourceNamespaces(ctx, exec, roots, 'data')
@@ -2049,6 +2101,7 @@ async function validateResources(
     }
   }
 
+  result.scanComplete = result.scanComplete && !result.warnings.some(issue => issue.code === 'scan_warning' || issue.code === 'file_too_large')
   return sortValidation(result)
 }
 
@@ -2105,6 +2158,7 @@ async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedCon
   }
 
   const steps: CheckStepResult[] = []
+  let currentScan: DetectionScan | undefined = scan
   let discoveryCommand: string | undefined
   const unresolvedPlan = plans.find(plan => plan.task === undefined)
   if (unresolvedPlan !== undefined) {
@@ -2139,7 +2193,8 @@ async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedCon
   ]
   for (const plan of plans) {
     if (plan.step === 'resources:gradle') {
-      const staticStep = await runStaticResourceStep(ctx, exec, config, steps.some(step => step.command !== undefined) ? undefined : scan)
+      // Reuse the authoritative detection snapshot from this check invocation.
+      const staticStep = await runStaticResourceStep(ctx, exec, config, currentScan)
       steps.push(staticStep)
       if (staticStep.status === 'failed') {
         return {
@@ -2162,6 +2217,7 @@ async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedCon
         suggestedNextAction: suggestedNextAction(step.step, step),
       }
     }
+    if (plan.step === 'datagen') currentScan = undefined
   }
   return {
     commands,

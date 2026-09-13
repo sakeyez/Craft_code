@@ -14,10 +14,7 @@
     <div id="selection" hidden></div>
   </main>
   <header id="toolbar" aria-label="标注工具栏">
-    <div class="toolbar-copy">
-      <strong>画面已定格</strong>
-      <small>点击标记位置，拖动框选区域</small>
-    </div>
+    <strong>标注</strong>
     <span id="count" role="status" aria-live="polite">0 条标注</span>
     <div class="toolbar-actions">
       <button id="cancel" type="button" aria-label="取消标注">取消</button>
@@ -27,9 +24,9 @@
   <p id="error" role="alert" aria-live="assertive" hidden></p>
   <dialog id="editor" aria-labelledby="editor-title">
     <form id="edit-form">
-      <label id="editor-title" for="description">请描述这里需要修改什么</label>
-      <textarea id="description" rows="4" maxlength="10000" required></textarea>
-      <div class="actions"><button id="delete" type="button">删除</button><button id="edit-cancel" type="button">取消</button><button class="primary" type="submit">保存标注</button></div>
+      <label id="editor-title" for="description" class="sr-only">标注说明</label>
+      <textarea id="description" rows="1" placeholder="添加说明…" aria-label="标注说明" maxlength="10000" required></textarea>
+      <div class="actions"><button id="delete" type="button">删除</button><button id="edit-cancel" type="button">取消</button><button class="primary" type="submit">确定</button></div>
     </form>
   </dialog>
   <dialog id="discard" aria-labelledby="discard-title">

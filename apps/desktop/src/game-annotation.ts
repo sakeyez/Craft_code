@@ -21,6 +21,7 @@ interface Transaction {
   snapshotPromise?: Promise<GameCaptureSnapshot>
   saving?: { attempt: number; resolve: (error?: string) => void }
   attempt: number
+  started: number
   ready: boolean
 }
 
@@ -28,35 +29,39 @@ interface Transaction {
 export class GameAnnotationController {
   #active: Transaction | undefined
 
-  constructor(private readonly owner: WebContents) {
-    const trusted = (sender: WebContents) => {
+  #window: BrowserWindow | undefined
+  #loaded: Promise<void> | undefined
+
+  constructor(private readonly owner: WebContents, private readonly log: (line: string) => void = () => {}) {
+    const trusted = (sender: WebContents, operationId: unknown) => {
       const active = this.#active
-      if (active?.window?.webContents !== sender) throw new Error('无效的标注窗口。')
+      if (!active || active.window?.webContents !== sender || active.request.operationId !== operationId) throw new Error('无效的标注窗口。')
       return active
     }
-    ipcMain.handle('annotation:load', (event) => {
-      const active = trusted(event.sender)
+    ipcMain.handle('annotation:load', (event, operationId: unknown) => {
+      const active = trusted(event.sender, operationId)
       if (active.snapshot !== undefined) return { snapshot: active.snapshot, labels: active.request.labels }
       if (active.snapshotPromise === undefined) throw new Error('标注截图为空，请重试。')
       return active.snapshotPromise.then(snapshot => ({ snapshot, labels: active.request.labels }))
     })
-    ipcMain.handle('annotation:ready', (event) => {
-      const active = trusted(event.sender)
+    ipcMain.handle('annotation:ready', (event, operationId: unknown) => {
+      const active = trusted(event.sender, operationId)
       const window = active.window
-      if (window === undefined || !active.target?.valid()) { active.close(new Error('游戏窗口已变化，请重新标注。')); return }
+      if (window === undefined || !active.snapshot || !active.target?.valid()) { active.close(new Error('游戏窗口已变化，请重新标注。')); return }
       active.ready = true
       window.show()
       window.focus()
+      this.log(`annotation visible operation=${active.request.operationId} ms=${(performance.now() - active.started).toFixed(1)}`)
     })
-    ipcMain.handle('annotation:cancel', (event) => {
-      const active = trusted(event.sender)
+    ipcMain.handle('annotation:cancel', (event, operationId: unknown) => {
+      const active = trusted(event.sender, operationId)
       if (active.saving) return
       const target = active.target
       active.close()
       if (target?.valid()) target.focus()
     })
-    ipcMain.handle('annotation:submit', async (event, drafts: unknown) => {
-      const active = trusted(event.sender)
+    ipcMain.handle('annotation:submit', async (event, operationId: unknown, drafts: unknown) => {
+      const active = trusted(event.sender, operationId)
       if (!active.ready || active.saving || !isAnnotationDrafts(drafts)
         || drafts.some(draft => active.request.labels.includes(draft.label))) throw new Error('标注数据无效或正在保存。')
       if (!active.target?.valid()) { active.close(new Error('游戏窗口已变化，请重新标注。')); return }
@@ -87,22 +92,62 @@ export class GameAnnotationController {
   }
 
   #navigation = (_event: unknown, _url: string, inPlace: boolean, main: boolean): void => {
-    if (main && !inPlace) this.cancel()
+    if (main && !inPlace) this.release()
   }
-  #ownerGone = (): void => { this.cancel() }
+  #ownerGone = (): void => { this.release() }
+
+  /** Preload a hidden overlay without taking focus or capturing pixels. */
+  warm(bounds?: Rectangle): Promise<void> {
+    if (this.#window && !this.#window.isDestroyed()) return this.#loaded ?? Promise.resolve()
+    const window = new BrowserWindow({
+      ...(bounds ?? { width: 800, height: 600 }), show: false, frame: false, resizable: false, movable: false,
+      minimizable: false, maximizable: false, skipTaskbar: true, alwaysOnTop: true,
+      backgroundColor: '#161c17',
+      webPreferences: { ...DESKTOP_WEB_PREFERENCES, backgroundThrottling: false, preload: fileURLToPath(new URL('./annotation-preload.cjs', import.meta.url)) },
+    })
+    this.#window = window
+    window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+    window.webContents.on('will-navigate', (event) => { event.preventDefault() })
+    window.webContents.on('will-attach-webview', (event) => { event.preventDefault() })
+    window.webContents.once('render-process-gone', () => {
+      this.#active?.close(new Error('标注窗口意外关闭，请重新标注。'))
+      this.release()
+    })
+    window.once('closed', () => {
+      if (this.#window !== window) return
+      this.#window = undefined
+      this.#loaded = undefined
+      this.#active?.close()
+    })
+    this.#loaded = window.loadFile(fileURLToPath(new URL('./annotation.html', import.meta.url)))
+    return this.#loaded
+  }
+
+  /** Release prewarmed UI and any active transaction when the owner changes. */
+  release(): void {
+    this.cancel()
+    const window = this.#window
+    this.#window = undefined
+    this.#loaded = undefined
+    if (window && !window.isDestroyed()) window.destroy()
+  }
 
   /** Resolves only when closed; capture/show failure rejects without leaving a window. */
   begin(request: AnnotationRequest, prepare: () => Promise<AnnotationTarget>): Promise<void> {
     if (this.#active) return Promise.reject(new Error('已有标注正在进行。'))
     return new Promise<void>((resolve, reject) => {
       const active: Transaction = {
-        request, attempt: 0, ready: false,
+        request, attempt: 0, ready: false, started: performance.now(),
         close: (error) => {
           if (this.#active !== active) return
           this.#active = undefined
           clearInterval(poll)
           active.saving?.resolve('标注已结束。')
-          if (!active.window?.isDestroyed()) active.window?.destroy()
+          if (active.window && !active.window.isDestroyed()) {
+            active.window.hide()
+            active.window.webContents.send('annotation:reset', active.request.operationId)
+            if (error) active.window.destroy()
+          }
           delete active.snapshot
           if (error) reject(error)
           else resolve()
@@ -118,29 +163,25 @@ export class GameAnnotationController {
         const target = await prepare()
         if (this.#active !== active) return
         active.target = target
-        // Capture and renderer startup are independent, so overlap them while
-        // the window stays hidden. annotation:load waits for the same snapshot.
+        this.log(`annotation target operation=${request.operationId} ms=${(performance.now() - active.started).toFixed(1)}`)
         active.snapshotPromise = target.capture().then((snapshot) => {
           if (this.#active === active) active.snapshot = snapshot
           return snapshot
         })
-        const window = new BrowserWindow({
-          ...target.bounds, show: false, frame: false, resizable: false, movable: false,
-          minimizable: false, maximizable: false, skipTaskbar: true, alwaysOnTop: true,
-          backgroundColor: '#161c17',
-          webPreferences: { ...DESKTOP_WEB_PREFERENCES, preload: fileURLToPath(new URL('./annotation-preload.cjs', import.meta.url)) },
-        })
+        // Contain an early capture rejection even while renderer startup is pending.
+        void active.snapshotPromise.catch(() => {})
+        const loaded = this.warm(target.bounds)
+        const window = this.#window
+        if (!window) throw new Error('标注窗口不可用。')
         active.window = window
-        window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-        window.webContents.on('will-navigate', (event) => { event.preventDefault() })
-        window.webContents.on('will-attach-webview', (event) => { event.preventDefault() })
-        window.webContents.once('render-process-gone', () => { active.close(new Error('标注窗口意外关闭，请重新标注。')) })
-        window.once('closed', () => { active.close() })
-        await window.loadFile(fileURLToPath(new URL('./annotation.html', import.meta.url)))
+        await loaded
+        if (this.#active !== active) return
+        window.setBounds(target.bounds)
         const snapshot = await active.snapshotPromise
         if (this.#active !== active) return
         if (!target.valid()) throw new Error('游戏窗口已变化，请重新标注。')
         active.snapshot = snapshot
+        window.webContents.send('annotation:begin', active.request.operationId)
       })().catch((error: unknown) => {
         active.close(error instanceof Error ? error : new Error(String(error)))
       })
@@ -153,7 +194,7 @@ export class GameAnnotationController {
   }
 
   dispose(): void {
-    this.cancel()
+    this.release()
     for (const channel of ['annotation:load', 'annotation:ready', 'annotation:cancel', 'annotation:submit', 'desktop:game-annotation-result']) ipcMain.removeHandler(channel)
     this.owner.removeListener('did-start-navigation', this.#navigation)
     this.owner.removeListener('render-process-gone', this.#ownerGone)

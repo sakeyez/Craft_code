@@ -28,7 +28,7 @@
   },
   "scripts": {
     "build": "pnpm run build:main && pnpm run build:renderer",
-    "build:main": "tsc -p tsconfig.json && node -e \"require('node:fs').copyFileSync('src/preload.cjs','lib/preload.cjs'); require('node:fs').copyFileSync('src/CraftCode.ico','lib/CraftCode.ico'); for(const file of ['annotation.html','annotation.css','annotation.js','annotation-preload.cjs']) require('node:fs').copyFileSync('src/'+file,'lib/'+file)\"",
+    "build:main": "tsc -p tsconfig.json && node -e \"require('node:fs').copyFileSync('src/preload.cjs','lib/preload.cjs'); require('node:fs').copyFileSync('src/CraftCode.ico','lib/CraftCode.ico'); for(const file of ['annotation.html','annotation.css','annotation.js','annotation-preload.cjs','capture.html','capture.js']) require('node:fs').copyFileSync('src/'+file,'lib/'+file)\"",
     "build:renderer": "vite build --config renderer/vite.config.ts",
     "dev": "pnpm run build && electron .",
     "icon:generate": "node scripts/generate-icon.mjs"

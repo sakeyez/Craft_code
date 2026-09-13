@@ -8,7 +8,7 @@ import type { Browser, Page } from 'playwright'
 /** The built page under test; `pnpm run test:desktop-renderer` rebuilds it before running. */
 export const DIST_INDEX = fileURLToPath(new URL('../dist/index.html', import.meta.url))
 
-export const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url))
+export const REPO_ROOT = fileURLToPath(new URL('../../../..', import.meta.url))
 
 /**
  * Browser language a page must advertise to boot into the product's Chinese
@@ -83,7 +83,7 @@ export async function connectFreshWorkspace(page: Page, root: string, name = 'wo
   await dialog.getByRole('button', { name: 'Open', exact: true }).click()
   // The pick connected the workspace: the blank session's live composer
   // replaces the locked placeholder and enables.
-  await page.locator('textarea:enabled[placeholder="Describe what you want to build"]')
+  await page.locator('[data-composer-card] textarea:enabled')
     .waitFor({ timeout: 15_000 })
 }
 
@@ -112,7 +112,7 @@ export async function connectFreshWorkspaceZh(page: Page, root: string, name = '
 
 /** Failure evidence goes to the gitignored .artifacts/ (repo convention). */
 export async function saveFailureShot(page: Page, name: string): Promise<void> {
-  const dir = fileURLToPath(new URL('../../../.artifacts', import.meta.url))
+  const dir = fileURLToPath(new URL('../../../../.artifacts', import.meta.url))
   mkdirSync(dir, { recursive: true })
   try {
     await page.screenshot({ path: `${dir}/${name}.png`, fullPage: true })

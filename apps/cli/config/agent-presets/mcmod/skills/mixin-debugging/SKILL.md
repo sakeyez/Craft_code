@@ -7,9 +7,11 @@ description: Use for Minecraft Mixin configuration, target resolution, injection
 
 Use this skill when diagnosing or changing Mixin configs, mixin classes, injection points, target methods, accessors, invokers, or runtime mixin failures.
 
-## Read First
+## Relevant evidence
 
-- `fabric.mod.json` and every referenced mixin config
+This is task-specific guidance, not a checklist for every request. Read only the evidence needed for the affected behavior, reuse still-valid project facts, and expand when dependencies or errors require it. General questions and screenshot identification do not require this skill.
+
+- the detected loader metadata and the mixin configs relevant to the failure
 - Mixin JSON files, package declarations, compatibility level, refmap settings, and plugin entries
 - Target classes and methods from local dependency sources, decompiled sources, generated sources, or LSP results
 - Build logs, game logs, stack traces, and any existing mixin debug flags or run configs
@@ -31,4 +33,4 @@ Mixin targets and descriptors are Minecraft-version and mapping-sensitive. Confi
 
 ## Checks
 
-Use the smallest command that reaches mixin application: project tests, `./gradlew build`, a focused run task, or a user-approved client/server launch. Inspect logs after the run; a successful compile alone may not prove an injection applies.
+Use the smallest command that reaches mixin application: project tests, `./gradlew build`, a focused non-game task, or a user-approved client/server launch. Inspect logs after the run; a successful compile alone may not prove an injection applies.

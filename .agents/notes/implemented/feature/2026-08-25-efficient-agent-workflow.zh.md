@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决策
 
-通用的 `standard`、`code`、`cordis`、`minimal` 和 `mcmod` CLI preset 显式启用由 `dsh-system-prompt` 导出的唯一 `CODING_WORKFLOW_POLICY`，并由 `dsh-persona` 应用。在大规模探索或修改前，模型先写出简短范围，包含目标、必需行为、排除项、可能涉及的文件、验收检查和不阻塞最小实现的不确定项。API 调研从仓库模式、类型、编译反馈和测试开始；只有具体未解决的决策或高风险行为才进入更深的文档或运行时检查，并在决策得到支持后停止。模型先形成关键文件集合，批量读取独立文件，避免无理由重读未变化文件，并在运行聚焦检查前集中完成修改。standalone 提示词保留其显式文本和环境变量覆盖语义。
+通用的 `standard`、`code`、`cordis` 和 `minimal` CLI preset 显式启用由 `dsh-system-prompt` 导出的唯一 `CODING_WORKFLOW_POLICY`，并由 `dsh-persona` 应用。在大规模探索或修改前，模型先写出简短范围，包含目标、必需行为、排除项、可能涉及的文件、验收检查和不阻塞最小实现的不确定项。API 调研从仓库模式、类型、编译反馈和测试开始；只有具体未解决的决策或高风险行为才进入更深的文档或运行时检查，并在决策得到支持后停止。模型先形成关键文件集合，批量读取独立文件，避免无理由重读未变化文件，并在运行聚焦检查前集中完成修改。standalone 提示词保留其显式文本和环境变量覆盖语义。
 
 策略按发生概率、影响、触发路径、现有保护和验证成本排序运行时调查。安全、数据、并发、进程和生命周期风险仍是优先项。没有触发路径的低概率低影响问题记录为剩余风险，而不延迟交付。用户明确要求深入审计时会覆盖默认分级。中间更新只报告已确认事实、影响实现的不确定项、下一次查询的理由以及探索结束的时点，不披露隐藏推理或逐次叙述工具调用。
 
@@ -33,3 +33,5 @@ Status: implemented
 ## 测试
 
 `apps/cli/tests/agent-efficiency-prompt.spec.ts` 使用 Loader YAML schema 解析 shipped preset，检查共享策略标记、显式启用、standalone 默认 persona、保留的 JSON-RPC 环境变量覆盖以及 Minecraft 专用文本缺失。`dsh-loader-smoke` 现在返回实测墙钟时间，并直接折叠现有 JSONL replay 记录，统计工具、重复读取、skill、重试、token、验证事件和 transcript digest，不增加 wire event。受影响的提示词快照已通过现有无密钥 ACP replay 机制检查。Windows bash 和 symlink 限制仍是环境限制；没有重复 clean-HEAD 运行时，不作模型级速度结论。
+
+Minecraft 使用专属的[按需工作流](2026-09-11-minecraft-task-dependent-workflow.zh.md)，其他预设继续使用共享编码策略。

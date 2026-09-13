@@ -12,6 +12,7 @@ class ResizeObserverStub {
 }
 
 function mountWorkspace(options: {
+  bindAnnotationShortcut?: GameWorkspaceProps['bindAnnotationShortcut']
   beginAnnotation?: GameWorkspaceProps['beginAnnotation']
   endAnnotation?: GameWorkspaceProps['endAnnotation']
   reposition?: GameWorkspaceProps['reposition']
@@ -35,11 +36,12 @@ function mountWorkspace(options: {
     inputActions: {} as never,
     annotate,
     reconnect: vi.fn(async () => ({ status: 'reconnecting' as const })),
+    ...(options.bindAnnotationShortcut ? { bindAnnotationShortcut: options.bindAnnotationShortcut } : {}),
     beginAnnotation,
     endAnnotation,
     reposition,
   } satisfies GameWorkspaceProps
-  return { ...render(<GameWorkspace {...props} />), beginAnnotation, endAnnotation, reposition, annotate }
+  return { ...render(<GameWorkspace {...props} />), props, beginAnnotation, endAnnotation, reposition, annotate }
 }
 
 beforeEach(() => {
@@ -60,46 +62,31 @@ describe('GameWorkspace companion panel', () => {
     shape: { type: 'point', geometry: { x: 0.5, y: 0.5 } }, description: 'Original description', createdAt: 1,
   }
 
-  it('edits and saves an existing description without capturing the game', async () => {
+  it('keeps saved annotations out of the game toolbar', () => {
     const view = mountWorkspace({ annotations: [annotation] })
-    fireEvent.click(view.getByRole('button', { name: '编辑' }))
-    const input = view.getByRole('textbox', { name: '请描述这里需要修改什么' }) as HTMLTextAreaElement
-    expect(input.value).toBe('Original description')
-    fireEvent.change(input, { target: { value: 'Updated description' } })
-    fireEvent.click(view.getByRole('button', { name: '保存标注' }))
-    await waitFor(() => { expect(view.queryByRole('dialog')).toBeNull() })
-    expect(view.annotate).toHaveBeenCalledWith([{ ...annotation, description: 'Updated description' }])
-    expect(view.beginAnnotation).not.toHaveBeenCalled()
+    expect(view.queryByText('Original description')).toBeNull()
+    expect(view.queryByText('在游戏上标注，将问题带入对话。')).toBeNull()
   })
 
-  it('keeps an edited description after a failed save and allows retry', async () => {
-    let attempt = 0
-    const view = mountWorkspace({ annotations: [annotation], annotate: async () => { if (attempt++ === 0) throw new Error('save failed') } })
-    fireEvent.click(view.getByRole('button', { name: '编辑' }))
-    fireEvent.change(view.getByRole('textbox'), { target: { value: 'Retry description' } })
-    fireEvent.click(view.getByRole('button', { name: '保存标注' }))
-    expect(await view.findByText('save failed')).toBeTruthy()
-    expect((view.getByRole('textbox') as HTMLTextAreaElement).value).toBe('Retry description')
-    fireEvent.click(view.getByRole('button', { name: '保存标注' }))
-    await waitFor(() => { expect(view.queryByRole('dialog')).toBeNull() })
-    expect(view.queryByText('save failed')).toBeNull()
+  it('only offers reconnection after a connection failure', () => {
+    const view = mountWorkspace()
+    expect(view.queryByRole('button', { name: '重连' })).toBeNull()
+    view.rerender(<GameWorkspace {...view.props} state={{ status: 'disconnected', error: 'Game closed' }} />)
+    fireEvent.click(view.getByRole('button', { name: '重连' }))
+    expect(view.props.reconnect).toHaveBeenCalledWith(view.props.cwd)
   })
 
-  it('cancels an existing description edit without persisting it', () => {
-    const view = mountWorkspace({ annotations: [annotation] })
-    fireEvent.click(view.getByRole('button', { name: '编辑' }))
-    fireEvent.change(view.getByRole('textbox'), { target: { value: 'Discard me' } })
-    fireEvent.click(view.getByRole('button', { name: '取消' }))
-    expect(view.queryByRole('dialog')).toBeNull()
-    expect(view.annotate).not.toHaveBeenCalled()
-  })
-
-  it('reports a refused deletion and keeps the annotation available', async () => {
-    const view = mountWorkspace({ annotations: [annotation], annotate: async () => { throw new Error('delete failed') } })
-    fireEvent.click(view.getByRole('button', { name: '删除标注 A' }))
-    expect(await view.findByText('delete failed')).toBeTruthy()
-    expect(view.getByText('Original description')).toBeTruthy()
-    expect(view.annotate).toHaveBeenCalledWith([])
+  it('routes native shortcuts through the button transaction and disposes the subscription', async () => {
+    let trigger: (error?: string) => void = () => {}
+    const dispose = vi.fn()
+    const view = mountWorkspace({ bindAnnotationShortcut: (_request, listener) => { trigger = listener; return dispose } })
+    trigger('快捷键被占用')
+    await waitFor(() => { expect(view.getByText('快捷键被占用')).toBeTruthy() })
+    trigger(); trigger()
+    await waitFor(() => { expect(view.beginAnnotation).toHaveBeenCalledTimes(1) })
+    expect(view.beginAnnotation).toHaveBeenCalledWith(expect.objectContaining({ cwd: 'C:\\Projects\\Example', sessionId: 'session' }))
+    view.unmount()
+    expect(dispose).toHaveBeenCalledOnce()
   })
 
   it('renders an external-window companion status without a black game surface', async () => {
@@ -128,8 +115,6 @@ describe('GameWorkspace companion panel', () => {
     expect(firstCall[0]).toMatchObject({ cwd: 'C:\\Projects\\Example', sessionId: 'session', labels: ['A'] })
     expect(firstCall[0].operationId).toMatch(/^[0-9a-f-]{36}$/iu)
     expect(view.queryByRole('img')).toBeNull()
-    expect((view.getByRole('button', { name: '编辑' }) as HTMLButtonElement).disabled).toBe(true)
-    expect((view.getByRole('button', { name: '删除标注 A' }) as HTMLButtonElement).disabled).toBe(true)
     view.unmount()
     expect(view.endAnnotation).toHaveBeenCalledWith(firstCall[0].operationId)
   })

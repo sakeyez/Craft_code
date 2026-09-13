@@ -32,6 +32,8 @@ export interface ILayout {
   closeDetails(): void
   /** Publish one complete project-scoped external-game state. */
   setGameSurface(event: GameSurfaceEvent): void
+  /** Subscribe the active conversation to native annotation requests; returns its disposer. */
+  bindAnnotationShortcut(request: GameAnnotationRequest, listener: (error?: string) => void): () => void
   /** Attach the desktop-only privileged operations and return their disposer. */
   attachGameSurfaceBridge(bridge: GameSurfaceBridge): () => void
   reconnectGameSurface(cwd: string): Promise<GameSurfaceState>
@@ -80,6 +82,11 @@ export class LayoutController implements ILayout {
   setGameSurface(event: GameSurfaceEvent): void {
     if (this.#panels === undefined) this.#pendingGameStates.set(event.cwd, event.state)
     else this.#panels.setGameSurface(event.cwd, event.state)
+  }
+
+  /** Bind the native shortcut when the desktop bridge is available; dispose on session changes. */
+  bindAnnotationShortcut(request: GameAnnotationRequest, listener: (error?: string) => void): () => void {
+    return this.#gameBridge?.bindAnnotationShortcut?.(request, listener) ?? (() => {})
   }
 
   attachGameSurfaceBridge(bridge: GameSurfaceBridge): () => void {

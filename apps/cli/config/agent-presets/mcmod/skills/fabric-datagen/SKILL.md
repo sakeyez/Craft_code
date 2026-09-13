@@ -7,7 +7,9 @@ description: Use for Fabric data-generation providers, generated resources, Fabr
 
 Use this skill when adding or maintaining Fabric datagen providers, generated resource files, datagen Gradle wiring, or generated-output checks. Confirm the project is Fabric before using Fabric APIs.
 
-## Read First
+## Relevant evidence
+
+This is task-specific guidance, not a checklist for every request. Read only the evidence needed for the affected behavior, reuse still-valid project facts, and expand when dependencies or errors require it. General questions and screenshot identification do not require this skill.
 
 - Gradle files, `gradle.properties`, pinned Minecraft/mappings versions, and the Loom configuration
 - Fabric datagen source sets, provider classes, run configs, and existing generated-resource directories

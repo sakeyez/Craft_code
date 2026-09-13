@@ -10,11 +10,13 @@ The default coding personas did not give the model a compact decision process fo
 
 ## Decision
 
-The generic `standard`, `code`, `cordis`, `minimal`, and `mcmod` CLI presets opt into one shared `CODING_WORKFLOW_POLICY` exported by `dsh-system-prompt` and applied by `dsh-persona`. Before broad exploration or edits, the model states a short scope containing the goal, required behavior, exclusions, likely files, acceptance checks, and non-blocking uncertainties. It starts API research with repository patterns, types, compiler feedback, and tests; deeper documentation or runtime inspection is tied to a concrete unresolved decision or a high-risk behavior, and stops when that decision is supported. It forms a key file set, batches independent reads, avoids rereading unchanged files, and groups edits before running focused checks. Standalone prompts retain their explicit text and environment override semantics.
+The generic `standard`, `code`, `cordis`, and `minimal` CLI presets opt into one shared `CODING_WORKFLOW_POLICY` exported by `dsh-system-prompt` and applied by `dsh-persona`. Before broad exploration or edits, the model states a short scope containing the goal, required behavior, exclusions, likely files, acceptance checks, and non-blocking uncertainties. It starts API research with repository patterns, types, compiler feedback, and tests; deeper documentation or runtime inspection is tied to a concrete unresolved decision or a high-risk behavior, and stops when that decision is supported. It forms a key file set, batches independent reads, avoids rereading unchanged files, and groups edits before running focused checks. Standalone prompts retain their explicit text and environment override semantics.
 
 The policy ranks runtime investigation by probability, impact, trigger path, existing protection, and verification cost. Security, data, concurrency, process, and lifecycle risks remain first-class concerns. Low-probability, low-impact concerns without a trigger path are recorded as residual risk instead of delaying delivery. A user request for a deep audit explicitly overrides the default triage. Progress updates report confirmed facts, material uncertainty, the reason for the next query, and the point at which exploration ends; they do not expose hidden reasoning or narrate every tool call.
 
 This is prompt guidance, not an execution quota or a runtime veto. The existing tool protocol, compiler, tests, and model remain able to request additional evidence when the task requires it.
+
+Minecraft uses its own [task-dependent workflow](2026-09-11-minecraft-task-dependent-workflow.md) while the shared coding policy remains active for other presets.
 
 ## Alternatives considered
 

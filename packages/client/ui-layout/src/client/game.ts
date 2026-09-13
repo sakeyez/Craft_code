@@ -16,6 +16,7 @@ export interface GameAnnotationRequest { operationId: string; cwd: string; sessi
 export interface GameAnnotationSnapshot { dataUrl: string; width: number; height: number }
 /** Renderer operations backed by the desktop game capture provider. */
 export interface GameSurfaceBridge {
+  bindAnnotationShortcut?(request: GameAnnotationRequest, listener: (error?: string) => void): () => void
   reconnect(cwd: string): Promise<GameSurfaceState>
   beginAnnotation(
     request: GameAnnotationRequest,

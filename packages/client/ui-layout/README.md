@@ -10,6 +10,10 @@ The same transient store keeps strict external-game states by normalized project
 
 The `/client` exports are the plugin body (`apply`/`inject`), `LayoutController`, and the four owner-share interfaces. AppFrame, the panel store, and the concession solver remain package-internal.
 
+The game slot binds the native Ctrl+Shift+P subscription to its current conversation and disposes it on session changes. Shortcut requests and the annotation button share one transaction; registration failures remain visible in the game panel.
+
+The game companion uses content-sized controls capped at 35% of the conversation column; reconnect appears only after failure or disconnection. Saved annotations belong to the conversation composer. Game focus docks even a blank composer at the bottom without remounting it.
+
 ## Model Experience
 
 None, as the layout shell manages browser viewing state; nothing here reaches a model request.

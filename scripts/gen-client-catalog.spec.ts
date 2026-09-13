@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { collectSlotEntries, oversizedSlotReports, resolveSlotEntries, validateSlotContracts } from './gen-client-catalog.ts'
+import { collectSlotEntries, renderClientCatalog, oversizedSlotReports, resolveSlotEntries, validateSlotContracts } from './gen-client-catalog.ts'
 import type { SlotDeclaration, SlotRegistration, TypeDeclaration } from './slot-walk.ts'
 
 /** A declaration with every field the catalog needs, overridable per case. */
@@ -210,5 +210,14 @@ describe('the real workspace surface', () => {
     const root = entries.find(entry => entry.key === 'root')
     expect(root?.replaceRisk).toBe('shadows-shipped-ui')
     expect(root?.occupants.join(' ')).toContain('AppFrame')
+  })
+})
+
+describe('client catalog Windows source text', () => {
+  it('emits the same escaped literals for CRLF and LF declarations', () => {
+    const entries = resolveSlotEntries([declaration({ ownerType: 'DemoOwnerProps' })], [registration()], OWNER_TYPES, new Map())
+    const windowsEntries = entries.map(entry => ({ ...entry, ownerProps: entry.ownerProps.map(text => text.replaceAll('\n', '\r\n')) }))
+    expect(renderClientCatalog(windowsEntries)).toBe(renderClientCatalog(entries))
+    expect(renderClientCatalog(windowsEntries)).not.toContain('\r')
   })
 })

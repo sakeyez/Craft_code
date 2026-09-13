@@ -707,6 +707,7 @@ export function InputBar({
       >
         {overlay !== undefined && <div className={css.overlayAnchor}>{overlay}</div>}
         {accessory !== undefined && <div className={css.accessory}>{accessory}</div>}
+        {renderSlot('conversation.input.annotations', { locked })}
         {renderSlot('conversation.input.attachments', {
           attachments,
           canAcceptDrop,

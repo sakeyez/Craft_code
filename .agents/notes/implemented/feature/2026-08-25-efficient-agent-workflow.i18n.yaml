@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-25-efficient-agent-workflow.md
-2026-08-25-efficient-agent-workflow.md: 4ed246e996196cbdd29df0005800a3da7d175929
-2026-08-25-efficient-agent-workflow.zh.md: b9ec86b6ccc09e2181baf15d43b0fe947cd8ce6e
+2026-08-25-efficient-agent-workflow.md: 4beee2289b3feabc393f1a8db6aed3070d7fc9cb
+2026-08-25-efficient-agent-workflow.zh.md: 3065627a01e633ff5b1ac90cfb2c92dd683afdcd

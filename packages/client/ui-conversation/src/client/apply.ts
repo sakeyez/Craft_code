@@ -24,6 +24,7 @@ import { ComposerBlockRegistry } from './input/blocks.ts'
 import type { ComposerBlock } from './input/blocks.ts'
 import { InputHub } from './input/hub.ts'
 import { ComposerSubmissionPolicy } from './input/submission-policy.ts'
+import { AnnotationContext } from './skeleton/AnnotationContext.tsx'
 import { InputBar } from './skeleton/InputBar.tsx'
 import { EnterBehaviorRow } from './settings/EnterBehaviorRow.tsx'
 import type { EnterBehaviorRowInjected } from './settings/EnterBehaviorRow.tsx'
@@ -284,6 +285,7 @@ export function apply(ctx: Context): void {
     // access control, model right); empty until their owning plugins
     // register.
     children: {
+      'conversation.input.annotations': { kind: 'single', scope: 'session' },
       'conversation.input.attachments': { kind: 'single', scope: 'session-maybe' },
       'conversation.input.plan': { kind: 'single', scope: 'session' },
       'conversation.input.model': { kind: 'single', scope: 'session' },
@@ -363,6 +365,25 @@ export function apply(ctx: Context): void {
       }
     },
   }, InputBar)
+
+  slots.register({
+    name: 'conversation.input.annotations',
+    inject: (sessionId: SessionId) => ({
+      save: async (annotations: import('@deepseek-ai/dsh-session/types').GameAnnotation[]) => {
+        const session = sessions.binding(sessionId)?.session
+        if (!session?.annotate) throw new Error('当前会话无法保存游戏标注。')
+        const result = await session.annotate(annotations)
+        if (!result.ok) throw new Error(result.error.message)
+      },
+      resolveImage: async (reference: string) => {
+        const ref: unknown = JSON.parse(reference)
+        if (typeof ref !== 'object' || ref === null || !('attachmentId' in ref) || typeof ref.attachmentId !== 'string') throw new Error('截图引用无效。')
+        return concreteConversation(ctx).resolveImage(sessionId, ref as Parameters<ConversationController['resolveImage']>[1])
+      },
+    }),
+  }, AnnotationContext)
+
+
 
   // The approval takeover: a selector-routed entry of the chain this package
   // just declared (the ui-user-questions registration pattern; the entry lives here

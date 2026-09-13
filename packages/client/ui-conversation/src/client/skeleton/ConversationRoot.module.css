@@ -26,10 +26,10 @@
 }
 
 .header {
-  position: relative;
-  flex: none;
-  padding: 12px 28px 0 20px;
-  border-bottom: 1px solid transparent;
+  /* The conversation header is intentionally collapsed: the transcript and
+     composer are the primary workspace, and the title/tab chrome consumed
+     valuable vertical space without adding task context. */
+  display: none;
 }
 
 .header::after {
@@ -398,3 +398,8 @@
   border-radius: 0;
   background: var(--dsh-mc-moss);
 }
+
+/* Keep the same composer tree when a blank session accompanies the game. */
+:global([data-game-focus]) .root[data-phase='hero'] .scrollBody { justify-content: flex-end; }
+:global([data-game-focus]) .composerHero { padding-bottom: 12px; }
+:global([data-game-focus]) .heroGlow { display: none; }

@@ -170,6 +170,7 @@ export function apply(ctx: ClientContext): void {
           const result = await annotate.call(session, annotations)
           if (!result.ok) throw new Error(result.error.message)
         },
+        bindAnnotationShortcut: (request: import('./game.ts').GameAnnotationRequest, listener: (error?: string) => void) => layout.bindAnnotationShortcut(request, listener),
         reconnect: (cwd: string) => layout.reconnectGameSurface(cwd),
         beginAnnotation: async (request: import('./game.ts').GameAnnotationRequest) => {
           if (sessionId === undefined || request.sessionId !== sessionId) throw new Error('标注会话无效。')

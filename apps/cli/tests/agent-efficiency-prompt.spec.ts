@@ -79,7 +79,7 @@ describe('default coding-agent efficiency guidance', () => {
       expect(presetWorkflowEnabled(id), `preset ${id}`).toBe(true)
       expect(presetPersona(id)).not.toContain('Do not reread unchanged files')
     }
-    expect(presetWorkflowEnabled('mcmod'), 'preset mcmod').toBe(true)
+    expect(presetWorkflowEnabled('mcmod'), 'Minecraft owns its task-dependent policy').toBe(false)
   })
 
   it('keeps standalone default personas aligned without changing explicit overrides', () => {

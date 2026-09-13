@@ -71,6 +71,8 @@ export interface DesktopBridge {
       | { status: 'failed' | 'disconnected' | 'unsupported'; gameName?: string; error: string }
   }) => void) => () => void
   reconnectGameSurface?: (cwd: string) => Promise<unknown>
+  /** Bind the active conversation; dispose releases only this subscription. */
+  bindGameAnnotationShortcut?: (request: GameAnnotationRequest, listener: (error?: string) => void) => () => void
   beginGameAnnotation?: (
     request: GameAnnotationRequest,
     commit: (drafts: GameAnnotationDraft[], snapshot?: GameAnnotationSnapshot) => Promise<void>,

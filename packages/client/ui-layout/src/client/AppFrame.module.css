@@ -50,11 +50,11 @@
   overflow: hidden;
 }
 
-.centerCol > [data-game-status] {
+.centerCol [data-game-status] {
   flex: 0 0 auto;
   height: auto;
-  max-height: 45%;
-  overflow-y: auto;
+  max-height: 35%;
+  overflow: hidden;
   border-bottom: 1px solid var(--dsw-alias-border-l1);
 }
 
@@ -154,6 +154,7 @@
 }
 
 .frame[data-game-focus] .body {
+  transition: none;
   grid-template-columns: 0 minmax(0, 1fr) 0 !important;
 }
 

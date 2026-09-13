@@ -25,6 +25,7 @@ async function run() {
   await app.whenReady()
   const koffi = (await import('koffi')).default
   const { createGameCaptureProvider } = await import('../../lib/game-capture.js')
+  const { GameCaptureStream } = await import('../../lib/game-capture-stream.js')
   const { desktopWindowOptions } = await import('../../lib/window.js')
   const { initialGameLayout } = await import('../../lib/game-layout.js')
   const user32 = koffi.load('user32.dll')
@@ -97,7 +98,7 @@ async function run() {
     const layout = initialGameLayout(area)
     if (!layout) throw new Error('native fixture needs at least 1024x496 DIP of work area')
     let state
-    provider = await createGameCaptureProvider({ window: host, publish: event => { state = event.state; log(`fixture: state ${JSON.stringify(state)}`) }, log })
+    provider = await createGameCaptureProvider({ stream: new GameCaptureStream(log), window: host, publish: event => { state = event.state; log(`fixture: state ${JSON.stringify(state)}`) }, log })
     await provider.select('C:\\fixture')
     await provider.start('C:\\fixture', child.pid)
     await until(() => state?.status === 'connected' && matches(screen.screenToDipRect(null, rectOf(hwnd)), layout.game) && matches(host.getBounds(), layout.panel), 'initial side-by-side layout')

@@ -767,6 +767,19 @@ describe('detect_mc_project', () => {
     expect(detected.warnings.filter(warning => warning.includes('directory scan stopped after maxEntries 1')).length).toBeGreaterThan(1)
   })
 
+  it('includes statically declared Gradle resource directories in validation', async () => {
+    const workspace = await createFabricProject()
+    await write('build.gradle', (await readFile(join(workspace, 'build.gradle'), 'utf8')) + "\nsourceSets.main.resources.srcDir('generated-assets')\n")
+    await write('generated-assets/data/examplemod/recipe/broken.json', '{broken')
+    const context = await bootDirect(workspace)
+    const detected = await callDetect(context, workspace)
+    expect(detected.resourceRoots).toContain('generated-assets')
+    const validation = await callValidate(context, workspace)
+    expect(validation.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: 'generated-assets/data/examplemod/recipe/broken.json', code: 'invalid_json' }),
+    ]))
+  })
+
   it('reports conflicting Fabric and NeoForge loader evidence', async () => {
     const workspace = await createFabricProject()
     await write('src/main/resources/META-INF/neoforge.mods.toml', 'modLoader="javafml"\n[[mods]]\nmodId="examplemod"\n')
@@ -1083,13 +1096,13 @@ describe('validate_mc_resources', () => {
     expect(validation.warnings).toEqual([])
   })
 
-  it('warns when a valid JSON resource uses a directory from another Minecraft version', async () => {
+  it('errors when a valid JSON resource uses a directory from another Minecraft version', async () => {
     const workspace = await createFabricProject()
     await write('src/main/resources/data/examplemod/recipes/old.json', '{}')
     const context = await bootDirect(workspace)
     const validation = await callValidate(context, workspace)
 
-    expect(validation.warnings).toEqual(expect.arrayContaining([
+    expect(validation.errors).toEqual(expect.arrayContaining([
       expect.objectContaining({
         code: 'data_directory_version',
         path: 'src/main/resources/data/examplemod/recipes',
@@ -1581,13 +1594,13 @@ describe('run_mc_check', () => {
     expect(shell.commands).toEqual([])
   })
 
-  it('retains bounded metadata read warnings in a passing resource step', async () => {
+  it('fails when bounded metadata reads make the resource scan incomplete', async () => {
     const workspace = await createFabricProject()
     await write('src/main/resources/fabric.mod.json', ' '.repeat(600))
     const { context } = await bootWithShell(workspace, { maxFileBytes: 512 })
     const result = await callRunCheck(context, workspace, { target: 'resources' })
 
-    expect(result.failedStep).toBeNull()
+    expect(result.failedStep).toBe('resources:static')
     expect(result.steps[0]?.stdout.text).toContain('fabric.mod.json')
     expect(result.steps[0]?.stdout.text).toContain('maxFileBytes 512')
   })
@@ -2090,17 +2103,16 @@ describe('run_mc_check', () => {
     })
     const result = await callRunCheck(context, workspace, { target: 'build' })
 
-    expect(result.steps[0]?.stdout).toEqual({
-      text: 'qrstuvwxyz',
-      truncated: true,
-      spillPath: 'full.log',
-    })
+    expect(result.steps[0]?.stdout.truncated).toBe(true)
+    expect(result.steps[0]?.stdout.spillPath).toBe('full.log')
+    expect(result.steps[0]?.stdout.text).toContain('…')
 
     shell.results.set(expectedGradle('test'), {
       ...okResult('0123456789abcdefghijklmnopqrstuvwxyz'),
       stdout: { text: '0123456789abcdefghijklmnopqrstuvwxyz', truncated: false },
     })
     const withoutSpill = await callRunCheck(context, workspace, { target: 'test' })
-    expect(withoutSpill.steps[0]?.stdout).toEqual({ text: 'qrstuvwxyz', truncated: true })
+    expect(withoutSpill.steps[0]?.stdout.truncated).toBe(true)
+    expect(withoutSpill.steps[0]?.stdout.text).toContain('…')
   })
 })

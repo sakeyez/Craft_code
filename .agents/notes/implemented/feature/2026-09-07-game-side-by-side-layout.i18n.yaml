@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-07-game-side-by-side-layout.md
-2026-09-07-game-side-by-side-layout.md: 91e1ba9a44f2a9744a2f4d0503beebcdeefb7e6b
-2026-09-07-game-side-by-side-layout.zh.md: 14e3026c16a4305bdeaf5281f5978ae868379769
+2026-09-07-game-side-by-side-layout.md: b8d5b8abbe2c73485f8ccf2cffdeb9e69b1f943b
+2026-09-07-game-side-by-side-layout.zh.md: c4bd9e6d4b193025a00fedd4f4321c9a55245888

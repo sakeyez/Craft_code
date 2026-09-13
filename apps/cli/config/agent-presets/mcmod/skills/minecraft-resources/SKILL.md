@@ -7,9 +7,11 @@ description: Use for Minecraft asset and data resource changes, including lang, 
 
 Use this skill when adding, reviewing, or fixing files under Minecraft `assets/` or `data/` resource trees.
 
-## Read First
+## Relevant evidence
 
-- `src/main/resources/fabric.mod.json`, especially mod id and mixin declarations
+This is task-specific guidance, not a checklist for every request. Read only the evidence needed for the affected behavior, reuse still-valid project facts, and expand when dependencies or errors require it. General questions and screenshot identification do not require this skill.
+
+- the detected loader metadata (`fabric.mod.json` or `META-INF/neoforge.mods.toml`) and mod id
 - `src/main/resources/assets/<modid>/` and `src/main/resources/data/<modid>/`
 - Java registry names, mod id constants, item/block/entity identifiers, and creative tab wiring
 - Existing generated-resource output and datagen providers when resources are generated
@@ -31,4 +33,4 @@ Treat the discovered mod id and registry identifiers as authoritative. Do not in
 
 ## Checks
 
-Use focused file inspection plus `./gradlew build` when available. Run `./gradlew runDatagen` or the project's focused datagen task when generated resources are involved.
+For resource changes, run validate_mc_resources and the narrowest relevant resource or packaging check through run_mc_check. Run the detected loader's actual datagen task only when generated resources are affected; inspect its output. Do not run a full build for a read-only explanation.

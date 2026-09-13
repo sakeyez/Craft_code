@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-11-minecraft-task-dependent-workflow.md
+2026-09-11-minecraft-task-dependent-workflow.md: 3deff1717f926f4bc8ed7738928c64535706341a
+2026-09-11-minecraft-task-dependent-workflow.zh.md: 1d93e5331a2c22238d83e441a043680304dfce73

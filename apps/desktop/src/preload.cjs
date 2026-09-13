@@ -107,6 +107,19 @@ contextBridge.exposeInMainWorld('craftCodeDesktop', {
     if (!isGameCaptureState(value)) throw new Error('主进程返回了无效的游戏状态。')
     return value
   },
+  bindGameAnnotationShortcut(request, listener) {
+    let disposed = false
+    const wrapped = (_event, value) => {
+      if (!disposed && value?.operationId === request.operationId && (value.error === undefined || typeof value.error === 'string')) listener(value.error)
+    }
+    ipcRenderer.on('desktop:annotation-shortcut', wrapped)
+    void ipcRenderer.invoke('desktop:annotation-shortcut-bind', request).catch(error => { if (!disposed) listener(String(error)) })
+    return () => {
+      disposed = true
+      ipcRenderer.removeListener('desktop:annotation-shortcut', wrapped)
+      void ipcRenderer.invoke('desktop:annotation-shortcut-bind', undefined, request.operationId).catch(() => {})
+    }
+  },
   async beginGameAnnotation(request, commit) {
     const receive = (_event, value) => {
       if (value.operationId !== request.operationId || value.sessionId !== request.sessionId) return

@@ -56,6 +56,7 @@ import * as ToolSchedule from '@deepseek-ai/dsh-schedule'
 import Lsp from '@deepseek-ai/dsh-lsp'
 import * as ToolLsp from '@deepseek-ai/dsh-tool-lsp'
 import * as ToolMcProject from '@deepseek-ai/dsh-tool-mc-project'
+import * as ToolMcBootstrap from '@deepseek-ai/dsh-tool-mc-bootstrap'
 import * as ToolSkill from '@deepseek-ai/dsh-tool-skill'
 import * as ToolSessionQuery from '@deepseek-ai/dsh-tool-session-query'
 import * as ToolTasks from '@deepseek-ai/dsh-tool-jobs'
@@ -407,6 +408,19 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'The lsp tool keeps provider selection and language-server subprocesses behind ctx.lsp, so its model-visible schema stays stable across providers. Requires a registered provider (e.g. `@deepseek-ai/dsh-lsp-stdio`) at runtime; without one, a query returns the structured `LSP_UNAVAILABLE` error rather than changing the schema.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-mc-bootstrap',
+    dir: 'tool-mc-bootstrap',
+    source: 'packages/minecraft/tool-mc-bootstrap/src/index.ts',
+    requires: ['ctx.tools', 'ctx.shell'],
+    writes: ['tool/call', 'tool/result'],
+    async mount(ctx) {
+      await ctx.plugin(LocalSubprocessRuntime)
+      await ctx.plugin(LocalBashExecutor)
+      await ctx.plugin(ToolMcBootstrap)
+    },
+    note: 'bootstrap_mc_project creates a supported project only in an empty directory and reports environment readiness without claiming gameplay verification.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-mc-project',

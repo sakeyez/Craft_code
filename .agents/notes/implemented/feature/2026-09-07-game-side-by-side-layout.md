@@ -20,11 +20,13 @@ The provider revalidates HWND, PID, and process creation identity before request
 
 Game movement and resize update the companion's right-side position and height while preserving its manual width. Insufficient right-side space pauses following without moving or raising the panel. Reposition arranges both windows and resumes following. Project selection, reconnect, and minimize/restore preserve an already arranged game window. Game exit restores CraftCode bounds, maximization, minimum size, topmost state, and background throttling.
 
+The companion gives conversation priority: controls use intrinsic height with a 35% ceiling. Saved annotations occupy a composer attachment seat, combining a small image and count in one chip beside the draft; hover, focus, or click reveals local details and editing. Slot anchors use display:contents but remain DOM ancestors, so height constraints target descendant game panels. The blank composer docks through game-scoped CSS, preserving draft and session identity. Screenshot previews use the conversation image cache, without extra capture or polling.
+
 ## Alternatives considered
 
 **Observation-only placement.** Avoiding all game moves cannot provide a predictable large game viewport beside a narrow panel. Explicit reposition and one automatic arrangement bound the native changes.
 
-**Temporary annotation overlay.** A borderless overlay is used only for the one-shot still-frame annotation transaction at verified Minecraft client bounds. It freezes the visual surface without suspending the process, then is destroyed to restore the side-by-side layout; ordinary browsing and conversation remain independent windows.
+**Temporary annotation overlay.** A borderless overlay is used only for the one-shot still-frame annotation transaction at verified Minecraft client bounds. It freezes the visual surface without suspending the process, then is hidden and reset for reuse to restore the side-by-side layout; ordinary browsing and conversation remain independent windows.
 
 **Size settings in the first version.** Fixed defaults cover the requested workflow; manual panel resizing retains user control without a separate settings contract.
 

@@ -6,11 +6,14 @@ import { isAnnotationDrafts, isAnnotationRequest } from '../src/game-annotation-
 
 type Handler = (event: { sender: unknown }, ...args: unknown[]) => unknown
 interface MockWebContents extends EventEmitter {
+  send: (channel: string, payload: unknown) => void
   setWindowOpenHandler: (handler: () => { action: 'deny' }) => void
 }
 interface MockWindow extends EventEmitter {
   destroyed: boolean
   readonly options: unknown
+  hide: () => void
+  setBounds: (bounds: unknown) => void
   readonly webContents: MockWebContents
   loadFile: () => Promise<void>
   show: () => void
@@ -29,9 +32,11 @@ vi.mock('electron', async () => {
     },
     BrowserWindow: class extends EventEmitter {
       destroyed = false
-      webContents = Object.assign(new EventEmitter(), { setWindowOpenHandler: vi.fn() }) as MockWebContents
+      webContents = Object.assign(new EventEmitter(), { setWindowOpenHandler: vi.fn(), send: vi.fn() }) as MockWebContents
       constructor(readonly options: unknown) { super(); fixture.windows.push(this) }
       loadFile = vi.fn(async (): Promise<void> => {})
+      hide = vi.fn((): void => {})
+      setBounds = vi.fn((): void => {})
       show = vi.fn((): void => {})
       focus = vi.fn((): void => {})
       isDestroyed(): boolean { return this.destroyed }
@@ -72,22 +77,23 @@ describe('annotation transaction', () => {
       webPreferences: { sandbox: true, nodeIntegration: false },
     })
     expect(window.show).not.toHaveBeenCalled()
-    invoke('annotation:ready', window.webContents)
+    invoke('annotation:ready', window.webContents, request.operationId)
     expect(window.show).toHaveBeenCalledOnce()
-    const first = invoke('annotation:submit', window.webContents, [draft])
+    const first = invoke('annotation:submit', window.webContents, request.operationId, [draft])
     expect(owner.send).toHaveBeenLastCalledWith('desktop:game-annotation-commit', {
       ...request, attempt: 1, drafts: [draft], snapshot: { dataUrl: 'data:image/jpeg;base64,AA==', width: 800, height: 600 },
     })
-    await expect(invoke('annotation:submit', window.webContents, [draft])).rejects.toThrow('正在保存')
+    await expect(invoke('annotation:submit', window.webContents, request.operationId, [draft])).rejects.toThrow('正在保存')
     invoke('desktop:game-annotation-result', owner, request.operationId, 99, undefined)
     expect(window.destroyed).toBe(false)
     invoke('desktop:game-annotation-result', owner, request.operationId, 1, 'save refused')
     expect(await first).toEqual({ error: 'save refused' })
     expect(window.destroyed).toBe(false)
-    const retry = invoke('annotation:submit', window.webContents, [draft])
+    const retry = invoke('annotation:submit', window.webContents, request.operationId, [draft])
     invoke('desktop:game-annotation-result', owner, request.operationId, 2, undefined)
     await retry; await done
-    expect(window.destroyed).toBe(true)
+    expect(window.destroyed).toBe(false)
+    expect(window.hide).toHaveBeenCalled()
     expect(target.focus).toHaveBeenCalledOnce()
   })
 
@@ -104,7 +110,7 @@ describe('annotation transaction', () => {
     resolveCapture({ dataUrl: 'data:image/jpeg;base64,AA==', width: 800, height: 600 })
     await tick()
     expect(fixture.windows).toHaveLength(1)
-    expect(fixture.windows[0]?.destroyed).toBe(true)
+    expect(fixture.windows[0]?.destroyed).toBe(false)
     expect(fixture.windows[0]?.show).not.toHaveBeenCalled()
     expect(target.focus).not.toHaveBeenCalled()
   })
@@ -128,21 +134,39 @@ describe('annotation transaction', () => {
     const window = fixture.windows[0]!
     expect(() => invoke('annotation:load', owner)).toThrow('无效')
     expect(() => invoke('desktop:game-annotation-result', {}, request.operationId, 1)).toThrow('无效')
-    invoke('annotation:ready', window.webContents)
-    await expect(invoke('annotation:submit', window.webContents, [{ ...draft, shape: { type: 'point', geometry: { x: NaN, y: 0 } } }])).rejects.toThrow('数据无效')
+    invoke('annotation:ready', window.webContents, request.operationId)
+    await expect(invoke('annotation:submit', window.webContents, request.operationId, [{ ...draft, shape: { type: 'point', geometry: { x: NaN, y: 0 } } }])).rejects.toThrow('数据无效')
     controller.cancel('old')
     expect(window.destroyed).toBe(false)
-    invoke('annotation:cancel', window.webContents)
+    invoke('annotation:cancel', window.webContents, request.operationId)
     await done
     expect(target.focus).toHaveBeenCalledOnce()
+  })
+
+  it('reuses its preloaded window and rejects old operation messages', async () => {
+    await controller.warm(target.bounds)
+    const done = controller.begin(request, async () => target)
+    await tick()
+    const window = fixture.windows[0]!
+    invoke('annotation:ready', window.webContents, request.operationId)
+    controller.cancel()
+    await done
+    const next = { ...request, operationId: '33333333-3333-4333-8333-333333333333' }
+    const second = controller.begin(next, async () => target)
+    await tick()
+    expect(fixture.windows).toHaveLength(1)
+    expect(() => invoke('annotation:cancel', window.webContents, request.operationId)).toThrow('无效')
+    expect(window.webContents.send).toHaveBeenLastCalledWith('annotation:begin', next.operationId)
+    controller.cancel()
+    await second
   })
 
   it('settles an in-flight save after cancellation without applying its reply to another transaction', async () => {
     const done = controller.begin(request, async () => target)
     await tick()
     const window = fixture.windows[0]!
-    invoke('annotation:ready', window.webContents)
-    const save = invoke('annotation:submit', window.webContents, [draft])
+    invoke('annotation:ready', window.webContents, request.operationId)
+    const save = invoke('annotation:submit', window.webContents, request.operationId, [draft])
     controller.cancel()
     await done; await save
     invoke('desktop:game-annotation-result', owner, request.operationId, 1, undefined)

@@ -8,6 +8,7 @@ Minecraft-domain packages for DeepSeek Harness agent compositions.
 |---|---|---|
 | [`mcmod-agent/`](mcmod-agent/README.md) | Prompt-only Fabric and NeoForge Minecraft Java mod-development guidance for agent presets | — (prompt sections only) |
 | [`tool-mc-project/`](tool-mc-project/README.md) | Minecraft project detection, static resource validation, and shell-backed Gradle check orchestration tools | — (tool only) |
+| [`tool-mc-bootstrap/`](tool-mc-bootstrap/README.md) | Deterministic Fabric and NeoForge project bootstrap from fixed templates | — (tool only) |
 
 The domain packages do not replace the core agent loop. They compose with profile bundles and presets, reusing the existing file, search, shell, LSP, skill, compaction, permission, and session-persistence capability families.
 

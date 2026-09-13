@@ -246,14 +246,20 @@ export async function walkFiles(
   }
   const entries = await listOptionalDir(ctx, exec, path)
   const out: WalkedFile[] = []
-  for (const entry of entries) {
+  for (const [index, entry] of entries.entries()) {
+    if (state.entries >= config.maxEntries) {
+      if (index < entries.length && !state.warned) {
+        state.warned = true
+        warnings.push(`directory scan stopped after maxEntries ${config.maxEntries}; remaining entries were not inspected`)
+      }
+      break
+    }
     state.entries++
     const child = posix.join(path, entry.name)
     if (entry.type === 'file' && predicate(child, entry)) out.push({ path: child, entry })
     if (entry.type === 'directory') {
       out.push(...await walkFiles(ctx, exec, child, state, config, warnings, predicate))
     }
-    if (state.entries >= config.maxEntries) break
   }
   return out
 }

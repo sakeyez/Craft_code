@@ -7,7 +7,9 @@ description: Use for Fabric Java mod code changes, Gradle/Loom setup, entrypoint
 
 Use this skill when changing Java mod code or Fabric project wiring. If the project already uses Forge, NeoForge, Architectury, or another loader, report that fact and do not introduce Fabric APIs unless the user asked for migration.
 
-## Read First
+## Relevant evidence
+
+This is task-specific guidance, not a checklist for every request. Read only the evidence needed for the affected behavior, reuse still-valid project facts, and expand when dependencies or errors require it. General questions and screenshot identification do not require this skill.
 
 - `settings.gradle`, `settings.gradle.kts`, `build.gradle`, `build.gradle.kts`, and `gradle.properties`
 - `src/main/resources/fabric.mod.json`

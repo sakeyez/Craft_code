@@ -5,9 +5,11 @@ description: Use for NeoForge Java mod code and Gradle wiring, including @Mod en
 
 # NeoForge Mod Development
 
-Use this skill when the project is detected as NeoForge. Keep the implementation on the project's pinned NeoForge and Minecraft versions; do not import Forge, Fabric, Architectury, or another version's API.
+Use this skill for NeoForge Java implementation or project-wiring diagnosis and changes; detecting a NeoForge project alone does not require loading it. Keep the implementation on the project's pinned NeoForge and Minecraft versions; do not import Forge, Fabric, Architectury, or another version's API.
 
-## Read First
+## Relevant evidence
+
+This is task-specific guidance, not a checklist for every request. Read only the evidence needed for the affected behavior, reuse still-valid project facts, and expand when dependencies or errors require it. General questions and screenshot identification do not require this skill.
 
 - `settings.gradle(.kts)`, `build.gradle(.kts)`, `gradle.properties`, version catalogs, included builds, and convention-plugin declarations
 - the fixed ModDevGradle or other NeoForge Gradle plugin configuration

@@ -7,7 +7,9 @@ description: Use for NeoForge data generation, GatherDataEvent wiring, providers
 
 Use this skill when the project is detected as NeoForge and a change affects generated assets, data, recipes, tags, loot, models, or datagen Gradle wiring.
 
-## Read First
+## Relevant evidence
+
+This is task-specific guidance, not a checklist for every request. Read only the evidence needed for the affected behavior, reuse still-valid project facts, and expand when dependencies or errors require it. General questions and screenshot identification do not require this skill.
 
 - pinned NeoForge/Minecraft versions, `settings.gradle(.kts)`, `build.gradle(.kts)`, `gradle.properties`, and version catalogs
 - the `@Mod` entrypoint and the event-bus wiring for `GatherDataEvent`

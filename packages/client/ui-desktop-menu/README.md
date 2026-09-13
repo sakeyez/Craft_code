@@ -8,6 +8,8 @@ The preload bridge exposes closed menu, game-process, and project-scoped game-st
 
 Short successful and cancelled operations dismiss after four seconds. A normal game exit uses the same short notice; game failures and other results with stdout or stderr remain until dismissed, and bounded process output is available through an expandable detail region. Every input is controlled, modal actions are keyboard-operable, and the status indicator pairs color with text and state glyphs.
 
+The bridge forwards operation-scoped annotation shortcut subscriptions through `ctx.layout`, including registration errors and disposal. Native handles and capture-stream permissions remain in the main process.
+
 ## Model Experience
 
 ### Project settings

@@ -43,7 +43,7 @@ export interface Config {
 
 export const Config: z<Config> = z.object({
   printUrl: z.boolean().default(true),
-  surfaceContext: z.boolean().default(true),
+  surfaceContext: z.boolean().default(false),
 })
 
 /** Bind-dependent values retained for the shared connection service. */

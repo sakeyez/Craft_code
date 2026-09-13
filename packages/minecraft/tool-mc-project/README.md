@@ -10,7 +10,7 @@ Model-facing Minecraft project tools. The package registers `detect_mc_project`,
 
 | Tool | Purpose |
 |---|---|
-| `detect_mc_project` | Detects loader evidence, Minecraft version candidates, mappings candidates, mod id candidates, Java/Kotlin use, source sets, resource roots, mixin configs, datagen clues, declared Gradle task candidates, inspected files, warnings, and recommended Gradle validation commands. `loaderSupport` reports whether the current profile supports the detected loader; Forge, Quilt, and Architectury remain diagnostic-only. Version and mappings results preserve `determined`, `unknown`, or `conflict` status plus candidate evidence; an exact version is distinguished from a range. |
+| `detect_mc_project` | Detects loader evidence, Minecraft version candidates, mappings candidates, mod id candidates, Java/Kotlin use, source sets, conventional and statically declared Gradle resource roots, mixin configs, datagen clues, declared Gradle task candidates, inspected files, warnings, scan completeness, and recommended Gradle validation commands. `loaderSupport` reports whether the current profile supports the detected loader; Forge, Quilt, and Architectury remain diagnostic-only. Version and mappings results preserve `determined`, `unknown`, or `conflict` status plus candidate evidence; an exact version is distinguished from a range. |
 | `validate_mc_resources` | Validates language values, model, blockstate, recipe, tag, loot-table, advancement, predicate, item-modifier, and item-definition JSON files; checks bounded PNG signatures/chunks/CRCs, local model parents, local model texture and blockstate model references, suspicious namespaces, and asset namespace mismatches against detected metadata. |
 | `run_mc_check` | Runs `build`, `test`, `datagen`, `resources`, `runtime`, or `all` by selecting Gradle wrapper or `gradle` commands from detected project facts. Datagen and runtime tasks are discovered from declared or bounded `tasks --all` output when necessary; runtime requires an explicit approved `runtimeMode`. |
 
@@ -20,7 +20,7 @@ Model-facing Minecraft project tools. The package registers `detect_mc_project`,
 |---|---:|---|
 | `maxEntries` | `2000` | Maximum directory entries walked while discovering source/resource and metadata clues. |
 | `maxFileBytes` | `524288` | Maximum bytes read from one candidate text file. Larger files are skipped with a warning. |
-| `maxOutputSummaryBytes` | `4096` | Maximum UTF-8 bytes retained inline from each `run_mc_check` stdout/stderr tail after shell-level truncation or spill. |
+| `maxOutputSummaryBytes` | `4096` | Maximum UTF-8 bytes retained inline from each `run_mc_check` stdout/stderr head-and-tail summary after shell-level truncation or spill. |
 | `maxTaskDiscoveryBytes` | `65536` | Maximum stdout bytes captured while discovering Gradle tasks. Truncated output is inconclusive and never selects a task. |
 
 All fields must be positive integers. The read-only tools do not execute Gradle tasks or shell commands.
@@ -63,7 +63,7 @@ Prefix-stable for the life of the mounted composition and the presence of `ctx.s
 
 #### What the model sees
 
-The model sees the [`validate_mc_resources`](../../../docs/tool-catalog.md#deepseek-aidsh-tool-mc-project) tool schema. The tool has no parameters; its canonical result contains `errors`, `warnings`, `checkedFiles`, and `detectedModId`, where each issue carries `code`, `path`, `message`, `reference`, and `expectedPath`. Static checks reject malformed metadata, malformed or truncated PNGs, and missing local model parents; existing item-definition JSON files are parsed and checked against the detected Minecraft version when it is exact. Data folders use the singular names introduced in Minecraft 1.21 (`recipe`, `loot_table`, `advancement`, `predicate`, `item_modifier`) and the plural names used by older versions; when an exact version is known, a mismatched spelling is reported. Unqualified resource references resolve to the `minecraft` namespace, while explicit vanilla and dependency namespaces remain outside the local-file check. The Native render is the same object pretty-printed as JSON. `presentCall` labels the pending card `Validate Minecraft resources`; `presentResult` shows the rendered JSON in a generic result card.
+The model sees the [`validate_mc_resources`](../../../docs/tool-catalog.md#deepseek-aidsh-tool-mc-project) tool schema. The tool has no parameters; its canonical result contains `errors`, `warnings`, `checkedFiles`, `detectedModId`, and `scanComplete`, where each issue carries `code`, `path`, `message`, `reference`, and `expectedPath`. Static checks reject malformed metadata, malformed or truncated PNGs, missing local model parents, and deterministic version-incompatible data directories; incomplete scans do not count as a complete pass. Existing item-definition JSON files are parsed and checked against the detected Minecraft version when it is exact. Data folders use the singular names introduced in Minecraft 1.21 (`recipe`, `loot_table`, `advancement`, `predicate`, `item_modifier`) and the plural names used by older versions; when an exact version is known, a mismatched spelling is reported as an error. Unqualified resource references resolve to the `minecraft` namespace, while explicit vanilla and dependency namespaces remain outside the local-file check. The Native render is the same object pretty-printed as JSON. `presentCall` labels the pending card `Validate Minecraft resources`; `presentResult` shows the rendered JSON in a generic result card.
 
 #### Token effect
 
@@ -75,7 +75,7 @@ Prefix-stable for the life of the mounted composition. Result content is per-cal
 
 ## Known Limitations and Deferred Work
 
-- **No Gradle evaluation** - variables, convention plugins, included builds, and generated source-set declarations are recognized only when their text leaves direct clues.
+- **No Gradle evaluation** - variables, convention plugins, included builds, and generated source-set declarations are recognized only when their text leaves direct clues. Common static `srcDir` and `srcDirs` resource declarations are included; dynamic declarations remain an explicit incomplete-scan warning.
 - **Evidence conflicts and unsupported loaders stay explicit** - conflicting loader evidence returns `loader: "unknown"` with a warning instead of choosing a winner; detected Forge, Quilt, or Architectury projects return `loaderSupport: "unsupported"` and do not receive loader-specific check-task selection; conflicting version or mappings candidates are returned as `conflict` with all candidate evidence preserved.
 - **Gradle evaluation remains bounded** - `run_mc_check` probes `tasks --all --console=plain` only when a datagen or runtime task is not declared in the inspected text; variables, convention plugins, included builds, and generated source-set declarations still require project-specific inspection.
 - **Root-project commands only** - `run_mc_check` refuses settings that declare subprojects or included builds because it cannot infer qualified task paths. Maven builds and custom launchers are unsupported.

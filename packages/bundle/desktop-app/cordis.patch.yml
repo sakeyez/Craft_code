@@ -138,7 +138,10 @@
       inject: [desktopStartup]
       config:
         printUrl: true
-        surfaceContext: true
+        # Do not inject a model-facing desktop confirmation/orientation prompt.
+        # The renderer remains available, but desktop access is no longer
+        # advertised as a conversational capability.
+        surfaceContext: false
 
     # The client-plugin reload chain, always mounted: it is idle until a
     # rebuild watcher (pnpm run dev:desktop-renderer) actually rewrites client bundles. It

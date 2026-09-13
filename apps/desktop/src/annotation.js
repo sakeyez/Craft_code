@@ -3,6 +3,7 @@ const bridge = window.gameAnnotation
 const element = id => document.getElementById(id)
 const surface = element('surface'), snapshot = element('snapshot'), editor = element('editor')
 const description = element('description'), discard = element('discard'), error = element('error')
+let operationId
 let drafts = [], labels = [], editing, pending, start, saving = false
 
 function messageOf(value) { return value instanceof Error ? value.message : String(value || '操作失败') }
@@ -46,13 +47,20 @@ function openEditor(draft) {
   editing = draft
   description.value = draft?.description || ''
   element('delete').hidden = !draft
-  editor.showModal(); description.focus()
+  editor.showModal()
+  const geometry = (draft?.shape || pending)?.geometry
+  const rect = editor.getBoundingClientRect()
+  const left = (geometry?.x || 0) * innerWidth
+  const top = ((geometry?.y || 0) + (geometry?.height || 0)) * innerHeight + 8
+  editor.style.left = `${Math.max(8, Math.min(left, innerWidth - rect.width - 8))}px`
+  editor.style.top = `${Math.max(52, Math.min(top, innerHeight - rect.height - 8))}px`
+  description.focus()
 }
 function closeEditor() { editor.close(); editing = undefined; pending = undefined; element('selection').hidden = true }
 function cancel() {
   if (saving) return
   if (drafts.length) discard.showModal()
-  else void bridge.cancel().catch(failure => report(messageOf(failure)))
+  else void bridge.cancel(operationId).catch(failure => report(messageOf(failure)))
 }
 function point(event) {
   const rect = surface.getBoundingClientRect()
@@ -96,29 +104,44 @@ editor.oncancel = event => { event.preventDefault(); closeEditor() }
 element('delete').onclick = () => { drafts = drafts.filter(draft => draft.id !== editing.id); closeEditor(); render() }
 element('cancel').onclick = cancel
 element('keep').onclick = () => discard.close()
-element('discard-confirm').onclick = () => { void bridge.cancel().catch(failure => report(messageOf(failure))) }
+element('discard-confirm').onclick = () => { void bridge.cancel(operationId).catch(failure => report(messageOf(failure))) }
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && !editor.open && !discard.open) { event.preventDefault(); cancel() }
 })
 element('finish').onclick = async () => {
   if (saving) return
   if (!drafts.length) {
-    try { await bridge.cancel() } catch (failure) { report(messageOf(failure)) }
+    try { await bridge.cancel(operationId) } catch (failure) { report(messageOf(failure)) }
     return
   }
+  const id = operationId
   saving = true; report(''); render()
-  try { const result = await bridge.submit(drafts); if (result?.error) report(result.error) }
-  catch (failure) { report(messageOf(failure)) }
-  finally { saving = false; render() }
+  try { const result = await bridge.submit(id, drafts); if (operationId === id && result?.error) report(result.error) }
+  catch (failure) { if (operationId === id) report(messageOf(failure)) }
+  finally { if (operationId === id) { saving = false; render() } }
 }
-void (async () => {
-  const data = await bridge.load()
+function reset() {
+  operationId = undefined
+  drafts = []; labels = []; editing = undefined; pending = undefined; start = undefined; saving = false
+  if (editor.open) editor.close()
+  if (discard.open) discard.close()
+  snapshot.removeAttribute('src')
+  element('selection').hidden = true
+  report(''); render()
+}
+bridge.onReset(id => { if (id === operationId) reset() })
+bridge.onBegin(id => { void (async () => {
+  reset(); operationId = id
+  const data = await bridge.load(id)
+  if (operationId !== id) return
   labels = data.labels
   snapshot.src = data.snapshot.dataUrl
   await snapshot.decode()
+  if (operationId !== id) return
   if (!snapshot.naturalWidth || !snapshot.naturalHeight) throw new Error('标注截图为空，请重试。')
   render()
   await new Promise(resolve => requestAnimationFrame(resolve))
-  await bridge.ready()
+  if (operationId !== id) return
+  await bridge.ready(id)
   surface.focus({ preventScroll: true })
-})().catch(failure => { report(messageOf(failure)); void bridge.cancel().catch(() => {}) })
+})().catch(failure => { if (operationId === id) { report(messageOf(failure)); void bridge.cancel(id).catch(() => {}) } }) })

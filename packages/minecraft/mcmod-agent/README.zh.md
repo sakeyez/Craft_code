@@ -10,13 +10,19 @@
 
 | 段落 | 用途 |
 |---|---|
-| `minecraft:identity` | 把工作锚定在项目根目录，并要求先识别 loader、Minecraft 版本、mappings、Gradle 插件、源码集与资源根。 |
+| `minecraft:identity` | 按当前请求选择工作范围，并将项目任务锚定在项目根目录。 |
 | `minecraft:scope` | 在同一工作流支持 Fabric 与 NeoForge；先检测 loader，只有空白项目才临时默认 Fabric 1.21.x。 |
-| `minecraft:workflow` | 要求编辑前读取 Gradle 文件、元数据、入口类、registry、事件、端隔离和 mixin，并指向聚焦验证及需批准的运行任务。 |
+| `minecraft:workflow` | 按任务选择证据、技能、修改和验证；复用有效事实，游戏启动仍需授权。 |
 | `minecraft:resources` | 保持 registry name、namespace、版本适用的资源、数据文件、语言键和生成数据一致，并说明静态检查的边界。 |
 | `minecraft:version-discipline` | 防止把 loader、版本或 mappings 冲突变成 API 猜测，优先使用项目事实、源码和 LSP 结果。 |
 
 这些段落以 `40` 到 `44` 的顺序渲染，位于 persona 文本之后、工具指导之前。
+
+## 按需工作流
+
+Minecraft 预设使用本包的规则替代通用编码流程。普通知识可以直接回答；视觉问题先看附图和选区，图片缺失时明确说明，不遍历临时目录、会话日志或游戏存档寻找图片。代码解释和诊断按相关证据调查。修改需要适用技能及聚焦验证；明确要求完整开发或审计时，仍完成全部验收步骤。
+
+已确认的项目事实可复用，直到项目、相关配置或证据变化。追问不会重启已完成的开发，历史流程只适用于匹配的任务。必要的 loader/version 研究、资源验证、高风险检查和游戏启动授权仍保留。这是模型指导，不是运行时工具限制，也不能保证模型总会遵从。
 
 ## 配置
 
@@ -33,9 +39,9 @@
 ##### Minecraft prompt sections
 
 ```markdown
-minecraft:identity — Identify loader, Minecraft version, mappings, Gradle plugin, source sets, and resource roots before acting.
+minecraft:identity — Match work to the current request and unfinished objective; general and visual questions do not require a development workflow.
 minecraft:scope — Detect Fabric or NeoForge and report determined, unknown, conflicting, or unsupported loader/version/mappings evidence before choosing APIs; Forge, Quilt, Architectury, and other loaders are diagnostic-only in this profile, and only a genuinely blank project may use a provisional Fabric + Java + Minecraft 1.21.x default.
-minecraft:workflow — Read Gradle files, loader metadata, entrypoint, registries, event wiring, side configuration, and mixin config before edits; verify with focused loader-appropriate Gradle tasks.
+minecraft:workflow — Choose only the steps needed for the current request; inspect images first for visual questions, investigate relevant code for diagnosis, and verify changes with focused checks.
 minecraft:resources — Keep Java registry names, namespaces, assets, data files, language keys, and generated data aligned.
 minecraft:version-discipline — Do not mix Fabric, Forge, NeoForge, Architectury, or cross-version Minecraft APIs.
 ```

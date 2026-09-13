@@ -44,6 +44,7 @@
     "@deepseek-ai/dsh-lsp-stdio": "workspace:^",
     "@deepseek-ai/dsh-mcmod-agent": "workspace:^",
     "@deepseek-ai/dsh-tool-mc-project": "workspace:^",
+    "@deepseek-ai/dsh-tool-mc-bootstrap": "workspace:^",
     "@deepseek-ai/dsh-tool-lsp": "workspace:^"
   },
   "peerDependencies": {
@@ -59,6 +60,7 @@
     "@deepseek-ai/dsh-lsp-stdio": "workspace:^",
     "@deepseek-ai/dsh-mcmod-agent": "workspace:^",
     "@deepseek-ai/dsh-tool-mc-project": "workspace:^",
+    "@deepseek-ai/dsh-tool-mc-bootstrap": "workspace:^",
     "@deepseek-ai/dsh-tool-lsp": "workspace:^",
     "js-yaml": "^4.2.0"
   }

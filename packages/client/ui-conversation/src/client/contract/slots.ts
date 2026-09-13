@@ -243,6 +243,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      * command face through its own inject.
      */
     'conversation.composer.bar': { kind: 'single'; scope: 'session-maybe'; owner: ComposerBarOwnerProps }
+    /** Saved game annotations beside draft images; receives the session and lock state. Empty sessions render nothing. */
+    'conversation.input.annotations': { kind: 'single'; scope: 'session'; owner: InputControlOwnerProps }
     /** Optional draft-image rail, drop target, and preview surface inside the composer. */
     'conversation.input.attachments': {
       kind: 'single'
@@ -605,7 +607,7 @@ export interface InputControlOwnerProps {
 export type ComposerBarProps =
   PropsRuntime<'conversation.composer.bar'>
   & PropsRenderSlots<
-    'conversation.input.attachments' | 'conversation.input.plan' | 'conversation.input.model'
+    'conversation.input.annotations' | 'conversation.input.attachments' | 'conversation.input.plan' | 'conversation.input.model'
   >
   & InjectFace<ComposerBarInjected>
   & PropsLocale<'conversation'>

@@ -9,6 +9,7 @@ import {
   injectRuntimeTest,
   parseBenchmarkPrompts,
   parseTimelineMetrics,
+  runRuntime,
   runtimeSource,
   sessionText,
 } from './mcmod-agent-benchmark.ts'
@@ -141,6 +142,27 @@ describe('mcmod agent benchmark acceptance', () => {
       expect(result.checks).not.toHaveLength(0)
       expect(result.checks.every(check => !check.passed)).toBe(true)
       expect(result.unverified).toContain('Minecraft loads the mod')
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it.each([
+    ['empty process', '', 'inconclusive'],
+    ['missing report', 'echo agent_accuracy_test:positionRecorderBehavior passed', 'inconclusive'],
+    ['wrong test report', 'echo agent_accuracy_test:other passed', 'inconclusive'],
+    ['failed test', 'echo GameTest failed', 'failed'],
+    ['named passing report', 'echo agent_accuracy_test:positionRecorderBehavior passed', 'passed'],
+  ] as const)('requires concrete GameTest evidence: %s', async (_label, output, expected) => {
+    const root = await mkdtemp(join(tmpdir(), 'mcmod-runtime-evidence-'))
+    try {
+      await mkdir(join(root, 'build', 'reports', 'gametest'), { recursive: true })
+      await writeFile(join(root, 'gradlew.bat'), `@echo off\r\n${output}\r\nexit /b ${expected === 'failed' ? 1 : 0}\r\n`)
+      if (_label === 'named passing report') {
+        await writeFile(join(root, 'build', 'reports', 'gametest', 'result.xml'), '<testcase name="positionRecorderBehavior">passed agent_accuracy_test</testcase>')
+      }
+      const result = await runRuntime(root, { id: 'accuracy', name: 'accuracy', text: '', acceptanceTotal: 14 }, 5_000, join(root, 'artifacts'))
+      expect(result.status).toBe(expected)
     } finally {
       await rm(root, { recursive: true, force: true })
     }

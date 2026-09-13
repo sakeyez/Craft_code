@@ -10,13 +10,19 @@ The package is meant to be mounted from an [agent preset](../../preset/agent-pre
 
 | Section | Purpose |
 |---|---|
-| `minecraft:identity` | Anchors work in the project root and requires loader, version, mappings, Gradle plugin, source set, and resource-root discovery. |
+| `minecraft:identity` | Matches work to the current request and anchors project tasks in the project root. |
 | `minecraft:scope` | Supports Fabric and NeoForge in one workflow; detects loader facts before APIs or datagen, with Fabric 1.21.x only as a blank-project default. |
-| `minecraft:workflow` | Requires Gradle files, metadata, entrypoint, registries, event wiring, side separation, and mixin config reads before edits, then directs focused validation and approved run tasks. |
+| `minecraft:workflow` | Selects evidence, skills, edits, and validation by task; reuses valid facts and requires approved game launches. |
 | `minecraft:resources` | Keeps registry names, namespaces, version-appropriate assets, data files, language keys, and generated data aligned while stating static-check limits. |
 | `minecraft:version-discipline` | Prevents loader/version/mappings conflicts from becoming API guesses and prefers project facts, sources, and LSP results. |
 
 The sections render at orders `40` through `44`, after persona text and before tool guidance.
+
+## Task-dependent workflow
+
+The Minecraft preset uses this package instead of the generic coding workflow. General questions can be answered directly. Visual questions start with the attached image and selected region; missing images are reported rather than searched for across temporary directories, session logs, or game saves. Code explanations and diagnoses follow relevant evidence. Changes require applicable skills and focused verification; explicit full-development and audit requests retain their complete acceptance checks.
+
+Previously confirmed project facts remain usable until the project, relevant configuration, or evidence changes. A follow-up does not restart completed development, and historical procedures apply only to matching tasks. Necessary loader/version research, resource validation, high-risk checks, and game-launch authorization remain required. This is model guidance, not a runtime tool restriction or a guarantee of model compliance.
 
 ## Config
 
@@ -33,9 +39,9 @@ The model sees the fixed prompt guidance below.
 ##### Minecraft prompt sections
 
 ```markdown
-minecraft:identity — Identify loader, Minecraft version, mappings, Gradle plugin, source sets, and resource roots before acting.
+minecraft:identity — Match work to the current request and unfinished objective; general and visual questions do not require a development workflow.
 minecraft:scope — Detect Fabric or NeoForge and report determined, unknown, conflicting, or unsupported loader/version/mappings evidence before choosing APIs; Forge, Quilt, Architectury, and other loaders are diagnostic-only in this profile, and only a genuinely blank project may use a provisional Fabric + Java + Minecraft 1.21.x default.
-minecraft:workflow — Read Gradle files, loader metadata, entrypoint, registries, event wiring, side configuration, and mixin config before edits; verify with focused loader-appropriate Gradle tasks.
+minecraft:workflow — Choose only the steps needed for the current request; inspect images first for visual questions, investigate relevant code for diagnosis, and verify changes with focused checks.
 minecraft:resources — Keep Java registry names, namespaces, assets, data files, language keys, and generated data aligned.
 minecraft:version-discipline — Do not mix Fabric, Forge, NeoForge, Architectury, or cross-version Minecraft APIs.
 ```

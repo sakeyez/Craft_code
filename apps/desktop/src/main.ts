@@ -1,3 +1,5 @@
+import { GameAnnotationShortcut } from './game-annotation-shortcut.ts'
+import { GameCaptureStream } from './game-capture-stream.ts'
 import { GameAnnotationController } from './game-annotation.ts'
 import { isAnnotationRequest } from './game-annotation-contract.ts'
 /** Electron application shell over the private loopback desktop runtime. */
@@ -33,6 +35,7 @@ let backend: BackendHandle | undefined
 let mainWindow: BrowserWindow | undefined
 let shutdown: Promise<void> | undefined
 let gameCapture: GameCaptureProvider | undefined
+let annotationShortcut: GameAnnotationShortcut | undefined
 let gameAnnotation: GameAnnotationController | undefined
 
 app.setName('CraftCode')
@@ -132,10 +135,12 @@ async function createWindow(url: string): Promise<BrowserWindow> {
 
 /** Stop the backend exactly once before allowing Electron to exit. */
 function shutdownAndQuit(): Promise<void> {
-  shutdown ??= (async () => {
+  shutdown ??= Promise.resolve().then(async () => {
     const active = backend
     backend = undefined
     try {
+      annotationShortcut?.dispose()
+      annotationShortcut = undefined
       gameAnnotation?.dispose()
       gameAnnotation = undefined
       await gameCapture?.dispose()
@@ -147,7 +152,7 @@ function shutdownAndQuit(): Promise<void> {
     } finally {
       app.quit()
     }
-  })()
+  })
   return shutdown
 }
 
@@ -268,6 +273,15 @@ async function startDesktop(): Promise<void> {
     }
     return gameCapture.reconnect(canonical)
   })
+  ipcMain.removeHandler('desktop:annotation-shortcut-bind')
+  ipcMain.handle('desktop:annotation-shortcut-bind', (event, raw: unknown, token: unknown) => {
+    if (event.sender !== mainWindow?.webContents) throw new Error('请求来源无效。')
+    if (raw === undefined && typeof token === 'string') { annotationShortcut?.bind(undefined, token); return }
+    if (!isAnnotationRequest(raw)) throw new Error('快捷键会话无效。')
+    const cwd = canonicalProjectCwd(raw.cwd)
+    if (cwd === undefined || !knownProjects.has(cwd)) throw new Error('快捷键项目无效。')
+    annotationShortcut?.bind({ ...raw, cwd })
+  })
   ipcMain.removeHandler('desktop:game-annotation-begin')
   ipcMain.handle('desktop:game-annotation-begin', async (event, raw: unknown): Promise<void> => {
     if (!isAnnotationRequest(raw)) throw new Error('标注请求无效。')
@@ -336,8 +350,11 @@ async function startDesktop(): Promise<void> {
     backend = await startBackend(runtime)
     desktopLog(`backend ready pid=${String(backend.child.pid)} url=${backend.url}`)
     mainWindow = await createWindow(backend.url)
-    gameAnnotation = new GameAnnotationController(mainWindow.webContents)
+    // Hidden capture windows must not keep the application alive after its main window closes.
+    mainWindow.once('closed', () => { void shutdownAndQuit() })
+    gameAnnotation = new GameAnnotationController(mainWindow.webContents, desktopLog)
     gameCapture = await createGameCaptureProvider({
+      stream: new GameCaptureStream(desktopLog),
       window: mainWindow,
       publish: (gameEvent) => {
         const window = mainWindow
@@ -345,6 +362,7 @@ async function startDesktop(): Promise<void> {
       },
       log: desktopLog,
     })
+    annotationShortcut = new GameAnnotationShortcut(mainWindow.webContents, gameCapture, gameAnnotation, () => activeProjectCwd)
     await gameCapture.select(activeProjectCwd)
     void backend.exited.then(({ code, signal }) => {
       desktopLog(`backend exit code=${String(code)} signal=${String(signal)}`)

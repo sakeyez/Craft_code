@@ -86,11 +86,11 @@ describe('dsh-mcmod bundle', () => {
     expect(ids.filter((id): id is string => typeof id === 'string' && forbidden.has(id))).toEqual([])
   })
 
-  it('composes without warnings after base and web-app bundle layers', () => {
+  it('composes without warnings after base and desktop-app bundle layers', () => {
     const root = fileURLToPath(new URL('../../..', import.meta.url))
     const patches = [
       yaml.load(readFileSync(resolve(root, 'bundle/base/cordis.patch.yml'), 'utf8'), { schema: entryListSchema }),
-      yaml.load(readFileSync(resolve(root, 'bundle/web-app/cordis.patch.yml'), 'utf8'), { schema: entryListSchema }),
+      yaml.load(readFileSync(resolve(root, 'bundle/desktop-app/cordis.patch.yml'), 'utf8'), { schema: entryListSchema }),
       loadPatch(),
     ]
     const warnings: string[] = []

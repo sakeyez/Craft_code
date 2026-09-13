@@ -52,6 +52,7 @@ export function apply(ctx: ClientContext): void {
     )
   }
   ctx.effect(() => ctx.layout.attachGameSurfaceBridge({
+    bindAnnotationShortcut: (request, listener) => bridge.bindGameAnnotationShortcut?.(request, listener) ?? (() => {}),
     reconnect: async (cwd) => {
       if (bridge.reconnectGameSurface === undefined) throw new Error('桌面端未提供游戏重连能力。')
       return await bridge.reconnectGameSurface(cwd) as never
