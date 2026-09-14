@@ -6,6 +6,7 @@
     { "path": "../../../vendor/cordis" },
     { "path": "../../../vendor/schemastery" },
     { "path": "../../core/tools" },
-    { "path": "../../shell/shell" }
+    { "path": "../../shell/shell" },
+    { "path": "../../fs/fs" }
   ]
 }

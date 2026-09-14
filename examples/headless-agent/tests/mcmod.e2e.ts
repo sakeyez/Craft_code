@@ -154,10 +154,10 @@ describe('mcmod headless agent e2e', () => {
     expect(result.stderr).toBe('')
     expect(result.stdout.trim()).toBe('MCMOD_E2E_OK')
     expect(calls).toEqual([
-      'write',
-      'write',
-      'write',
       'detect_mc_project',
+      'write',
+      'write',
+      'write',
       'validate_mc_resources',
       'run_mc_check',
     ])
@@ -191,10 +191,10 @@ describe('mcmod headless agent e2e', () => {
     expect(result.stderr).toBe('')
     expect(result.stdout.trim()).toBe('MCMOD_E2E_OK')
     expect(calls).toEqual([
-      'write',
-      'write',
-      'write',
       'detect_mc_project',
+      'write',
+      'write',
+      'write',
       'validate_mc_resources',
       'run_mc_check',
     ])

@@ -8,7 +8,7 @@
   justify-content: center;
   height: 100%;
   min-width: 0;
-  padding: 0 24px;
+  padding: 0 24px 8vh;
 }
 
 :global([data-game-focus]) .root {
@@ -21,7 +21,7 @@
   flex-direction: column;
   align-items: stretch;
   /* figma 75:8208: 12 between title block / workspace / card. */
-  gap: 12px;
+  gap: 10px;
   width: 100%;
   max-width: var(--dsh-composer-card-max-width);
   overflow: visible;
@@ -34,9 +34,10 @@
   column-gap: 10px;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
-  line-height: 32px;
-  font-weight: 500;
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 560;
+  letter-spacing: -0.02em;
   color: var(--dsw-alias-label-primary);
 }
 
@@ -116,13 +117,13 @@
   align-items: center;
   gap: 4px;
   max-width: min(100%, 360px);
-  min-height: 28px;
+  min-height: 26px;
   padding: 0 8px;
   border: none;
   border-radius: 16px;
   background: transparent;
   color: var(--dsw-alias-label-primary);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
   font-weight: 500;
   cursor: pointer;
@@ -193,7 +194,7 @@
 }
 
 .workspace {
-  min-height: 30px;
+  min-height: 26px;
   border: none;
   border-radius: 2px;
   background: transparent;

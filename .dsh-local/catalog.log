@@ -1,0 +1,2 @@
+$ tsx scripts/gen-tool-catalog.ts --check "--check"
+gen-tool-catalog: docs/tool-catalog.md is up to date.

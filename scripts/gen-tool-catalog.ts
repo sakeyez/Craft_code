@@ -413,14 +413,15 @@ const TOOL_PACKAGES: ToolPackage[] = [
     pkg: '@deepseek-ai/dsh-tool-mc-bootstrap',
     dir: 'tool-mc-bootstrap',
     source: 'packages/minecraft/tool-mc-bootstrap/src/index.ts',
-    requires: ['ctx.tools', 'ctx.shell'],
+    requires: ['ctx.tools', 'ctx.fs', 'ctx.shell'],
     writes: ['tool/call', 'tool/result'],
     async mount(ctx) {
       await ctx.plugin(LocalSubprocessRuntime)
       await ctx.plugin(LocalBashExecutor)
+      await ctx.plugin(LocalFileSystem)
       await ctx.plugin(ToolMcBootstrap)
     },
-    note: 'bootstrap_mc_project creates a supported project only in an empty directory and reports environment readiness without claiming gameplay verification.',
+    note: 'bootstrap_mc_project creates a complete minimal supported project only in an empty workspace directory, writes through ctx.fs, and reports environment readiness without claiming Gradle or gameplay verification.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-mc-project',

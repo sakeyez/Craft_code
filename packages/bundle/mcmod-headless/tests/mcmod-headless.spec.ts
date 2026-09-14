@@ -23,6 +23,10 @@ interface PatchRow {
 const MINECRAFT_SKILL_NAMES = [
   'fabric-mod-dev',
   'fabric-datagen',
+  'minecraft-add-content',
+  'minecraft-build-diagnose',
+  'minecraft-environment-doctor',
+  'minecraft-project-create',
   'minecraft-resources',
   'mixin-debugging',
   'neoforge-datagen',

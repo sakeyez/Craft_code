@@ -1544,6 +1544,9 @@ importers:
       '@deepseek-ai/dsh-lsp-stdio':
         specifier: workspace:^
         version: link:../../lsp/lsp-stdio
+      '@deepseek-ai/dsh-tool-mc-bootstrap':
+        specifier: workspace:^
+        version: link:../../minecraft/tool-mc-bootstrap
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -5957,9 +5960,6 @@ importers:
 
   packages/minecraft/tool-mc-bootstrap:
     dependencies:
-      '@deepseek-ai/dsh-shell':
-        specifier: workspace:^
-        version: link:../../shell/shell
       '@deepseek-ai/schemastery':
         specifier: link:../../../vendor/schemastery
         version: link:../../../vendor/schemastery
@@ -5967,6 +5967,12 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-fs':
+        specifier: workspace:^
+        version: link:../../fs/fs
+      '@deepseek-ai/dsh-shell':
+        specifier: workspace:^
+        version: link:../../shell/shell
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../../core/tools

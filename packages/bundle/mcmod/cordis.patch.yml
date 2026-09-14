@@ -1,6 +1,9 @@
 - id: agent-presets
   config:
     default: mcmod
+    allowedIds:
+      - mcmod
+    includeUserRoot: false
 
 - insert:
     - id: lsp

@@ -59,6 +59,8 @@ export interface Config {
    * configured root. False mounts a roster over `roots` alone.
    */
   includeUserRoot: boolean
+  /** When set, only these preset ids are visible and mountable. */
+  allowedIds?: string[]
 }
 
 /**

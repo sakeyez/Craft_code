@@ -9,6 +9,6 @@
   "files": ["lib"],
   "license": "MIT",
   "dependencies": { "@deepseek-ai/schemastery": "workspace:^" },
-  "peerDependencies": { "@deepseek-ai/cordis": "workspace:^", "@deepseek-ai/dsh-tools": "workspace:^", "@deepseek-ai/dsh-shell": "workspace:^" },
-  "devDependencies": { "@deepseek-ai/cordis": "workspace:^", "@deepseek-ai/dsh-tools": "workspace:^", "@types/node": "^22.20.0" }
+  "peerDependencies": { "@deepseek-ai/cordis": "workspace:^", "@deepseek-ai/dsh-tools": "workspace:^", "@deepseek-ai/dsh-shell": "workspace:^", "@deepseek-ai/dsh-fs": "workspace:^" },
+  "devDependencies": { "@deepseek-ai/cordis": "workspace:^", "@deepseek-ai/dsh-tools": "workspace:^", "@deepseek-ai/dsh-shell": "workspace:^", "@deepseek-ai/dsh-fs": "workspace:^", "@types/node": "^22.20.0" }
 }

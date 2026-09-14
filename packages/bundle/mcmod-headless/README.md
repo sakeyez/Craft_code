@@ -35,7 +35,7 @@ The patch disables web retrieval, workflow orchestration, Ralph, general subagen
 
 #### What the model sees
 
-The model sees the headless persona, the five shared Fabric/NeoForge Minecraft modding prompt sections from `@deepseek-ai/dsh-mcmod-agent`, six bundled Minecraft skills (`fabric-mod-dev`, `fabric-datagen`, `minecraft-resources`, `mixin-debugging`, `neoforge-mod-dev`, and `neoforge-datagen`) in the skill catalog, and the remaining model-facing tool schemas: filesystem read/write/edit/search, `detect_mc_project`, `validate_mc_resources`, `run_mc_check`, one foreground-only platform shell tool, `lsp`, and `skill`. The shell schema omits `run_in_background`; long validation should use bounded foreground calls or `run_mc_check`.
+The model sees the headless persona, the five shared Fabric/NeoForge Minecraft modding prompt sections from `@deepseek-ai/dsh-mcmod-agent`, ten bundled Minecraft skills (`fabric-mod-dev`, `fabric-datagen`, `minecraft-add-content`, `minecraft-build-diagnose`, `minecraft-environment-doctor`, `minecraft-project-create`, `minecraft-resources`, `mixin-debugging`, `neoforge-mod-dev`, and `neoforge-datagen`) in the skill catalog, and the remaining model-facing tool schemas: filesystem read/write/edit/search, `bootstrap_mc_project`, `detect_mc_project`, `validate_mc_resources`, `run_mc_check`, one foreground-only platform shell tool, `lsp`, and `skill`. The shell schema omits `run_in_background`; long validation should use bounded foreground calls or `run_mc_check`.
 
 #### Token effect
 

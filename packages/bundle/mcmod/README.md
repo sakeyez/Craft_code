@@ -22,7 +22,7 @@ The Java command is deliberately plain `jdtls`. A profile that installs this bun
 
 #### What the model sees
 
-Indirectly, new sessions in the profile compose from the shipped `mcmod` preset by default. The model sees that preset's shared Fabric and NeoForge Minecraft modding prompt sections, six scoped Minecraft skills, and the remaining tool schemas: filesystem read/write/edit/search, `detect_mc_project`, `validate_mc_resources`, `run_mc_check`, one foreground-only platform shell tool, `lsp`, `skill`, and `ask_user_question`. The bundle itself contributes no prompt text, skill body, or tool schema.
+Indirectly, new sessions in the profile compose from the shipped `mcmod` preset by default. The model sees that preset's shared Fabric and NeoForge Minecraft modding prompt sections, ten scoped Minecraft skills, and the remaining tool schemas: filesystem read/write/edit/search, `bootstrap_mc_project`, `detect_mc_project`, `validate_mc_resources`, `run_mc_check`, one foreground-only platform shell tool, `lsp`, `skill`, and `ask_user_question`. The bundle itself contributes no prompt text, skill body, or tool schema.
 
 #### Token effect
 

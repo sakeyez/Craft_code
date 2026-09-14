@@ -1871,6 +1871,58 @@ describe('run_mc_check', () => {
     })
   })
 
+  it('runs the fail-closed startup gate and accepts a bounded readiness probe', async () => {
+    const workspace = await createFabricProject()
+    const build = await readFile(join(workspace, 'build.gradle'), 'utf8')
+    await write('build.gradle', build.replace('tasks.register("runDatagen") {}\n', ''))
+    const { context, shell, approval } = await bootWithShell(workspace, { maxOutputSummaryBytes: 8 })
+    const tasks = expectedGradle('tasks --all --console=plain')
+    shell.results.set(tasks, okResult('runDatagen - data\nrunServer - server\n'))
+    shell.results.set(expectedGradle('runServer'), {
+      ...timeoutResult(),
+      stdout: { text: 'Done (1.2s)! For help, type "help"\n', truncated: false },
+    })
+
+    const result = await callRunCheck(context, workspace, { target: 'startup', runtimeMode: 'server', timeoutMs: 321 })
+
+    expect(result.failedStep).toBeNull()
+    expect(result.steps.map(step => step.step)).toEqual([
+      'gradle:tasks', 'datagen', 'resources:static', 'resources:gradle', 'test', 'build', 'runtime',
+    ])
+    expect(result.steps.at(-1)).toMatchObject({ status: 'passed', message: expect.stringContaining('readiness marker') })
+    expect(shell.commands).toEqual([
+      tasks, expectedGradle('runDatagen'), expectedGradle('processResources'), expectedGradle('test'), expectedGradle('build'), expectedGradle('runServer'),
+    ])
+    expect(approval.requests).toHaveLength(1)
+  })
+
+  it('blocks startup before the runtime probe when a preflight phase fails', async () => {
+    const workspace = await createFabricProject()
+    await write('build.gradle', `${await readFile(join(workspace, 'build.gradle'), 'utf8')}tasks.register("runServer") {}\n`)
+    const { context, shell } = await bootWithShell(workspace)
+    shell.results.set(expectedGradle('test'), failedResult(7, 'compile failed\n'))
+
+    const result = await callRunCheck(context, workspace, { target: 'startup', runtimeMode: 'server' })
+
+    expect(result.failedStep).toBe('test')
+    expect(result.steps.map(step => step.step)).toEqual(['datagen', 'resources:static', 'resources:gradle', 'test'])
+    expect(shell.commands).not.toContain(expectedGradle('build'))
+    expect(shell.commands).not.toContain(expectedGradle('runClient'))
+  })
+
+  it('does not count a runtime exit without a readiness marker as startup success', async () => {
+    const workspace = await createFabricProject()
+    await write('build.gradle', `${await readFile(join(workspace, 'build.gradle'), 'utf8')}tasks.register("runServer") {}\n`)
+    const { context, shell } = await bootWithShell(workspace)
+    shell.results.set(expectedGradle('runDatagen'), okResult(''))
+    shell.results.set(expectedGradle('runServer'), okResult('Mod loading failed\n'))
+
+    const result = await callRunCheck(context, workspace, { target: 'startup', runtimeMode: 'server' })
+
+    expect(result.failedStep).toBe('startup')
+    expect(result.steps.at(-1)).toMatchObject({ status: 'failed', message: expect.stringContaining('readiness marker') })
+  })
+
   it('does not run Gradle when runtime approval is rejected', async () => {
     const workspace = await createFabricProject()
     const { context, shell, approval } = await bootWithShell(workspace)
@@ -2115,4 +2167,5 @@ describe('run_mc_check', () => {
     expect(withoutSpill.steps[0]?.stdout.truncated).toBe(true)
     expect(withoutSpill.steps[0]?.stdout.text).toContain('…')
   })
+
 })

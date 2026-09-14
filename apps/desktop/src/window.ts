@@ -54,3 +54,18 @@ export function navigationDisposition(target: string, allowedOrigin: string): Na
   if (url.origin === allowedOrigin) return 'allow'
   return url.protocol === 'http:' || url.protocol === 'https:' ? 'external' : 'deny'
 }
+
+/** Allow only same-origin main-frame clipboard writes in the desktop shell. */
+export function desktopPermissionAllowed(
+  permission: string,
+  requestingUrl: string | undefined,
+  allowedOrigin: string,
+  isMainFrame: boolean,
+): boolean {
+  if (permission !== 'clipboard-sanitized-write' || requestingUrl === undefined || !isMainFrame) return false
+  try {
+    return new URL(requestingUrl).origin === allowedOrigin
+  } catch {
+    return false
+  }
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DESKTOP_APP_USER_MODEL_ID, DESKTOP_WEB_PREFERENCES, desktopAppUserModelId,
-  desktopWindowOptions, navigationDisposition,
+  desktopPermissionAllowed, desktopWindowOptions, navigationDisposition,
 } from '../src/window.ts'
 
 describe('desktop window policy', () => {
@@ -41,5 +41,14 @@ describe('desktop window policy', () => {
     expect(navigationDisposition('http://user:secret@127.0.0.1:43123/session/1', origin)).toBe('deny')
     expect(navigationDisposition('file:///C:/secret.txt', origin)).toBe('deny')
     expect(navigationDisposition('not a url', origin)).toBe('deny')
+  })
+
+  it('allows sanitized clipboard writes only for the launch origin main frame', () => {
+    const origin = 'http://127.0.0.1:43123'
+    expect(desktopPermissionAllowed('clipboard-sanitized-write', `${origin}/session/1`, origin, true)).toBe(true)
+    expect(desktopPermissionAllowed('clipboard-read', `${origin}/session/1`, origin, true)).toBe(false)
+    expect(desktopPermissionAllowed('clipboard-sanitized-write', 'https://example.com/', origin, true)).toBe(false)
+    expect(desktopPermissionAllowed('clipboard-sanitized-write', `${origin}/frame`, origin, false)).toBe(false)
+    expect(desktopPermissionAllowed('clipboard-sanitized-write', 'not a url', origin, true)).toBe(false)
   })
 })

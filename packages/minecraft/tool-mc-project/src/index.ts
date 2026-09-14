@@ -86,7 +86,7 @@ export const Config: z<Config> = z.object({
 
 type Confidence = 'high' | 'medium' | 'low'
 type VersionClassification = 'exact' | 'range'
-type CheckTarget = 'build' | 'test' | 'datagen' | 'resources' | 'runtime' | 'all'
+type CheckTarget = 'build' | 'test' | 'datagen' | 'resources' | 'runtime' | 'startup' | 'all'
 type CheckStepStatus = 'passed' | 'failed' | 'skipped'
 
 interface ResolvedConfig {
@@ -247,12 +247,16 @@ function isApprovedRuntimeCheck(exec: ToolExecution): boolean {
     return false
   }
   const args = exec.arguments as { target?: unknown; runtimeMode?: unknown }
-  return args.target === 'runtime' && (args.runtimeMode === 'client' || args.runtimeMode === 'server')
+  return (args.target === 'runtime' || args.target === 'startup') && (args.runtimeMode === 'client' || args.runtimeMode === 'server')
 }
 
 interface CommandPlan {
   step: string
   task?: string
+}
+
+interface TaskDiscoveryCache {
+  result?: { tasks: string[]; step: CheckStepResult }
 }
 
 interface DetectionState {
@@ -763,6 +767,35 @@ function commandStep(step: string, command: string, result: ShellRunResult, conf
   }
 }
 
+/**
+ * A Gradle run task is long-lived and commonly ends by timeout, so an exit
+ * code alone cannot prove that Minecraft reached its loading boundary. These
+ * markers are emitted after the vanilla client/server has initialised.
+ */
+const RUNTIME_READY_MARKERS = [
+  /\bDone \([^\n]*\)!/u,
+  /For help, type ["']help["']/u,
+  /Setting user:/u,
+]
+
+function runtimeProbeStep(step: CheckStepResult, mode: RuntimeMode, ready: boolean): CheckStepResult {
+  if (ready && (step.status === 'passed' || (step.timedOut && step.exitCode === null))) {
+    return {
+      ...step,
+      status: 'passed',
+      message: `Minecraft ${mode} readiness marker observed before the bounded probe ended.`,
+    }
+  }
+  if (step.status === 'passed' && !ready) {
+    return {
+      ...step,
+      status: 'failed',
+      message: `Minecraft ${mode} task exited without a recognized readiness marker; startup is not verified.`,
+    }
+  }
+  return step
+}
+
 function failedStaticStep(step: string, message: string, detail: unknown, config: ResolvedConfig): CheckStepResult {
   return {
     step,
@@ -842,6 +875,16 @@ function addTargetPlans(plans: CommandPlan[], target: CheckTarget, detected: Det
       if (detected.loaderSupport !== 'supported') return 'runtime'
       plans.push({ step: 'runtime' })
       return undefined
+    case 'startup':
+      if (detected.loaderSupport !== 'supported') return 'startup'
+      if (detected.datagenClues.length > 0) plans.push({ step: 'datagen' })
+      plans.push(
+        { step: 'resources:gradle', task: 'processResources' },
+        { step: 'test', task: 'test' },
+        { step: 'build', task: 'build' },
+        { step: 'runtime' },
+      )
+      return undefined
     case 'all': {
       if (detected.datagenClues.length > 0) {
         if (detected.loaderSupport === 'supported') plans.push({ step: 'datagen' })
@@ -875,6 +918,9 @@ function suggestedNextAction(step: string, result?: CheckStepResult): string {
   if (step === 'runtime') {
     return 'Ask the user to approve a client or dedicated-server launch, then retry run_mc_check with runtimeMode set.'
   }
+  if (step === 'startup') {
+    return 'The startup gate is blocked. Fix the reported preflight failure, rerun target "startup", and only present the game after readiness is verified.'
+  }
   if (result?.sandbox?.denied === true) {
     return 'The sandbox denied the Gradle command; review the denied access and retry through the approved shell permission path if the command is trusted.'
   }
@@ -898,7 +944,9 @@ async function listGradleTasks(
   config: ResolvedConfig,
   launcher: string,
   timeoutMs: number | undefined,
+  cache?: TaskDiscoveryCache,
 ): Promise<{ tasks: string[]; step: CheckStepResult }> {
+  if (cache?.result !== undefined) return cache.result
   const command = commandFor(launcher, 'tasks --all --console=plain')
   const result = await ctx.shell.run(ctx.shell.resolve({
     command,
@@ -908,14 +956,22 @@ async function listGradleTasks(
     ...exec.agent?.session.header.cwd !== undefined ? { workdir: exec.agent.session.header.cwd } : {},
   }))
   const step = commandStep('gradle:tasks', command, result, config)
-  if (step.status === 'failed') return { tasks: [], step }
+  if (step.status === 'failed') {
+    const result = { tasks: [], step }
+    if (cache !== undefined) cache.result = result
+    return result
+  }
   if (result.stdout.truncated) {
-    return {
+    const listing = {
       tasks: [],
       step: taskDiscoveryFailure(step, `Gradle task output exceeded maxTaskDiscoveryBytes ${config.maxTaskDiscoveryBytes}; no task was selected.`),
     }
+    if (cache !== undefined) cache.result = listing
+    return listing
   }
-  return { tasks: parseGradleTaskNames(result.stdout.text), step }
+  const listing = { tasks: parseGradleTaskNames(result.stdout.text), step }
+  if (cache !== undefined) cache.result = listing
+  return listing
 }
 
 async function discoverDatagenTask(
@@ -925,6 +981,7 @@ async function discoverDatagenTask(
   detected: DetectionResult,
   launcher: string,
   timeoutMs: number | undefined,
+  cache?: TaskDiscoveryCache,
 ): Promise<{ task?: string; step?: CheckStepResult }> {
   const staticCandidates = datagenTaskCandidates(detected.loader, detected.gradleTaskCandidates)
   if (staticCandidates.length === 1) {
@@ -941,7 +998,7 @@ async function discoverDatagenTask(
     }
   }
 
-  const listing = await listGradleTasks(ctx, exec, config, launcher, timeoutMs)
+  const listing = await listGradleTasks(ctx, exec, config, launcher, timeoutMs, cache)
   if (listing.step.status === 'failed') return { step: listing.step }
   const candidates = datagenTaskCandidates(detected.loader, listing.tasks)
   if (candidates.length === 1) {
@@ -963,6 +1020,7 @@ async function discoverRuntimeTask(
   launcher: string,
   mode: RuntimeMode,
   timeoutMs: number | undefined,
+  cache?: TaskDiscoveryCache,
 ): Promise<{ task?: string; step?: CheckStepResult }> {
   const staticCandidates = runtimeTaskCandidates(mode, detected.gradleTaskCandidates)
   if (staticCandidates.length === 1) {
@@ -978,7 +1036,7 @@ async function discoverRuntimeTask(
       ),
     }
   }
-  const listing = await listGradleTasks(ctx, exec, config, launcher, timeoutMs)
+  const listing = await listGradleTasks(ctx, exec, config, launcher, timeoutMs, cache)
   if (listing.step.status === 'failed') return { step: listing.step }
   const candidates = runtimeTaskCandidates(mode, listing.tasks)
   if (candidates.length === 1) {
@@ -1022,6 +1080,7 @@ async function runCommandStep(
   plan: CommandPlan,
   launcher: string,
   timeoutMs: number | undefined,
+  runtimeMode?: RuntimeMode,
 ): Promise<CheckStepResult> {
   if (plan.task === undefined) throw new Error(`unresolved Gradle task for ${plan.step}`)
   const command = commandFor(launcher, plan.task)
@@ -1031,7 +1090,11 @@ async function runCommandStep(
     signal: exec.signal,
     ...exec.agent?.session.header.cwd !== undefined ? { workdir: exec.agent.session.header.cwd } : {},
   }))
-  return commandStep(plan.step, command, result, config)
+  const step = commandStep(plan.step, command, result, config)
+  const runtimeReady = RUNTIME_READY_MARKERS.some(marker => marker.test(`${result.stdout.text}\n${result.stderr.text}`))
+  return plan.step === 'runtime' && runtimeMode !== undefined
+    ? runtimeProbeStep(step, runtimeMode, runtimeReady)
+    : step
 }
 
 async function runStaticResourceStep(
@@ -1654,18 +1717,21 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
 
   const metadataFiles: TextFile[] = []
   const metadataWarnings: string[] = []
-  const walkState: WalkState = { entries: 0, warned: false }
+  const resourceWalkState: WalkState = { entries: 0, warned: false }
+  const resourceClueFiles: Array<{ path: string; entry: FsDirEntry }> = []
   for (const resourceRoot of resourceRoots) {
     const files = await walkFiles(
       ctx,
       exec,
       resourceRoot,
-      walkState,
+      resourceWalkState,
       config,
       metadataWarnings,
-      path => METADATA_BASENAMES.has(posix.basename(path)),
+      path => METADATA_BASENAMES.has(posix.basename(path)) || isMixinFile(path),
     )
+    resourceClueFiles.push(...files)
     for (const file of files) {
+      if (!METADATA_BASENAMES.has(posix.basename(file.path))) continue
       const text = await readTextFile(ctx, exec, file.path, file.entry.target, file.entry.size, config, metadataWarnings)
       if (text !== undefined) metadataFiles.push(text)
     }
@@ -1686,10 +1752,8 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
     }
   }
 
-  const mixinState: WalkState = { entries: 0, warned: false }
-  for (const resourceRoot of resourceRoots) {
-    const files = await walkFiles(ctx, exec, resourceRoot, mixinState, config, warnings, isMixinFile)
-    for (const file of files) state.mixins.push({ path: file.path, source: 'resource file name' })
+  for (const file of resourceClueFiles) {
+    if (isMixinFile(file.path)) state.mixins.push({ path: file.path, source: 'resource file name' })
   }
 
   const sourceWalkState: WalkState = { entries: 0, warned: false }
@@ -2120,21 +2184,25 @@ async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedCon
     }
   }
   const plans: CommandPlan[] = []
-  if (args.target === 'runtime' && args.runtimeMode === undefined) {
-    const step = unavailableStep('runtime', 'runtimeMode must be "client" or "server" before launching a Minecraft runtime task.')
+  if ((args.target === 'runtime' || args.target === 'startup') && args.runtimeMode === undefined) {
+    const step = unavailableStep(args.target, 'runtimeMode must be "client" or "server" before launching a Minecraft runtime task.')
     return {
       commands: [],
       exitCode: null,
       steps: [step],
-      failedStep: 'runtime',
-      suggestedNextAction: 'Ask the user whether the client or dedicated server should be launched, then retry with runtimeMode.',
+      failedStep: args.target,
+      suggestedNextAction: args.target === 'startup'
+        ? 'Ask the user whether the client or dedicated server should be launched, then retry target "startup" with runtimeMode.'
+        : 'Ask the user whether the client or dedicated server should be launched, then retry with runtimeMode.',
     }
   }
   const unsupportedStep = addTargetPlans(plans, args.target, detected)
   if (unsupportedStep !== undefined) {
     const message = detected.loaderSupport === 'unsupported'
       ? `Loader ${detected.loader} is detected but unsupported by this profile; no loader-specific ${unsupportedStep} check was executed.`
-      : `Cannot infer a datagen Gradle task for loader ${detected.loader}.`
+      : unsupportedStep === 'startup'
+        ? `Cannot establish a supported Fabric or NeoForge loader for startup verification.`
+        : `Cannot infer a datagen Gradle task for loader ${detected.loader}.`
     const step = unavailableStep(unsupportedStep, message)
     return {
       commands: [],
@@ -2159,21 +2227,23 @@ async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedCon
 
   const steps: CheckStepResult[] = []
   let currentScan: DetectionScan | undefined = scan
-  let discoveryCommand: string | undefined
-  const unresolvedPlan = plans.find(plan => plan.task === undefined)
-  if (unresolvedPlan !== undefined) {
+  const discoveryCommands: string[] = []
+  const taskDiscoveryCache: TaskDiscoveryCache = {}
+  for (const unresolvedPlan of plans.filter(plan => plan.task === undefined)) {
     const discovery = unresolvedPlan.step === 'datagen'
-      ? await discoverDatagenTask(ctx, exec, config, detected, launcher, args.timeoutMs)
-      : await discoverRuntimeTask(ctx, exec, config, detected, launcher, args.runtimeMode as RuntimeMode, args.timeoutMs)
+      ? await discoverDatagenTask(ctx, exec, config, detected, launcher, args.timeoutMs, taskDiscoveryCache)
+      : await discoverRuntimeTask(ctx, exec, config, detected, launcher, args.runtimeMode as RuntimeMode, args.timeoutMs, taskDiscoveryCache)
     if (discovery.step !== undefined) {
-      steps.push(discovery.step)
-      discoveryCommand = discovery.step.command
+      if (discovery.step.command === undefined || !discoveryCommands.includes(discovery.step.command)) {
+        steps.push(discovery.step)
+        if (discovery.step.command !== undefined) discoveryCommands.push(discovery.step.command)
+      }
     }
     if (discovery.task === undefined) {
-      const failedStep = discovery.step?.step ?? 'datagen'
+      const failedStep = discovery.step?.step ?? unresolvedPlan.step
       const unresolvedLabel = unresolvedPlan.step === 'runtime' ? 'runtime' : 'datagen'
       return {
-        commands: discovery.step?.command === undefined ? [] : [discovery.step.command],
+        commands: discoveryCommands,
         exitCode: discovery.step?.exitCode ?? null,
         steps,
         failedStep,
@@ -2185,7 +2255,7 @@ async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedCon
     unresolvedPlan.task = discovery.task
   }
   const commands = [
-    ...discoveryCommand === undefined ? [] : [discoveryCommand],
+    ...discoveryCommands,
     ...plans.map((plan) => {
       if (plan.task === undefined) throw new Error(`unresolved Gradle task for ${plan.step}`)
       return commandFor(launcher, plan.task)
@@ -2206,15 +2276,15 @@ async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedCon
         }
       }
     }
-    const step = await runCommandStep(ctx, exec, config, plan, launcher, args.timeoutMs)
+    const step = await runCommandStep(ctx, exec, config, plan, launcher, args.timeoutMs, args.target === 'startup' ? args.runtimeMode : undefined)
     steps.push(step)
     if (step.status === 'failed') {
       return {
         commands,
         exitCode: step.exitCode,
         steps,
-        failedStep: step.step,
-        suggestedNextAction: suggestedNextAction(step.step, step),
+        failedStep: step.step === 'runtime' && args.target === 'startup' ? 'startup' : step.step,
+        suggestedNextAction: suggestedNextAction(step.step === 'runtime' && args.target === 'startup' ? 'startup' : step.step, step),
       }
     }
     if (plan.step === 'datagen') currentScan = undefined
@@ -2283,18 +2353,18 @@ export function apply(ctx: Context, rawConfig: Config = {}): void {
     const fiber = ctx.inject(['shell'], (shellCtx: Context) => {
       shellCtx.tools.register(defineTool({
         name: RUN_MC_CHECK,
-        description: 'Run the appropriate Minecraft Gradle validation for the current workspace. The tool first detects the project with detect_mc_project, chooses Gradle wrapper or gradle commands from the detected loader, discovers custom datagen/runtime tasks when needed, runs each command through the mounted shell executor, and returns structured command results. Targets: build, test, datagen, resources, runtime, all. A runtime target launches the user-approved client or dedicated server and requires runtimeMode.',
+        description: 'Run Minecraft validation for the current workspace. The tool detects the project, chooses the pinned Gradle launcher, discovers unambiguous custom tasks, and returns structured command results. Targets: build, test, datagen, resources, runtime, startup, all. The startup target is a launch gate: static resources, optional datagen, processResources, test, and build must pass before a user-approved client or dedicated-server probe runs; the probe must emit a readiness marker.',
         parameters: {
           target: {
             type: 'string',
             required: true,
-            description: 'Check to run. resources performs static Minecraft resource validation before Gradle processResources. runtime launches a client or dedicated server only after the user approves it and supplies runtimeMode. all stops at the first failed step.',
-            enum: ['build', 'test', 'datagen', 'resources', 'runtime', 'all'],
+            description: 'Check to run. resources performs static Minecraft resource validation before Gradle processResources. runtime launches a client or dedicated server after approval. startup runs the complete preflight and then a bounded readiness probe; it blocks launch on any failed or unverified phase. all stops at the first failed step.',
+            enum: ['build', 'test', 'datagen', 'resources', 'runtime', 'startup', 'all'],
           },
           runtimeMode: {
             type: 'string',
             enum: ['client', 'server'],
-            description: 'Required for target runtime: choose client or dedicated server after user approval.',
+            description: 'Required for target runtime or startup: choose client or dedicated server after user approval.',
           },
           timeoutMs: {
             type: 'number',

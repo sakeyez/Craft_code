@@ -40,7 +40,8 @@
   },
   "dependencies": {
     "@deepseek-ai/dsh-lsp": "workspace:^",
-    "@deepseek-ai/dsh-lsp-stdio": "workspace:^"
+    "@deepseek-ai/dsh-lsp-stdio": "workspace:^",
+    "@deepseek-ai/dsh-tool-mc-bootstrap": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-invariants": "workspace:^",
@@ -53,6 +54,7 @@
     "@deepseek-ai/dsh-invariants": "workspace:^",
     "@deepseek-ai/dsh-lsp": "workspace:^",
     "@deepseek-ai/dsh-lsp-stdio": "workspace:^",
+    "@deepseek-ai/dsh-tool-mc-bootstrap": "workspace:^",
     "js-yaml": "^4.2.0"
   }
 }

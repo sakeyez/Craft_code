@@ -20,7 +20,7 @@ import {
 } from './menu.ts'
 import type { DesktopCommandRequest, DesktopCommandResult } from './preload.ts'
 import { resolveDesktopRuntime } from './runtime.ts'
-import { desktopAppUserModelId, desktopWindowOptions, navigationDisposition } from './window.ts'
+import { desktopAppUserModelId, desktopPermissionAllowed, desktopWindowOptions, navigationDisposition } from './window.ts'
 import {
   createGameCaptureProvider, type GameCaptureProvider, type GameCaptureState,
 } from './game-capture.ts'
@@ -122,7 +122,21 @@ async function createWindow(url: string): Promise<BrowserWindow> {
     desktopLog(`desktop renderer gone reason=${details.reason} exitCode=${String(details.exitCode)}`)
   })
   installNavigationPolicy(window.webContents, allowedOrigin, icon)
-  window.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => { callback(false) })
+  // Keep the desktop session deny-by-default, but grant the renderer's own
+  // sanitized clipboard writes. Chromium routes `navigator.clipboard.writeText`
+  // through this permission on Electron, so denying every request makes all
+  // copy controls appear clickable while silently refusing their writes.
+  const isOwnClipboardWrite = (
+    contents: WebContents | null, permission: string, requestingUrl: string | undefined, isMainFrame: boolean,
+  ): boolean => (
+    contents === window.webContents && desktopPermissionAllowed(permission, requestingUrl, allowedOrigin, isMainFrame)
+  )
+  window.webContents.session.setPermissionCheckHandler((contents, permission, requestingOrigin, details) => (
+    isOwnClipboardWrite(contents, permission, details.requestingUrl ?? requestingOrigin, details.isMainFrame)
+  ))
+  window.webContents.session.setPermissionRequestHandler((contents, permission, callback, details) => {
+    callback(isOwnClipboardWrite(contents, permission, details.requestingUrl, details.isMainFrame))
+  })
   try {
     await window.loadURL(url)
     window.show()

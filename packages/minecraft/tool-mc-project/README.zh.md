@@ -12,7 +12,7 @@
 |---|---|
 | `detect_mc_project` | 检测 loader 证据、Minecraft 版本候选、mappings 候选、mod id 候选、Java/Kotlin 使用、source set、约定目录和静态声明的 Gradle resource root、mixin config、datagen 线索、已声明的 Gradle task 候选、已检查文件、warning、扫描完整性与推荐 Gradle 验证命令。`loaderSupport` 明确表示当前 profile 是否支持该 loader；Forge、Quilt 和 Architectury 等 loader 可被识别，但不会被当成 Fabric/NeoForge 目标执行 loader-specific 检查。版本与 mappings 结果保留 `determined`、`unknown` 或 `conflict` 状态及候选证据；精确版本与范围版本明确区分。 |
 | `validate_mc_resources` | 校验语言值、model、blockstate、recipe、tag、loot table、advancement、predicate、item modifier 与 item-definition JSON 文件；检查有界 PNG 签名/分块/CRC、本地 model parent、本地 model texture 与 blockstate model 引用、可疑 namespace，以及 asset namespace 与 metadata mod id 不一致。 |
-| `run_mc_check` | 根据检测到的项目事实选择 Gradle wrapper 或 `gradle` 命令，并运行 `build`、`test`、`datagen`、`resources`、`runtime` 或 `all`。需要时从声明或有界的 `tasks --all` 输出发现 datagen/runtime task；runtime 必须提供明确且已获批准的 `runtimeMode`。 |
+| `run_mc_check` | 根据检测到的项目事实选择 Gradle wrapper 或 `gradle` 命令，并运行 `build`、`test`、`datagen`、`resources`、`runtime`、`startup` 或 `all`。`startup` 是 fail-closed 启动门禁：静态资源、可选 datagen、`processResources`、`test`、`build` 全部通过后才探测已批准的客户端/服务器，并且日志必须出现就绪标记。需要时从声明或有界的 `tasks --all` 输出发现 datagen/runtime task。 |
 
 ## Config
 
@@ -49,7 +49,7 @@
 
 #### What the model sees
 
-只有当该包挂载在已提供 `ctx.shell` 的 composition 中时，模型才会看到 [`run_mc_check`](../../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-mc-project) 工具 schema。该工具接受 `target`（`build`、`test`、`datagen`、`resources`、`runtime` 或 `all`），`runtime` 需要 `runtimeMode`（`client` 或 `server`），以及可选的单命令 `timeoutMs`。规范结果包含 `commands`、`exitCode`、`steps`、`failedStep` 和 `suggestedNextAction`；每个 step 在适用时携带 command、status、退出信息、stdout/stderr 摘要以及来自 shell 结果的 sandbox facts。datagen 与 runtime 会优先使用已声明候选，必要时执行有界的 `tasks --all --console=plain` 探测。`resources` 会先运行静态 `validate_mc_resources`，`runtime` 可启动客户端或专用服务器且必须遵循用户批准；`all` 在第一处失败后停止。
+只有当该包挂载在已提供 `ctx.shell` 的 composition 中时，模型才会看到 [`run_mc_check`](../../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-mc-project) 工具 schema。该工具接受 `target`（`build`、`test`、`datagen`、`resources`、`runtime`、`startup` 或 `all`），`runtime` 与 `startup` 需要 `runtimeMode`（`client` 或 `server`），以及可选的单命令 `timeoutMs`。规范结果包含 `commands`、`exitCode`、`steps`、`failedStep` 和 `suggestedNextAction`；每个 step 在适用时携带 command、status、退出信息、stdout/stderr 摘要以及来自 shell 结果的 sandbox facts。datagen 与 runtime 会优先使用已声明候选，必要时执行有界的 `tasks --all --console=plain` 探测。`startup` 先完成完整 preflight，再要求客户端/服务器在有界 probe 内输出就绪标记；任一阶段失败或未验证都阻断启动。`all` 在第一处失败后停止。
 
 #### Token effect
 

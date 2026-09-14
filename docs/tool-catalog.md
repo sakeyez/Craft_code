@@ -30,6 +30,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-goal` | `create_goal`, `get_goal`, `update_goal` | `ctx.tools`, `ctx.agents`, `ctx.goals`, `ctx.systemPrompt`, `a calling Agent in an authorized open turn` | `tool/call`, `goal/change for mutations`, `tool/result` | - | create, edit, pause, and resume require direct-human root authority; complete and blocked also accept the exact current goal round. The default blocked lower bound is three admitted rounds. |
 | `@deepseek-ai/dsh-schedule` | `schedule_create`, `schedule_delete`, `schedule_list` | `ctx.tools`, `ctx.sessions`, `Session persistence`, `a future live root Agent` | `tool/call`, `schedule/change create or delete`, `tool/result` | - | Registered only inside live root Agent scopes created after the opt-in Schedule plugin loads. Version 1 accepts after_seconds, explicit absolute at, and bounded fixed-rate every_seconds, and discloses session-local delivery; management reads and mutations require the shared Session persistence barrier. |
 | `@deepseek-ai/dsh-tool-lsp` | `lsp` | `ctx.tools`, `ctx.lsp`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | The lsp tool keeps provider selection and language-server subprocesses behind ctx.lsp, so its model-visible schema stays stable across providers. Requires a registered provider (e.g. `@deepseek-ai/dsh-lsp-stdio`) at runtime; without one, a query returns the structured `LSP_UNAVAILABLE` error rather than changing the schema. |
+| `@deepseek-ai/dsh-tool-mc-bootstrap` | `bootstrap_mc_project` | `ctx.tools`, `ctx.fs`, `ctx.shell` | `tool/call`, `tool/result` | - | bootstrap_mc_project creates a complete minimal supported project only in an empty workspace directory, writes through ctx.fs, and reports environment readiness without claiming Gradle or gameplay verification. |
 | `@deepseek-ai/dsh-tool-mc-project` | `detect_mc_project`, `run_mc_check`, `validate_mc_resources` | `ctx.tools`, `ctx.fs`, `ctx.shell for run_mc_check` | `tool/call`, `tool/result` | - | Minecraft project detection and resource validation read the current workspace through ctx.fs. run_mc_check is registered only when ctx.shell exists; it selects Gradle commands from detected project facts and executes them through the shell executor rather than spawning directly. |
 | `@deepseek-ai/dsh-tool-ralph` | `ralph` | `ctx.tools`, `ctx.workflowEngine`, `ctx.subagents`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents every fresh round)` | `tool/call`, `tool/result`, `workflow and child session events during execution` | - | A fixed foreground workflow starts one fresh structured child per round; the model selects only the immutable objective and an optional round cap. |
 | `@deepseek-ai/dsh-tool-skill` | `skill` | `ctx.tools`, `ctx.agents`, `ctx.skills` | `tool/call`, `tool/result`, `user/message replacement catalogs via agent.inject()` | - | - |
@@ -1207,6 +1208,58 @@ Source: [`packages/lsp/tool-lsp/src/index.ts`](../packages/lsp/tool-lsp/src/inde
 
 The lsp tool keeps provider selection and language-server subprocesses behind ctx.lsp, so its model-visible schema stays stable across providers. Requires a registered provider (e.g. `@deepseek-ai/dsh-lsp-stdio`) at runtime; without one, a query returns the structured `LSP_UNAVAILABLE` error rather than changing the schema.
 
+<a id="deepseek-aidsh-tool-mc-bootstrap"></a>
+
+## `@deepseek-ai/dsh-tool-mc-bootstrap`
+
+### `bootstrap_mc_project`
+
+Create a complete minimal Fabric or NeoForge Minecraft Java mod project from a pinned template. Writes only inside the session workspace, refuses non-empty targets and unsupported versions, and reports Java readiness; it does not claim gameplay or a Gradle build until run_mc_check executes one.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "loader": {
+      "type": "string",
+      "enum": [
+        "fabric",
+        "neoforge"
+      ]
+    },
+    "minecraftVersion": {
+      "type": "string"
+    },
+    "modName": {
+      "type": "string"
+    },
+    "modId": {
+      "type": "string"
+    },
+    "packageName": {
+      "type": "string"
+    },
+    "targetDirectory": {
+      "type": "string"
+    },
+    "enableDatagen": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "loader",
+    "minecraftVersion",
+    "modName",
+    "modId",
+    "packageName"
+  ]
+}
+```
+
+Source: [`packages/minecraft/tool-mc-bootstrap/src/index.ts`](../packages/minecraft/tool-mc-bootstrap/src/index.ts)
+
+bootstrap_mc_project creates a complete minimal supported project only in an empty workspace directory, writes through ctx.fs, and reports environment readiness without claiming Gradle or gameplay verification.
+
 <a id="deepseek-aidsh-tool-mc-project"></a>
 
 ## `@deepseek-ai/dsh-tool-mc-project`
@@ -1226,7 +1279,7 @@ Source: [`packages/minecraft/tool-mc-project/src/index.ts`](../packages/minecraf
 
 ### `run_mc_check`
 
-Run the appropriate Minecraft Gradle validation for the current workspace. The tool first detects the project with detect_mc_project, chooses Gradle wrapper or gradle commands from the detected loader, discovers custom datagen/runtime tasks when needed, runs each command through the mounted shell executor, and returns structured command results. Targets: build, test, datagen, resources, runtime, all. A runtime target launches the user-approved client or dedicated server and requires runtimeMode.
+Run Minecraft validation for the current workspace. The tool detects the project, chooses the pinned Gradle launcher, discovers unambiguous custom tasks, and returns structured command results. Targets: build, test, datagen, resources, runtime, startup, all. The startup target is a launch gate: static resources, optional datagen, processResources, test, and build must pass before a user-approved client or dedicated-server probe runs; the probe must emit a readiness marker.
 
 ```json
 {
@@ -1234,19 +1287,20 @@ Run the appropriate Minecraft Gradle validation for the current workspace. The t
   "properties": {
     "target": {
       "type": "string",
-      "description": "Check to run. resources performs static Minecraft resource validation before Gradle processResources. runtime launches a client or dedicated server only after the user approves it and supplies runtimeMode. all stops at the first failed step.",
+      "description": "Check to run. resources performs static Minecraft resource validation before Gradle processResources. runtime launches a client or dedicated server after approval. startup runs the complete preflight and then a bounded readiness probe; it blocks launch on any failed or unverified phase. all stops at the first failed step.",
       "enum": [
         "build",
         "test",
         "datagen",
         "resources",
         "runtime",
+        "startup",
         "all"
       ]
     },
     "runtimeMode": {
       "type": "string",
-      "description": "Required for target runtime: choose client or dedicated server after user approval.",
+      "description": "Required for target runtime or startup: choose client or dedicated server after user approval.",
       "enum": [
         "client",
         "server"

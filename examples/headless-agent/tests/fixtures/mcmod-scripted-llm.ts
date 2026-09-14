@@ -73,6 +73,7 @@ interface ToolCallStep {
 }
 
 const STEPS: readonly ToolCallStep[] = [
+  { name: 'detect_mc_project', args: {} },
   {
     name: 'write',
     args: {
@@ -94,12 +95,12 @@ const STEPS: readonly ToolCallStep[] = [
       content: MODEL,
     },
   },
-  { name: 'detect_mc_project', args: {} },
   { name: 'validate_mc_resources', args: {} },
   { name: 'run_mc_check', args: { target: 'build' } },
 ]
 
 const NEO_STEPS: readonly ToolCallStep[] = [
+  { name: 'detect_mc_project', args: {} },
   {
     name: 'write',
     args: {
@@ -121,7 +122,6 @@ const NEO_STEPS: readonly ToolCallStep[] = [
       content: NEO_MODEL,
     },
   },
-  { name: 'detect_mc_project', args: {} },
   { name: 'validate_mc_resources', args: {} },
   { name: 'run_mc_check', args: { target: 'datagen' } },
 ]

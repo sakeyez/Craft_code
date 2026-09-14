@@ -1,1 +1,6 @@
-zh: README.zh.md
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/minecraft/tool-mc-bootstrap/README.md
+README.md: 45a529c812755a9b3248ff69ca8d3ba657112307
+README.zh.md: 1b2f741fca82767d9670faca2f40196f705b2215
