@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-14-independent-game-window-current-session-annotation.md
-2026-09-14-independent-game-window-current-session-annotation.md: af57138fea90ad0f6e2403e0924cced7157dee38
-2026-09-14-independent-game-window-current-session-annotation.zh.md: 7ce642becf95bae2151771a0ade494d438701000
+2026-09-14-independent-game-window-current-session-annotation.md: 3452acda7b2a5642764c016d26a06bccd59e2fe7
+2026-09-14-independent-game-window-current-session-annotation.zh.md: 3dbd4ee7ed51c270930faac7ed8ed75641d46f31
