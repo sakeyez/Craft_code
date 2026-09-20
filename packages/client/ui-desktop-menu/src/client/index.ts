@@ -3,10 +3,10 @@
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
-import { DesktopMenuBar } from './DesktopMenuBar.tsx'
+import { DesktopMenuBar, DesktopWindowControls } from './DesktopMenuBar.tsx'
 import { DesktopMenuSurface } from './DesktopMenuSurface.tsx'
 import type {
-  DesktopGameEvent, DesktopMenuBarInjected, DesktopMenuEvent, DesktopMenuInjected, ProjectSearchItem,
+  DesktopGameEvent, DesktopMenuBarInjected, DesktopMenuEvent, DesktopMenuInjected, DesktopWindowControlsInjected,
 } from './contract.ts'
 
 /** Required services for the overlay registration and project/session actions. */
@@ -53,16 +53,11 @@ export function apply(ctx: ClientContext): void {
   }
   ctx.effect(() => ctx.layout.attachGameSurfaceBridge({
     bindAnnotationShortcut: (request, listener) => bridge.bindGameAnnotationShortcut?.(request, listener) ?? (() => {}),
-    reconnect: async (cwd) => {
-      if (bridge.reconnectGameSurface === undefined) throw new Error('桌面端未提供游戏重连能力。')
-      return await bridge.reconnectGameSurface(cwd) as never
-    },
     beginAnnotation: async (request, commit) => {
       if (bridge.beginGameAnnotation === undefined) throw new Error('桌面端未提供游戏截图能力。')
       return bridge.beginGameAnnotation(request, commit)
     },
     endAnnotation: async (operationId) => { await bridge.endGameAnnotation?.(operationId) },
-    reposition: async (cwd) => { await bridge.repositionGameCompanion?.(cwd) },
   }), 'ui-desktop-menu: game surface bridge')
 
   const injected = (): DesktopMenuInjected => ({
@@ -76,17 +71,13 @@ export function apply(ctx: ClientContext): void {
       ctx.workspaces.startSession(workspace.workspaceId)
       return workspace.path
     },
-    searchProject: async (query, cwd, signal): Promise<ProjectSearchItem[]> => {
-      const response = await ctx.sessions.search(query, signal)
-      if (!response.ok) throw new Error(response.error.message)
-      const sessions = ctx.sessions.list.getSnapshot().byId
-      return response.value.items.filter(item => sessions[item.sessionId]?.cwd === cwd)
-    },
   })
 
   if (bridge.menuPresentation === 'web') {
     const menuInjected = (): DesktopMenuBarInjected => ({
       openMenu: (menu, anchor, cwd) => bridge.openMenu(menu, anchor, cwd),
+    })
+    const controlsInjected = (): DesktopWindowControlsInjected => ({
       windowControls: {
         minimize: () => bridge.minimizeWindow(),
         toggleMaximize: () => bridge.toggleMaximizeWindow(),
@@ -99,6 +90,10 @@ export function apply(ctx: ClientContext): void {
       name: 'shell.topbar',
       inject: menuInjected,
     }, DesktopMenuBar))
+    ctx.slots.inject('shell.window-controls', () => ctx.slots.register({
+      name: 'shell.window-controls',
+      inject: controlsInjected,
+    }, DesktopWindowControls))
   }
 
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({

@@ -1,0 +1,31 @@
+$ tsx scripts/verify-translation-pairing.ts "--write" ".agents/notes/implemented/feature/2026-09-16-minecraft-workbench.md" ".agents/notes/implemented/feature/2026-09-14-independent-game-window-current-session-annotation.md" ".agents/notes/implemented/feature/2026-09-14-minecraft-host-bootstrap.md" "apps/desktop/README.md" "packages/bundle/mcmod/README.md" "packages/bundle/mcmod-headless/README.md" "packages/client/ui-layout/README.md" "packages/client/ui-mcmod-workbench/README.md" "packages/minecraft/mc-workbench/README.md" "packages/minecraft/mcmod-agent/README.md" "packages/minecraft/tool-mc-project/README.md" "packages/minecraft/tool-mc-bootstrap/README.md" "docs/subsystems/minecraft.md" "docs/subsystems/README.md" "docs/config-catalog.md" "docs/tool-catalog.md"
+verify-translation-pairing: recorded .agents/notes/implemented/feature/2026-09-14-independent-game-window-current-session-annotation.i18n.yaml
+verify-translation-pairing: recorded .agents/notes/implemented/feature/2026-09-14-minecraft-host-bootstrap.i18n.yaml
+verify-translation-pairing: recorded apps/desktop/README.i18n.yaml
+verify-translation-pairing: recorded docs/config-catalog.i18n.yaml
+verify-translation-pairing: recorded docs/subsystems/README.i18n.yaml
+verify-translation-pairing: recorded docs/subsystems/minecraft.i18n.yaml
+verify-translation-pairing: recorded docs/tool-catalog.i18n.yaml
+verify-translation-pairing: recorded packages/bundle/mcmod-headless/README.i18n.yaml
+verify-translation-pairing: recorded packages/bundle/mcmod/README.i18n.yaml
+verify-translation-pairing: recorded packages/client/ui-layout/README.i18n.yaml
+verify-translation-pairing: recorded packages/client/ui-mcmod-workbench/README.i18n.yaml
+verify-translation-pairing: recorded packages/minecraft/mc-workbench/README.i18n.yaml
+node:fs:2422
+    return binding.writeFileUtf8(
+                   ^
+
+Error: UNKNOWN: unknown error, open 'E:\.sake\Desktop\craftcode\packages\minecraft\mcmod-agent\README.i18n.yaml'
+    at writeFileSync (node:fs:2422:20)
+    at <anonymous> (E:\.sake\Desktop\craftcode\scripts\verify-translation-pairing.ts:174:5)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:643:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -4094,
+  code: 'UNKNOWN',
+  syscall: 'open',
+  path: 'E:\\.sake\\Desktop\\craftcode\\packages\\minecraft\\mcmod-agent\\README.i18n.yaml'
+}
+
+Node.js v24.18.0
+[ELIFECYCLE] Command failed with exit code 1.

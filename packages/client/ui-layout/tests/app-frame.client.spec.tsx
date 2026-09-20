@@ -153,7 +153,7 @@ describe('AppFrame', () => {
     expect(tracks(frame)).toEqual([280, 0])
   })
 
-  it('keeps the ordinary layout and shows companion state only for the current project', () => {
+  it('keeps the ordinary layout and shows game state only for the current project', () => {
     const { frame, instance, slotCalls, rerenderFrame } = mountFrame()
     act(() => { instance.actions.setGameSurface('c:/projects/first', { status: 'starting', gameName: 'Minecraft' }) })
     expect(frame.hasAttribute('data-game-mode')).toBe(false)
@@ -167,11 +167,14 @@ describe('AppFrame', () => {
     expect(slotCalls.filter(call => call.key === 'game').at(-1)?.props).toMatchObject({ state: { status: 'starting' } })
   })
 
-  it('enters focus mode only after Minecraft connects', () => {
+  it('keeps the original page chrome when Minecraft connects', () => {
     const { frame, instance } = mountFrame()
     act(() => { instance.actions.setGameSurface(selectedCwd.current, { status: 'connected', gameName: 'Minecraft', surfaceKind: 'external-window' }) })
-    expect(frame.hasAttribute('data-game-focus')).toBe(true)
-    expect(frame.hasAttribute('data-game-mode')).toBe(true)
+    expect(frame.hasAttribute('data-game-focus')).toBe(false)
+    expect(frame.hasAttribute('data-game-mode')).toBe(false)
+    expect(frame.querySelector('[data-shell-topbar]')).toBeTruthy()
+    expect(frame.querySelector('[data-testid="sidebar-content"]')).toBeTruthy()
+    expect(frame.querySelector('[data-testid="details-content"]')).toBeTruthy()
     act(() => { instance.actions.setGameSurface(selectedCwd.current, { status: 'disconnected', gameName: 'Minecraft', error: 'closed' }) })
     expect(frame.hasAttribute('data-game-focus')).toBe(false)
   })

@@ -25,7 +25,7 @@
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "devDependencies": {
     "@deepseek-ai/cordis-plugin-loader": "workspace:^",
     "@deepseek-ai/dsh-client-modules": "workspace:^",

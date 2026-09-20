@@ -7,7 +7,7 @@
 
 已发布插件向 `ctx.tools` 提供的所有面向模型的工具：模型通过系统提示词组装获得的 `name`、`description` 和 JSON Schema `parameters`。本目录是[子系统页面](subsystems/core.zh.md)（类型及每页生成的 `cordis-surface` 接线区域）的补充；本页列出的是向 agent（智能体）提供的*工具*。
 
-英文源文件由系统**生成**，并通过 `pnpm run verify-tool-catalog`（`doc-sync`（文档同步门禁）的一部分）验证新鲜度；本中文文件作为经评审对侧通过双语配对维护。与 Cordis 目录（纯源码 AST 处理）不同，英文生成器会在真实上下文中**启动**每个工具插件并读取 `ctx.tools.schemas()`，因为工具 schema 无法通过静态分析完全确定，例如运行时展开的枚举、拼接的描述、由配置决定的名称以及使用原始 JSON Schema 的 MCP 工具。完整性守卫会 glob 匹配 `packages/*/tool-*`；如果生成器的启动 manifest（元数据清单）遗漏任何包，检查就会失败，因此新工具不会在无人察觉的情况下缺少文档。参见[工具 schema 目录 Agent Note](../.agents/notes/implemented/process/2026-07-02-tool-schema-catalog.zh.md)。
+英文源文件由系统**生成**，并通过 `pnpm run verify-tool-catalog`（`doc-sync`（文档同步门禁）的一部分）验证新鲜度；本中文文件作为经评审对侧通过双语配对维护。与 Cordis 目录（纯源码 AST 处理）不同，英文生成器会在真实上下文中**启动**每个面向模型的工具插件并读取 `ctx.tools.schemas()`，因为工具 schema 无法通过静态分析完全确定，例如运行时展开的枚举、拼接的描述、由配置决定的名称以及使用原始 JSON Schema 的 MCP 工具。完整性守卫会 glob 匹配 `packages/*/tool-*`；如果生成器的启动 manifest（元数据清单）遗漏任何面向模型的包，检查就会失败；明确列出的宿主专用包会被排除，因此新工具不会在无人察觉的情况下缺少文档。参见[工具 schema 目录 Agent Note](../.agents/notes/implemented/process/2026-07-02-tool-schema-catalog.zh.md)。
 
 范围：`packages/*/tool-*` 下已发布的产品工具，每个工具均使用其**默认**配置启动；但如果某个 Config 字段是**必填项**且没有默认值，生成器就必须作出选择，对应包的说明会记录本页展示的是哪个分支。注册的工具**名称**可以是加载时配置，例如 `tool-subagent` 的 `toolName`，因此部署可能以不同名称或额外名称提供某个包；如果存在随产品发布的别名，对应包的说明会予以记录。`examples/` 中的演示工具（例如 `echo`）不在范围内，这与 Cordis 目录仅涵盖包的范围一致。
 
@@ -34,8 +34,8 @@
 | `@deepseek-ai/dsh-tool-goal` | `create_goal`、`get_goal`、`update_goal` | `ctx.tools`、`ctx.agents`、`ctx.goals`、`ctx.systemPrompt`、`a calling Agent in an authorized open turn` | `tool/call`、`goal/change for mutations`、`tool/result` | - | create、edit、pause 和 resume 要求直接来自人类的根权限；complete 和 blocked 也接受确切的当前 Goal Round。blocked 的默认下限是 3 个获准的 Round。 |
 | `@deepseek-ai/dsh-schedule` | `schedule_create`、`schedule_delete`、`schedule_list` | `ctx.tools`、`ctx.sessions`、Session 持久化、未来创建的 live 根 Agent | `tool/call`、`schedule/change create or delete`、`tool/result` | - | 仅在选择启用的 Schedule 插件加载后创建的 live 根 Agent scope 内注册。版本 1 接受 after_seconds、显式绝对 at 和有界固定速率 every_seconds，并披露 session-local 交付；管理读取与变更必须通过共享的 Session 持久化 barrier。 |
 | `@deepseek-ai/dsh-tool-lsp` | `lsp` | `ctx.tools`、`ctx.lsp`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，因此其模型可见 schema 在更换提供方时保持稳定。运行时要求已注册提供方，例如 `@deepseek-ai/dsh-lsp-stdio`；如果没有提供方，查询会返回结构化 `LSP_UNAVAILABLE` 错误，而不会改变 schema。 |
-| `@deepseek-ai/dsh-tool-mc-bootstrap` | `bootstrap_mc_project` | `ctx.tools`、`ctx.fs`、`ctx.shell` | `tool/call`、`tool/result` | - | bootstrap_mc_project 只在 workspace 内的空目录创建完整最小项目，通过 ctx.fs 写入，并报告环境就绪状态，不声称 Gradle 或游戏运行已验证。 |
 | `@deepseek-ai/dsh-tool-mc-project` | `detect_mc_project`、`run_mc_check`、`validate_mc_resources` | `ctx.tools`、`ctx.fs`、`ctx.shell for run_mc_check` | `tool/call`、`tool/result` | - | Minecraft 项目检测和资源校验通过 ctx.fs 读取当前 workspace。run_mc_check 仅在 ctx.shell 存在时注册；它从检测到的项目事实选择 Gradle 命令，并通过 shell executor 执行，而不是直接 spawn。 |
+| `@deepseek-ai/dsh-mc-workbench/tools` | `query_mc_api` | `ctx.tools`, `ctx.minecraftWorkbench` | `tool/call`, `tool/result` | - | 查询使用精确且已校验的项目 classpath；外部映射保持未验证。Minecraft 消费插件在每轮首次修改或 shell 工具前创建一个恢复点。 |
 | `@deepseek-ai/dsh-tool-ralph` | `ralph` | `ctx.tools`、`ctx.workflowEngine`、`ctx.subagents`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents every fresh round)` | `tool/call`、`tool/result`、`workflow and child session events during execution` | - | 固定的前台工作流会在每个 Round 启动一个全新的结构化子级；模型只能选择不可变目标和可选的 Round 上限。 |
 | `@deepseek-ai/dsh-tool-skill` | `skill` | `ctx.tools`、`ctx.agents`、`ctx.skills` | `tool/call`、`tool/result`、`user/message replacement catalogs via agent.inject()` | - | - |
 | `@deepseek-ai/dsh-tool-session-query` | `session_event_read`、`session_event_search`、`session_event_trace`、`session_search`、`session_trace` | `ctx.tools`、`ctx.systemPrompt`、`ctx.sessionQuery`、`a calling Agent for workspace authority` | `tool/call`、`tool/result` | - | 这 5 个只读工具会隐藏提供方游标，并根据不可变的调用 agent 会话为每个结果授权。该包需要选择启用；需要强制截止时间或限制行内输出的组合还会挂载通用超时或 spill 策略。 |
@@ -1214,58 +1214,6 @@ create、edit、pause 和 resume 要求直接来自人类的根权限；complete
 
 lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，因此其模型可见 schema 在更换提供方时保持稳定。运行时要求已注册提供方，例如 `@deepseek-ai/dsh-lsp-stdio`；如果没有提供方，查询会返回结构化 `LSP_UNAVAILABLE` 错误，而不会改变 schema。
 
-<a id="deepseek-aidsh-tool-mc-bootstrap"></a>
-
-## `@deepseek-ai/dsh-tool-mc-bootstrap`
-
-### `bootstrap_mc_project`
-
-从固定模板创建完整的最小 Fabric 或 NeoForge Minecraft Java mod 项目。只在会话 workspace 内写入，拒绝非空目标和不支持的版本，并报告 Java 就绪状态；在 run_mc_check 执行前不会声称游戏运行或 Gradle 构建已验证。
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "loader": {
-      "type": "string",
-      "enum": [
-        "fabric",
-        "neoforge"
-      ]
-    },
-    "minecraftVersion": {
-      "type": "string"
-    },
-    "modName": {
-      "type": "string"
-    },
-    "modId": {
-      "type": "string"
-    },
-    "packageName": {
-      "type": "string"
-    },
-    "targetDirectory": {
-      "type": "string"
-    },
-    "enableDatagen": {
-      "type": "boolean"
-    }
-  },
-  "required": [
-    "loader",
-    "minecraftVersion",
-    "modName",
-    "modId",
-    "packageName"
-  ]
-}
-```
-
-来源：[`packages/minecraft/tool-mc-bootstrap/src/index.ts`](../packages/minecraft/tool-mc-bootstrap/src/index.ts)
-
-bootstrap_mc_project 只在 workspace 内的空目录创建完整最小项目，通过 ctx.fs 写入，并报告环境就绪状态，不声称 Gradle 或游戏运行已验证。
-
 <a id="deepseek-aidsh-tool-mc-project"></a>
 
 ## `@deepseek-ai/dsh-tool-mc-project`
@@ -1293,22 +1241,31 @@ bootstrap_mc_project 只在 workspace 内的空目录创建完整最小项目，
   "properties": {
     "target": {
       "type": "string",
-      "description": "Check to run. resources performs static Minecraft resource validation before Gradle processResources. runtime launches a client or dedicated server only after the user approves it and supplies runtimeMode. all stops at the first failed step.",
+      "description": "Check to run. resources performs static Minecraft resource validation before Gradle processResources. runtime launches a client or dedicated server after approval. startup runs the complete preflight and then a bounded readiness probe; it blocks launch on any failed or unverified phase. all stops at the first failed step.",
       "enum": [
         "build",
         "test",
         "datagen",
         "resources",
         "runtime",
+        "startup",
         "all"
       ]
     },
     "runtimeMode": {
       "type": "string",
-      "description": "Required for target runtime: choose client or dedicated server after user approval.",
+      "description": "Required for target runtime or startup: choose client or dedicated server after user approval.",
       "enum": [
         "client",
         "server"
+      ]
+    },
+    "testMode": {
+      "type": "string",
+      "description": "Runtime test mode. Defaults to development Gradle tasks. artifact builds and validates the published JAR, then installs an isolated exact-version local test instance. Requires the Minecraft workbench and separate server EULA acceptance.",
+      "enum": [
+        "development",
+        "artifact"
       ]
     },
     "timeoutMs": {
@@ -1338,6 +1295,41 @@ bootstrap_mc_project 只在 workspace 内的空目录创建完整最小项目，
 来源：[`packages/minecraft/tool-mc-project/src/index.ts`](../packages/minecraft/tool-mc-project/src/index.ts)
 
 Minecraft 项目检测和资源校验通过 ctx.fs 读取当前 workspace。run_mc_check 仅在 ctx.shell 存在时注册；它从检测到的项目事实选择 Gradle 命令，并通过 shell executor 执行，而不是直接 spawn。
+
+<a id="deepseek-aidsh-mc-workbenchtools"></a>
+
+## `@deepseek-ai/dsh-mc-workbench/tools`
+
+### `query_mc_api`
+
+从当前项目精确且已通过哈希校验的构建 classpath 查询 Java 类全名和公开方法描述符。返回 Minecraft 版本、映射命名空间、来源与缓存状态。查询前需要构建项目。可选 mappings.dev 证据保持未验证；不跨版本或映射转换名称。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "symbol": {
+      "type": "string",
+      "description": "Fully qualified class name in the current project namespace."
+    },
+    "version": {
+      "type": "string",
+      "description": "Optional exact Minecraft version; a mismatch with the project is rejected."
+    },
+    "external": {
+      "type": "boolean",
+      "description": "Allow mappings.dev fallback when no class is found locally. Defaults to false."
+    }
+  },
+  "required": [
+    "symbol"
+  ]
+}
+```
+
+Source: [`packages/minecraft/mc-workbench/src/tools.ts`](../packages/minecraft/mc-workbench/src/tools.ts)
+
+查询使用精确且已校验的项目 classpath；外部映射保持未验证。Minecraft 消费插件在每轮首次修改或 shell 工具前创建一个恢复点。
 
 <a id="deepseek-aidsh-tool-ralph"></a>
 

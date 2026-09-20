@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { DesktopMenuBar } from '../src/client/DesktopMenuBar.tsx'
+import { DesktopMenuBar, DesktopWindowControls } from '../src/client/DesktopMenuBar.tsx'
 
 const runtimeProps = {
   useSessions: (<S,>(selector: (value: { current: string; byId: Record<string, { cwd: string }> }) => S) =>
@@ -18,11 +18,11 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
 afterEach(cleanup)
 
 describe('DesktopMenuBar', () => {
-  it('renders the four product menus with one roving tab stop', () => {
+  it('renders the three product menus with one roving tab stop', () => {
     const view = render(<DesktopMenuBar {...runtimeProps} openMenu={vi.fn(async () => {})} />)
     const items = view.getAllByRole('menuitem')
-    expect(items.map(item => item.textContent)).toEqual(['项目', '编辑', 'Git', '帮助'])
-    expect(items.map(item => item.getAttribute('tabindex'))).toEqual(['0', '-1', '-1', '-1'])
+    expect(items.map(item => item.textContent)).toEqual(['项目', 'Git', '帮助'])
+    expect(items.map(item => item.getAttribute('tabindex'))).toEqual(['0', '-1', '-1'])
   })
 
   it('opens below the clicked button and restores focus after the native menu closes', async () => {
@@ -45,13 +45,13 @@ describe('DesktopMenuBar', () => {
     const openMenu = vi.fn(async () => {})
     const view = render(<DesktopMenuBar {...runtimeProps} openMenu={openMenu} />)
     const project = view.getByRole('menuitem', { name: '项目' })
-    const editor = view.getByRole('menuitem', { name: '编辑' })
+    const git = view.getByRole('menuitem', { name: 'Git' })
     project.focus()
     fireEvent.keyDown(project, { key: 'ArrowRight' })
-    expect(document.activeElement).toBe(editor)
-    expect(editor.getAttribute('tabindex')).toBe('0')
-    fireEvent.keyDown(editor, { key: 'ArrowDown' })
-    expect(openMenu).toHaveBeenCalledWith('editor', expect.objectContaining({ y: 0 }), '/project')
+    expect(document.activeElement).toBe(git)
+    expect(git.getAttribute('tabindex')).toBe('0')
+    fireEvent.keyDown(git, { key: 'ArrowDown' })
+    expect(openMenu).toHaveBeenCalledWith('git', expect.objectContaining({ y: 0 }), '/project')
   })
 
   it('renders compact window controls and forwards their actions', async () => {
@@ -67,9 +67,8 @@ describe('DesktopMenuBar', () => {
       }),
     }
     const view = render(
-      <DesktopMenuBar
+      <DesktopWindowControls
         {...runtimeProps}
-        openMenu={vi.fn(async () => {})}
         windowControls={controls}
       />,
     )

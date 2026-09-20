@@ -1,0 +1,4 @@
+$ tsx scripts/verify-translation-pairing.ts "--write" "docs/capability-seams.md" "docs/event-producer-consumer.md"
+verify-translation-pairing: recorded docs/capability-seams.i18n.yaml
+verify-translation-pairing: recorded docs/event-producer-consumer.i18n.yaml
+verify-translation-pairing: 2 record(s) written; run the check to validate the pairs.

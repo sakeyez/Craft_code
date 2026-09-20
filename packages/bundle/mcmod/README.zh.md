@@ -6,13 +6,15 @@
 
 ## Patch 内容
 
-该 patch 将默认 agent preset 选择为 `mcmod`，并插入该 preset 使用的 host-plane LSP 行：
+该 patch 将默认 agent preset 选择为 `mcmod`，插入该 preset 使用的 host-plane LSP 行，并为桌面组合加入宿主本地“新模组”向导：
 
 | 行 | 包 | 用途 |
 |---|---|---|
 | `agent-presets` | 既有 Web 行 | 将组合默认值设为 `mcmod`。 |
 | `lsp` | `@deepseek-ai/dsh-lsp` | 提供 `ctx.lsp` 注册表。 |
 | `lsp-stdio` | `@deepseek-ai/dsh-lsp-stdio` | 为 `.java` 文件注册 Java 提供方，命令为 `jdtls`，language id 为 `java`。 |
+| `mc-bootstrap` | `@deepseek-ai/dsh-tool-mc-bootstrap` | 执行仅限 loopback 的确定性项目生成和首次 Gradle 构建；不提供模型可见工具 schema。 |
+| `ui-mcmod-bootstrap` | `@deepseek-ai/dsh-client-ui-mcmod-bootstrap` | 替换侧栏主操作，并在 Electron 与 loopback 浏览器预览中渲染“新模组”向导。 |
 
 Java 命令刻意使用普通的 `jdtls`。安装该 bundle 的 profile 可以在自己的 `cordis.patch.yml` 中覆盖完整 `lsp-stdio` 行，以适配位于机器专用路径或需要参数的 JDTLS。
 
@@ -22,7 +24,7 @@ Java 命令刻意使用普通的 `jdtls`。安装该 bundle 的 profile 可以�
 
 #### What the model sees
 
-间接可见：此 profile 中的新会话默认从随包 `mcmod` preset 组装。模型会看到该 preset 的 Fabric 与 NeoForge Minecraft 模组开发提示词段落、六个 scoped Minecraft skills，以及剩余工具 schema：文件系统 read/write/edit/search、`detect_mc_project`、`validate_mc_resources`、`run_mc_check`、一个只前台执行的平台 shell 工具、`lsp`、`skill` 和 `ask_user_question`。bundle 本身不贡献提示词文本、skill 正文或工具 schema。
+间接可见：此 profile 中的新会话默认从随包 `mcmod` preset 组装。模型会看到该 preset 的 Fabric 与 NeoForge Minecraft 模组开发提示词段落、九个 scoped Minecraft skills，以及剩余工具 schema：文件系统 read/write/edit/search、`detect_mc_project`、`validate_mc_resources`、`run_mc_check`、一个只前台执行的平台 shell 工具、`lsp`、`skill` 和 `ask_user_question`。bundle 本身不贡献提示词文本、skill 正文或工具 schema。新项目由宿主本地“新模组”向导初始化：向导在工作区会话启动前解析受支持的 loader 和 Minecraft 版本、生成项目与 Gradle Wrapper，并完成首次构建；越过这一边界后，模型才修改已有项目。
 
 #### Token effect
 
@@ -37,3 +39,5 @@ Java 命令刻意使用普通的 `jdtls`。安装该 bundle 的 profile 可以�
 - **desktop profile 表层** —— 本 bundle 预期使用 `@deepseek-ai/dsh-desktop-app` 提供的 Web agent-preset roster；它不是 headless 任务表层。
 - **JDTLS 由部署拥有且可选** —— 默认命令名会从宿主 PATH 解析。命令不可用时，desktop profile 只报告诊断并禁用 Java LSP；项目或机器专用的 JDTLS 启动细节应放在 profile 自己的 overlay 中。
 - **不扩展可选工具** —— 该 patch 不启用 web search、workflow、Ralph、subagent、后台 job 控制、todo 或 goal 工具。
+
+[Minecraft 工作台](../../minecraft/mc-workbench/README.zh.md)及其[界面](../../client/ui-mcmod-workbench/README.zh.md)提供项目编辑、依赖预览及保留的开发运行日志。

@@ -1,0 +1,1 @@
+$ tsx scripts/sync-mcmod-skills.ts --check

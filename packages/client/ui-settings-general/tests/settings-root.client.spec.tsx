@@ -35,6 +35,11 @@ function mount({
   // plays a ledger change through the same observable contract.
   let current = rows
   const listeners = new Set<() => void>()
+  let navigation: { open: boolean; activeId?: string } = { open: false }
+  const publishNavigation = (next: typeof navigation) => {
+    navigation = next
+    for (const fn of listeners) fn()
+  }
   const renderSlot = vi.fn(
     ((key: string, _owner: unknown, opts?: { only?: string }) => {
       if (key === 'settings.section') return <div data-testid={`section-${opts?.only ?? 'all'}`} />
@@ -53,6 +58,9 @@ function mount({
     useSessions,
     useWorkspaces: unusedHook,
     wide,
+    openSection: id => { publishNavigation({ open: true, ...(id ? { activeId: id } : {}) }) },
+    closeSection: () => { publishNavigation({ open: false }) },
+    useNavigation: select => select(navigation),
     useOnboardingSteps: select => select(steps),
     useSections: (select) => {
       const [, force] = useState(0)

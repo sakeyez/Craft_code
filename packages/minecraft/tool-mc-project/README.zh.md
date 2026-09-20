@@ -6,6 +6,9 @@
 
 `detect_mc_project` 与 `validate_mc_resources` 通过 `ctx.fs` 读取当前 session workspace。它们提取证据，不求值 Gradle，不执行 shell 命令，不下载依赖，也不模拟 Minecraft 资源加载。`run_mc_check` 先复用检测结果，再通过 `ctx.shell` 执行选中的 Gradle 命令，因此已挂载的 shell、subprocess、sandbox、timeout 与输出保留策略仍是权威执行路径。
 
+
+挂载的 Minecraft 工作台通过 `query_mc_api` 提供精确 classpath 证据，并在修改工具前自动创建项目恢复点。`run_mc_check` 接受 `testMode: development | artifact`（默认 development）；成品运行检查要求挂载工作台，保留 shell 策略与运行批准，不自动接受服务端 EULA。参见[工作台契约](../mc-workbench/README.zh.md)。
+
 ## Tool
 
 | Tool | 用途 |
@@ -81,3 +84,5 @@
 - **只支持根项目命令** — `run_mc_check` 会拒绝声明 subproject 或 included build 的 settings，因为它无法推断限定 task path。不支持 Maven build 与自定义 launcher。
 - **shell 执行由 composition 负责** — 没有 `ctx.shell` 时不会出现 `run_mc_check`；sandbox denial 与 timeout limit 来自已挂载 executor，工具不会绕过它们。
 - **资源校验是静态检查** — `validate_mc_resources` 只检查检测到或约定资源根下的 workspace 文件，包括 metadata 解析错误、JSON 根和值类型、有界 PNG 结构与 CRC、本地 model parent、本地引用、两种版本化 data 目录与 `assets/<namespace>/items` 定义。缺失的 vanilla、依赖、生成或运行时提供 asset 会被忽略，除非引用目标属于当前 mod namespace。版本未知、只有范围或存在冲突时只产生 warning，不臆断 item-definition 或 data 目录格式。
+
+挂载 Minecraft 工作台时，授权后的 runtime/startup 请求通过现有 shell 策略使用其保留的生命周期；只有明确请求 startup 才增加预检。结果标识日志位置，不自动插入后台输出。仅类型的 `./types` 导出提供可序列化检测事实，不引入宿主服务声明。[运行契约](../mc-workbench/README.zh.md)。

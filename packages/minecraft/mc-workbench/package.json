@@ -1,0 +1,80 @@
+{
+  "name": "@deepseek-ai/dsh-mc-workbench",
+  "description": "Minecraft development environment, runs, dependencies and source workspace",
+  "version": "0.1.1-rc.2",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./types": {
+      "types": "./lib/types/types.d.ts"
+    },
+    "./contracts": {
+      "types": "./lib/types/contracts.d.ts",
+      "default": "./lib/contracts.js"
+    },
+    "./tools": {
+      "types": "./lib/types/tools.d.ts",
+      "default": "./lib/tools.js"
+    }
+  },
+  "files": [
+    "lib/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "dependencies": {
+    "fflate": "^0.8.2",
+    "semver": "^7.8.4",
+    "smol-toml": "^1.7.1",
+    "tar": "^7.5.0",
+    "undici": "7.28.0",
+    "zod": "^4.3.6",
+    "@xmcl/core": "2.15.1",
+    "@xmcl/installer": "6.1.2",
+    "yauzl": "3.2.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-client-connection": "workspace:^",
+    "@deepseek-ai/dsh-fs": "workspace:^",
+    "@deepseek-ai/dsh-host-apiproxy": "workspace:^",
+    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/dsh-shell": "workspace:^",
+    "@deepseek-ai/dsh-subprocess": "workspace:^",
+    "@deepseek-ai/dsh-tool-mc-project": "workspace:^",
+    "@deepseek-ai/dsh-workspace": "workspace:^",
+    "@deepseek-ai/dsh-settings": "workspace:^",
+    "@deepseek-ai/dsh-launch-environment": "workspace:^",
+    "@deepseek-ai/dsh-tools": "workspace:^",
+    "@deepseek-ai/dsh-credentials": "workspace:^"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-client-connection": "workspace:^",
+    "@deepseek-ai/dsh-fs": "workspace:^",
+    "@deepseek-ai/dsh-host-apiproxy": "workspace:^",
+    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/dsh-shell": "workspace:^",
+    "@deepseek-ai/dsh-subprocess": "workspace:^",
+    "@deepseek-ai/dsh-tool-mc-project": "workspace:^",
+    "@deepseek-ai/dsh-workspace": "workspace:^",
+    "@types/node": "^22.20.0",
+    "@types/semver": "^7.7.1",
+    "@deepseek-ai/dsh-settings": "workspace:^",
+    "@deepseek-ai/dsh-launch-environment": "workspace:^",
+    "@types/yauzl": "^2.10.3",
+    "@deepseek-ai/dsh-tools": "workspace:^",
+    "@deepseek-ai/dsh-credentials": "workspace:^"
+  }
+}

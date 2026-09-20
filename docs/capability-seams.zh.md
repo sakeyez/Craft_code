@@ -9,6 +9,14 @@
 
 ```mermaid
 flowchart LR
+  pkg_tool_mc_bootstrap["tool-mc-bootstrap"]
+  svc_minecraftBootstrap["ctx.minecraftBootstrap<br/>Minecraft project creation"]
+  pkg_ui_mcmod_bootstrap["ui-mcmod-bootstrap"]
+  pkg_tool_mc_project["tool-mc-project"]
+  svc_minecraftRuntime["ctx.minecraftRuntime<br/>Approved Minecraft runtime checks"]
+  pkg_mc_workbench["mc-workbench"]
+  svc_minecraftWorkbench["ctx.minecraftWorkbench<br/>Minecraft workbench"]
+  pkg_ui_mcmod_workbench["ui-mcmod-workbench"]
   pkg_attachment["attachment"]
   svc_attachments["ctx.attachments<br/>Durable binary attachment storage"]
   pkg_attachment_local["attachment-local"]
@@ -247,6 +255,7 @@ flowchart LR
   pkg_llm_replay --> svc_llm
   pkg_lsp --> svc_lsp
   pkg_lsp_local --> svc_lsp
+  pkg_mc_workbench --> svc_minecraftWorkbench
   pkg_message_feedback --> svc_messageFeedback
   pkg_modules --> svc_clientModules
   pkg_permission_presets --> svc_permissionPresets
@@ -296,6 +305,8 @@ flowchart LR
   pkg_terminal --> svc_terminals
   pkg_terminal_bash --> svc_terminals
   pkg_token_meter --> svc_tokenMeter
+  pkg_tool_mc_bootstrap --> svc_minecraftBootstrap
+  pkg_tool_mc_project --> svc_minecraftRuntime
   pkg_tools --> svc_tools
   pkg_typert_registry --> svc_typert
   pkg_user_questions --> svc_userQuestions
@@ -344,6 +355,9 @@ flowchart LR
   svc_llm --> pkg_agent_loop
   svc_llm --> pkg_compaction_basic
   svc_lsp --> pkg_tool_lsp
+  svc_minecraftBootstrap --> pkg_ui_mcmod_bootstrap
+  svc_minecraftRuntime --> pkg_tool_mc_project
+  svc_minecraftWorkbench --> pkg_ui_mcmod_workbench
   svc_sandbox --> pkg_bash_sandbox
   svc_sandbox --> pkg_terminal_bash
   svc_sandboxPolicy --> pkg_bash_sandbox
@@ -427,6 +441,9 @@ flowchart LR
 
 | ctx 键 | 角色 | 所属包 | 实现 | 直接消费方 | 配套插件 | 说明 |
 | --- | --- | --- | --- | --- | --- | --- |
+| `ctx.minecraftBootstrap` | `core` | [`tool-mc-bootstrap`](../packages/minecraft/tool-mc-bootstrap) | - | `ui-mcmod-bootstrap` | - | 管理版本目录、项目暂存和首次构建后的发布。 |
+| `ctx.minecraftRuntime` | `core` | [`tool-mc-project`](../packages/minecraft/tool-mc-project) | - | [`tool-mc-project`](../packages/minecraft/tool-mc-project) | - | 工作台通过已挂载 shell 的策略提供可保留记录的开发运行。 |
+| `ctx.minecraftWorkbench` | `core` | [`mc-workbench`](../packages/minecraft/mc-workbench) | - | `ui-mcmod-workbench` | - | 管理项目运行、依赖事务和只读源码操作。 |
 | `ctx.attachments` | `seam` | [`attachment`](../packages/attachment/attachment) | [`attachment-local`](../packages/attachment/attachment-local) | `host-runtime`, [`llm-pi-ai`](../packages/llm/llm-pi-ai) | - | 宿主会在会话事件之前提交已接受的图片；提供方适配器将已授权的持久引用解析为提供方原生内容。 |
 | `ctx.llm` | `seam` | [`llm`](../packages/llm/llm) | [`llm-deepseek`](../packages/llm/llm-deepseek), [`llm-pi-ai`](../packages/llm/llm-pi-ai), [`llm-replay`](../packages/test-support/llm-replay) | [`agent-loop`](../packages/core/agent-loop), [`compaction-basic`](../packages/compaction/compaction-basic) | - | 适配器注册提供方实现；agent loop（智能体循环）与压缩功能调用提供方无关的流服务。 |
 | `ctx.tokenMeter` | `core` | [`token-meter`](../packages/llm/token-meter) | - | [`compaction-basic`](../packages/compaction/compaction-basic) | - | 拥有按会话隔离的回放折叠区；压力消费方共享不可变且带修订版本的测量结果。 |

@@ -80,6 +80,8 @@ A `turn/end` whose reason is `max-tokens` projects one `turn-max-tokens` node at
 
 Each resident `Session` owns a `modelSelection` snapshot containing the current `ModelSelection`, provider-grouped directory, provider-local failures, and the `idle`/`loading`/`ready`/`selecting`/`error` state. History establishes or refreshes the current selection, opening a selector refreshes the directory, and selection failures preserve the last selection and usable groups. Directory and selection operations share a monotonically increasing generation so an older response cannot overwrite a newer selection. A reconnect rebuild restores the selection reported by the Host without replacing unchanged selection substructure.
 
+Explicit `sessions.open` and subagent navigation emit the client-local `sessions/navigate` event even when the selected id is unchanged. Layout consumes it to restore the target project's conversation view; this is not a persisted host session event.
+
 ## Model Experience
 
 None, as the session object layer selects the provider/model route used by a later Host request but adds no model-visible content.

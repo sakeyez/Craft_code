@@ -1,0 +1,10 @@
+$ tsx scripts/verify-translation-pairing.ts "--write" "packages/minecraft/mc-workbench/README.md" "packages/minecraft/tool-mc-bootstrap/README.md" "packages/client/ui-mcmod-bootstrap/README.md" "packages/client/ui-mcmod-workbench/README.md" "packages/client/runtime/README.md" "packages/client/ui-settings/README.md" ".agents/notes/implemented/feature/2026-09-16-minecraft-workbench.md" ".agents/notes/implemented/feature/2026-09-14-minecraft-host-bootstrap.md"
+verify-translation-pairing: recorded .agents/notes/implemented/feature/2026-09-14-minecraft-host-bootstrap.i18n.yaml
+verify-translation-pairing: recorded .agents/notes/implemented/feature/2026-09-16-minecraft-workbench.i18n.yaml
+verify-translation-pairing: recorded packages/client/runtime/README.i18n.yaml
+verify-translation-pairing: recorded packages/client/ui-mcmod-bootstrap/README.i18n.yaml
+verify-translation-pairing: recorded packages/client/ui-mcmod-workbench/README.i18n.yaml
+verify-translation-pairing: recorded packages/client/ui-settings/README.i18n.yaml
+verify-translation-pairing: recorded packages/minecraft/mc-workbench/README.i18n.yaml
+verify-translation-pairing: recorded packages/minecraft/tool-mc-bootstrap/README.i18n.yaml
+verify-translation-pairing: 8 record(s) written; run the check to validate the pairs.

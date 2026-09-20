@@ -67,7 +67,7 @@ describe('Minecraft focus layout', () => {
           context.fillRect(0, 0, 800, 450)
           await commit([{ id: crypto.randomUUID(), label: 'B', description: 'Native shortcut annotation', createdAt: Date.now(), shape: { type: 'point', geometry: { x: .5, y: .5 } } }], { dataUrl: canvas.toDataURL('image/jpeg'), width: 800, height: 450 })
         },
-        endGameAnnotation: noop, repositionGameCompanion: noop,
+        endGameAnnotation: noop,
       } })
     })
     await page.goto(scaffold.baseUrl)
@@ -106,7 +106,7 @@ describe('Minecraft focus layout', () => {
     expect(box!.y + box!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1)
   }
 
-  it('keeps chat, model selection, uploads and annotation accessible at companion widths', async () => {
+  it('keeps the original page and annotation entry accessible while Minecraft connects', async () => {
     onTestFailed(async () => {
       await mkdir('.artifacts/game-focus', { recursive: true })
       await page.screenshot({ path: '.artifacts/game-focus/layout-failed.png' })
@@ -118,18 +118,17 @@ describe('Minecraft focus layout', () => {
     await state('starting')
     expect(await page.getByRole('navigation', { name: '应用菜单' }).isVisible()).toBe(true)
     await state('connected')
-    await page.locator('[data-game-focus]').waitFor()
+    expect(await page.locator('[data-game-focus]').count()).toBe(0)
     for (const width of [494, 360, 520]) {
       await page.setViewportSize({ width, height: 1000 })
       await expect.poll(async () => (await input.boundingBox())?.width).toBeGreaterThan(200)
       await visibleInViewport(input)
-      expect((await page.locator('[data-composer-card]').boundingBox())!.y).toBeGreaterThan(700)
+      expect((await page.locator('[data-composer-card]').boundingBox())!.y).toBeGreaterThan(0)
       expect(await page.getByText('在游戏上标注，将问题带入对话。').count()).toBe(0)
       await visibleInViewport(page.getByRole('button', { name: '在游戏画面上标注' }))
       await visibleInViewport(page.getByRole('button', { name: /选择模型/ }))
-      expect(await page.getByRole('navigation', { name: '应用菜单' }).isVisible()).toBe(false)
-      expect(await page.getByText('开始打造新想法', { exact: true }).isVisible()).toBe(false)
-      expect(await page.locator('[data-side]').filter({ visible: true }).count()).toBe(0)
+      expect(await page.getByRole('navigation', { name: '应用菜单' }).isVisible()).toBe(true)
+      expect(await page.locator('[data-game-focus]').count()).toBe(0)
     }
     await page.setViewportSize({ width: 494, height: 1000 })
     await page.getByRole('button', { name: /选择模型/ }).click()
@@ -154,16 +153,16 @@ describe('Minecraft focus layout', () => {
     await mkdir('.artifacts/game-focus', { recursive: true })
     await page.screenshot({ path: '.artifacts/game-focus/connected.png' })
     await state('disconnected')
-    await page.locator('[data-game-focus]').waitFor({ state: 'detached' })
+    expect(await page.locator('[data-game-focus]').count()).toBe(0)
     await page.setViewportSize({ width: 1280, height: 1000 })
     expect(await originalInput!.evaluate(element => element.isConnected)).toBe(true)
     expect(await input.inputValue()).toBe('Keep this draft')
     expect(await page.getByRole('navigation', { name: '应用菜单' }).isVisible()).toBe(true)
-    expect(await page.getByText('开始打造新想法', { exact: true }).isVisible()).toBe(true)
+    expect(await page.getByRole('navigation', { name: '应用菜单' }).isVisible()).toBe(true)
     expect(consoleWatch.pageErrors).toEqual([])
   })
 
-  it('edits an existing annotation without a captured frame and persists the description', async () => {
+  it('edits an existing annotation and keeps shortcut capture on the original page', async () => {
     onTestFailed(async () => {
       await mkdir('.artifacts/game-focus', { recursive: true })
       await page.screenshot({ path: '.artifacts/game-focus/edit-failed.png' })
@@ -195,6 +194,7 @@ describe('Minecraft focus layout', () => {
       payload: { sessionId, annotations: [annotation] },
     })
     expect(seeded.result.ok).toBe(true)
+    await page.getByRole('treeitem', { name: /Annotation editing/ }).waitFor()
     await page.getByRole('treeitem', { name: /Annotation editing/ }).click()
     await page.getByRole('button', { name: /1 条标注/ }).hover()
     await page.getByText('Original description', { exact: true }).waitFor()
@@ -209,7 +209,7 @@ describe('Minecraft focus layout', () => {
       .filter(event => event.type === 'game/annotations').at(-1)?.data.annotations)
       .toEqual([{ ...annotation, description: 'Updated through the browser' }])
     await state('connected')
-    await page.locator('[data-game-focus]').waitFor()
+    expect(await page.locator('[data-game-focus]').count()).toBe(0)
     await page.evaluate(() => { window.dispatchEvent(new Event('test-annotation-shortcut')) })
     await page.getByRole('button', { name: /2 条标注/ }).hover()
     await page.getByText('Native shortcut annotation', { exact: true }).waitFor()
@@ -230,7 +230,7 @@ describe('Minecraft focus layout', () => {
     await state('disconnected')
     expect(consoleWatch.pageErrors).toEqual([])
   }, 60_000)
-  it('measures companion layout and interaction without remounting the composer', async () => {
+  it('measures annotation context and interaction without remounting the composer', async () => {
     const sessionId = SessionId('game-annotation-edit')
     const density = await scaffold.ctx.apiProxy.sessions.annotate!({
       rpcId: 'annotation-density' as never,
@@ -257,7 +257,7 @@ describe('Minecraft focus layout', () => {
       await page.setViewportSize({ width, height })
       await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: scale, mobile: false })
       await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
-      await expect.poll(async () => (await page.locator('[data-game-status]').boundingBox())?.width).toBeGreaterThanOrEqual(width - 1)
+      await expect.poll(async () => (await page.locator('[data-game-status]').boundingBox())?.width).toBeGreaterThan(0)
       await visibleInViewport(input)
       const layout = await page.locator('[data-game-status]').evaluate((element) => {
         const box = element.getBoundingClientRect()

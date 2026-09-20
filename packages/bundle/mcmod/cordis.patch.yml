@@ -18,3 +18,19 @@
             optional: true
             extensionToLanguage:
               .java: java
+
+    # Host-local deterministic Minecraft project generator. Its Connection
+    # channel is loopback-only and has no model-visible tool schema.
+    - id: mc-workbench
+      name: '@deepseek-ai/dsh-mc-workbench'
+
+    - id: mc-bootstrap
+      name: '@deepseek-ai/dsh-tool-mc-bootstrap'
+
+    # Minecraft New Mod action and frame-wide build wizard. The same client
+    # package is used by Electron and the loopback browser preview.
+    - id: ui-mcmod-bootstrap
+      name: '@deepseek-ai/dsh-client-ui-mcmod-bootstrap'
+
+    - id: ui-mcmod-workbench
+      name: '@deepseek-ai/dsh-client-ui-mcmod-workbench'

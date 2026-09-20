@@ -1078,6 +1078,98 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'minecraftBootstrap',
+    summary: 'Host service face, useful to trusted in-process consumers and tests.',
+    description: 'Host service face, useful to trusted in-process consumers and tests.',
+    methods: [
+      {
+        signature: 'catalog(signal?: AbortSignal): Promise<CatalogSnapshot>',
+        description: 'Read the supported release catalog and local Java facts.',
+        parameters: [{ name: 'signal', description: 'Caller-owned cancellation signal.' }],
+        returns: 'Current catalog entries and environment availability.',
+      },
+      {
+        signature: 'start(request: BootstrapStartRequest, signal?: AbortSignal): Promise<StartRpcResponse>',
+        description: 'Create a project and retain its preparation/build operation.',
+        parameters: [{ name: 'request', description: 'Project identity, destination and catalog selection.' }, { name: 'signal', description: 'Caller-owned cancellation signal.' }],
+        returns: 'Identifier for polling and cancellation.',
+      },
+      {
+        signature: 'status(operationId: string): OperationSnapshot | undefined',
+        description: 'Read the current or retained bootstrap operation.',
+        parameters: [{ name: 'operationId', description: 'Identifier returned by start.' }],
+        returns: 'Latest snapshot, or undefined for an unknown operation.',
+      },
+      {
+        signature: 'cancel(operationId: string): boolean',
+        description: 'Request cancellation of the selected bootstrap operation.',
+        parameters: [{ name: 'operationId', description: 'Identifier returned by start.' }],
+        returns: 'Whether an active operation received cancellation.',
+      },
+    ],
+  },
+  {
+    key: 'minecraftRuntime',
+    summary: 'Optional host runtime used by approved model launches and desktop controls.',
+    description: 'Optional host runtime used by approved model launches and desktop controls.',
+    methods: [
+      {
+        signature: 'check(cwd: string, mode: RuntimeMode, signal: AbortSignal, timeoutMs?: number, testMode?: \'development\' | \'artifact\'): Promise<CheckResult>',
+        description: 'Run an approved, bounded development launch through the mounted shell and retain its logs.',
+        parameters: [{ name: 'cwd', description: 'Absolute project directory.' }, { name: 'mode', description: 'Client or dedicated-server runtime.' }, { name: 'signal', description: 'Caller-owned cancellation signal.' }, { name: 'timeoutMs', description: 'Per-command timeout in milliseconds.' }, { name: 'testMode', description: 'Development tasks or isolated artifact test, defaulting to development.' }],
+        returns: 'Preflight and readiness outcome with the retained log path.',
+      },
+    ],
+  },
+  {
+    key: 'minecraftWorkbench',
+    summary: 'Service definition shared by UI RPC and trusted model consumers.',
+    description: 'Service definition shared by UI RPC and trusted model consumers.',
+    methods: [
+      {
+        signature: 'readonly runs: MinecraftRuns',
+        description: 'Shared owner of development process lifecycle and retained output.',
+        parameters: [],
+      },
+      {
+        signature: 'readonly network: MinecraftNetwork',
+        description: 'Shared download and build network settings.',
+        parameters: [],
+      },
+      {
+        signature: 'readonly dependencies: MinecraftDependencies',
+        description: 'Shared owner of dependency previews and durable transactions.',
+        parameters: [],
+      },
+      {
+        signature: 'readonly sources: MinecraftSources',
+        description: 'Shared owner of read-only source operations.',
+        parameters: [],
+      },
+      {
+        signature: 'readonly checkpoints: MinecraftCheckpoints = new MinecraftCheckpoints()',
+        description: 'Content-addressed project recovery independent of session-log persistence.',
+        parameters: [],
+      },
+      {
+        signature: 'queryApi(cwd: string, input: unknown, signal: AbortSignal): Promise<ApiQueryResult>',
+        description: 'Read exact-version class and method evidence for UI and explicit model queries.',
+        parameters: [{ name: 'cwd', description: 'Absolute project root.' }, { name: 'input', description: 'Untrusted query or preview payload.' }, { name: 'signal', description: 'Caller cancellation signal.' }],
+        returns: 'Versioned API evidence with source and verification status.',
+      },
+      {
+        signature: 'readonly handleRpc: (endpoint: string, payload: unknown, signal: AbortSignal) => Promise<RpcResult<unknown>> = async ( endpoint: string, payload: unknown, signal: AbortSignal, ): Promise<RpcResult<unknown>> => { try { if (endpoint === \'network-get\') return { ok: true, value: this.network.read() } if (endpoint === \'network-save\') return { ok: true, value: await this.network.save(payload) } if (endpoint === \'network-check\') return { ok: true, value: await this.network.check(signal) } const input = base.parse(payload) const cwd = await projectRoot(input.cwd) const registry = this.ctx.get(\'workspaceRegistry\') if (registry && !registry.list().some(workspace => workspace.path === cwd)) throw new Error(\'请先在应用中打开此项目。\') return { ok: true, value: await this.network.run(() => this.dispatch(cwd, endpoint, payload, signal)) } } catch (error) { return { ok: false, error: { code: \'internal\', message: error instanceof Error ? error.message : String(error), details: {}, }, } } }',
+        description: 'Validate a loopback request and dispatch it within its registered project.',
+        parameters: [],
+      },
+      {
+        signature: 'async dispose(): Promise<void>',
+        description: 'Settle process and source owners during plugin teardown.',
+        parameters: [],
+      },
+    ],
+  },
+  {
     key: 'permissionPresets',
     summary: 'Owns the deployment\'s permission presets and their write path.',
     description: 'Owns the deployment\'s permission presets and their write path. Requires a confining `ctx.shell` executor and `ctx.approval`; unmatched knob values are reported as CUSTOM_PRESET, not an error.',
@@ -2628,6 +2720,22 @@ export const EVENT_API: readonly EventApiEntry[] = [
     parameters: [{ name: 'options', description: 'the full request. A LOOP-built request carries the process-local {@link markAgentLoopRequest} identity and arrives deep-frozen (mutation throws): its content is a pure function of the session log (the reconstructability Agent Note), so listeners read it, never rewrite it. Hand-built calls do not carry that marker; their messages already obey the immutable creation contract.' }],
   },
   {
+    name: 'minecraft-bootstrap/progress',
+    mode: 'emit',
+    signature: '\'minecraft-bootstrap/progress\'(snapshot: unknown): void',
+    summary: 'Host-local Minecraft bootstrap snapshots; payload is validated by the client feature.',
+    description: 'Host-local Minecraft bootstrap snapshots; payload is validated by the client feature.',
+    parameters: [{ name: 'snapshot', description: 'Current host bootstrap operation snapshot.' }],
+  },
+  {
+    name: 'minecraft-bootstrap/progress',
+    mode: 'emit',
+    signature: '\'minecraft-bootstrap/progress\'(snapshot: unknown): void',
+    summary: 'Progress snapshots forwarded to reconnecting browser clients.',
+    description: 'Progress snapshots forwarded to reconnecting browser clients.',
+    parameters: [{ name: 'snapshot', description: 'Current operation progress for browser refresh.' }],
+  },
+  {
     name: 'session-telemetry/record',
     mode: 'waterfall',
     signature: '\'session-telemetry/record\'(record: SessionTelemetryRecord, next: () => SessionTelemetryRecord): SessionTelemetryRecord',
@@ -2896,6 +3004,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ApiKeyRecord {\n    readonly kind: \'api-key\';\n    readonly key?: string;\n    readonly env?: Readonly<Record<string, string>>;\n}',
   },
   {
+    name: 'ApiQueryResult',
+    declaration: 'export interface ApiQueryResult {\n    symbol: string;\n    version: string;\n    namespace: string;\n    verified: boolean;\n    source: string;\n    cached: boolean;\n    text: string;\n}',
+  },
+  {
     name: 'ApprovalOutcome',
     declaration: 'export type ApprovalOutcome = \'allowed-once\' | \'rejected\' | \'cancelled\' | \'unavailable\';',
   },
@@ -2910,6 +3022,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ApprovalService',
     declaration: 'export class ApprovalService extends Service {\n    static Config: z<Config>;\n    constructor(ctx: Context, public config: Config);\n    setPolicy(agent: Agent, policy: ApprovalPolicy): void;\n    async request(req: ApprovalRequest): Promise<ApprovalOutcome>;\n    overrideOf(session: Session): ApprovalPolicy | undefined;\n}',
+  },
+  {
+    name: 'ArtifactEvidence',
+    declaration: 'export interface ArtifactEvidence {\n    path: string;\n    sha256: string;\n    modId: string;\n    version: string;\n    loader: \'fabric\' | \'neoforge\';\n    minecraft: string;\n    loaderVersion: string;\n    inputFingerprint: string;\n    requirements: Record<string, string[]>;\n    nestedIds: string[];\n    nestedVersions: Record<string, string>;\n    checkedAt: string;\n}',
   },
   {
     name: 'AskUserQuestionAnswer',
@@ -3024,12 +3140,32 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface BashEnvVariableInfo extends BashEnvVariable {\n    contributor: string;\n    key: DshEnvironmentKey;\n}',
   },
   {
+    name: 'BootstrapLoader',
+    declaration: 'export type BootstrapLoader = \'fabric\' | \'neoforge\';',
+  },
+  {
+    name: 'BootstrapStartRequest',
+    declaration: 'export interface BootstrapStartRequest {\n    readonly entryId: string;\n    readonly parentDirectory: string;\n    readonly directoryName: string;\n    readonly modName: string;\n    readonly modId: string;\n    readonly packageName: string;\n}',
+  },
+  {
     name: 'Branded',
     declaration: 'export type Branded<B extends string> = string & {\n    readonly [BRAND]: B;\n};',
   },
   {
     name: 'CancelOptions',
     declaration: 'export interface CancelOptions {\n    keepInbox?: boolean | undefined;\n}',
+  },
+  {
+    name: 'CatalogEntry',
+    declaration: 'export interface CatalogEntry {\n    readonly entryId: string;\n    readonly loader: BootstrapLoader;\n    readonly minecraftVersion: string;\n    readonly loaderVersion: string;\n    readonly mappingsVersion: string;\n    readonly apiVersion: string;\n    readonly pluginVersion: string;\n    readonly gradleVersion: string;\n    readonly gradleSha256: string;\n    readonly wrapperSha256: string;\n    readonly requiredJdk: 17 | 21;\n    readonly stable: true;\n}',
+  },
+  {
+    name: 'CatalogSnapshot',
+    declaration: 'export interface CatalogSnapshot {\n    readonly entries: readonly CatalogEntry[];\n    readonly fetchedAt?: string;\n    readonly cached: boolean;\n    readonly stale: boolean;\n    readonly java: JavaProbe;\n    readonly error?: string;\n}',
+  },
+  {
+    name: 'CheckResult',
+    declaration: 'export interface CheckResult {\n    commands: string[];\n    exitCode: number | null;\n    steps: CheckStepResult[];\n    failedStep: string | null;\n    suggestedNextAction: string | null;\n}',
   },
   {
     name: 'ClientResponse',
@@ -3114,6 +3250,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'CompactionTrigger',
     declaration: 'export type CompactionTrigger = \'pressure\' | \'context-overflow\';',
+  },
+  {
+    name: 'Confidence',
+    declaration: 'export type Confidence = \'high\' | \'medium\' | \'low\';',
   },
   {
     name: 'ConfinedArgv',
@@ -3236,6 +3376,42 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type CredentialRef = Branded<\'CredentialRef\'>;',
   },
   {
+    name: 'CurseFile',
+    declaration: 'export type CurseFile = z.infer<typeof fileSchema>;',
+  },
+  {
+    name: 'CurseForge',
+    declaration: 'export class CurseForge {\n    constructor(private readonly ctx: Context);\n    async search(project: DetectionResult, query: string, signal?: AbortSignal): Promise<{\n        id: string;\n        name: string;\n        description: string;\n    }[]>;\n    async file(project: DetectionResult, projectId: number, fileId: number, signal?: AbortSignal): Promise<CurseFile>;\n    async files(project: DetectionResult, projectId: number, signal?: AbortSignal): Promise<CurseFile[]>;\n}',
+  },
+  {
+    name: 'DatagenClue',
+    declaration: 'export interface DatagenClue {\n    kind: string;\n    source: string;\n    detail: string;\n}',
+  },
+  {
+    name: 'Dependency',
+    declaration: 'export interface Dependency {\n    id: string;\n    name: string;\n    version: string;\n    modId?: string | undefined;\n    role: DependencyRole;\n    enabled: boolean;\n    source: DependencySource;\n    sha256: string;\n    file: string;\n    dependencies: string[];\n    automatic: boolean;\n    compatibility: \'verified\' | \'unknown\';\n    warnings: string[];\n    sourcesFile?: string | undefined;\n}',
+  },
+  {
+    name: 'DependencyManifest',
+    declaration: 'export interface DependencyManifest {\n    format: 1;\n    dependencies: Dependency[];\n}',
+  },
+  {
+    name: 'DependencyPlan',
+    declaration: 'export interface DependencyPlan {\n    id: WorkbenchId;\n    dependencies: Dependency[];\n    changes: FileChange[];\n    warnings: string[];\n}',
+  },
+  {
+    name: 'DependencyRole',
+    declaration: 'export type DependencyRole = \'required\' | \'optional\' | \'test\';',
+  },
+  {
+    name: 'DependencySource',
+    declaration: 'export type DependencySource = {\n    kind: \'modrinth\';\n    projectId: string;\n    versionId: string;\n} | {\n    kind: \'curseforge\';\n    projectId: number;\n    fileId: number;\n    publisherHash?: {\n        algorithm: \'sha1\';\n        value: string;\n    } | undefined;\n} | {\n    kind: \'maven\';\n    repository: string;\n    coordinate: string;\n} | {\n    kind: \'local\';\n    path: string;\n};',
+  },
+  {
+    name: 'DetectionResult',
+    declaration: 'export interface DetectionResult {\n    workspace: string;\n    loader: Loader;\n    loaderSupport: LoaderSupport;\n    loaderEvidence: LoaderEvidence[];\n    minecraftVersion: MinecraftVersionResult;\n    mappings: MappingsResult;\n    modIdCandidates: ModIdCandidate[];\n    languages: {\n        java: boolean;\n        kotlin: boolean;\n    };\n    mainSourceSets: SourceSetInfo[];\n    resourceRoots: string[];\n    mixinConfigs: MixinConfig[];\n    datagenClues: DatagenClue[];\n    recommendedValidationCommands: string[];\n    gradleTaskCandidates: string[];\n    inspected: {\n        gradleFiles: string[];\n        metadataFiles: string[];\n        sourceRoots: string[];\n        resourceRoots: string[];\n    };\n    warnings: string[];\n    scanComplete: boolean;\n}',
+  },
+  {
     name: 'DiffCallView',
     declaration: 'export interface DiffCallView {\n    card: \'diff\';\n    title: string;\n    diffs: FileDiff[];\n    locations?: FileLocation[];\n}',
   },
@@ -3348,8 +3524,16 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface EpochHeader {\n    config: LlmCallConfig;\n    adapterDefaults?: LlmCallConfigAdapterDefaults;\n    system?: string;\n    tools?: ToolSchema[];\n}',
   },
   {
+    name: 'FileChange',
+    declaration: 'export interface FileChange {\n    path: string;\n    before: string | null;\n    after: string | null;\n}',
+  },
+  {
     name: 'FileDiff',
     declaration: 'export interface FileDiff {\n    path: string;\n    oldText: string | null;\n    newText: string;\n}',
+  },
+  {
+    name: 'FileEntry',
+    declaration: 'export interface FileEntry {\n    path: string;\n    name: string;\n    directory: boolean;\n}',
   },
   {
     name: 'FileLocation',
@@ -3528,6 +3712,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface InvokeRemoteRequest {\n    readonly namespace: string;\n    readonly method: string;\n    readonly args: Readonly<Record<string, unknown>>;\n    readonly signal?: AbortSignal;\n}',
   },
   {
+    name: 'JavaEnvironment',
+    declaration: 'export interface JavaEnvironment {\n    executable?: string;\n    major: number;\n    managed: boolean;\n    available: boolean;\n}',
+  },
+  {
+    name: 'JavaProbe',
+    declaration: 'export interface JavaProbe {\n    readonly available: boolean;\n    readonly version?: number;\n    readonly executable?: string;\n    readonly message?: string;\n}',
+  },
+  {
     name: 'JobDoneListener',
     declaration: 'export type JobDoneListener = (snapshot: JobSnapshot, owner: Agent | undefined) => void | PromiseLike<void>;',
   },
@@ -3664,6 +3856,22 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export class LlmRuntime extends Service {\n    constructor(ctx: Context);\n    registerAdapter(providers: string[], adapter: LlmAdapter): AdapterRegistrationHandle;\n    listProviders(): LlmProviderInfo[];\n    registerConfigurableProviders(entries: readonly LlmConfigurableProvider[]): DirectoryRegistrationHandle;\n    listConfigurableProviders(): LlmConfigurableProvider[];\n    registerModelDiscovery(settingsNs: string, discover: (request: LlmModelDiscoveryRequest) => Promise<readonly LlmDiscoveredModel[]>): () => void;\n    async discoverModels(settingsNs: string, request: LlmModelDiscoveryRequest): Promise<LlmDiscoveredModel[]>;\n    providerRetryPolicy(provider: string): ResolvedRetryPolicy;\n    async listModels(provider: string): Promise<LlmModelInfo[]>;\n    async resolveModelInfo(provider: string, model: string, signal?: AbortSignal): Promise<LlmResolvedModelInfo>;\n    async resolveCallConfig(config: LlmCallConfig, signal?: AbortSignal): Promise<LlmCallConfig>;\n    async prepareCall(config: LlmCallConfig, signal?: AbortSignal): Promise<PreparedLlmCall>;\n    stream(options: GenerateOptions): AsyncIterable<StreamChunk>;\n}',
   },
   {
+    name: 'Loader',
+    declaration: 'export type Loader = \'architectury\' | \'fabric\' | \'forge\' | \'neoforge\' | \'quilt\' | \'unknown\';',
+  },
+  {
+    name: 'LoaderEvidence',
+    declaration: 'export interface LoaderEvidence {\n    loader: Exclude<Loader, \'unknown\'>;\n    evidence: string[];\n}',
+  },
+  {
+    name: 'LoaderSupport',
+    declaration: 'export type LoaderSupport = \'supported\' | \'unsupported\' | \'unknown\';',
+  },
+  {
+    name: 'LogChunk',
+    declaration: 'export interface LogChunk {\n    text: string;\n    cursor: number;\n    complete: boolean;\n}',
+  },
+  {
     name: 'LspHover',
     declaration: 'export interface LspHover {\n    readonly contents: string;\n    readonly range?: LspRange;\n}',
   },
@@ -3706,6 +3914,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ManualCompactAgentContext',
     declaration: 'export interface ManualCompactAgentContext extends CompactionAgentContext {\n    runMaintenance<T>(task: (signal: AbortSignal) => Promise<T>): Promise<T>;\n}',
+  },
+  {
+    name: 'MappingsCandidate',
+    declaration: 'export interface MappingsCandidate {\n    type: string;\n    version: string | null;\n    source: string;\n    evidence: string;\n}',
+  },
+  {
+    name: 'MappingsResult',
+    declaration: 'export type MappingsResult = {\n    status: \'unknown\';\n    candidates: [\n    ];\n} | {\n    status: \'determined\';\n    type: string;\n    version: string | null;\n    candidates: MappingsCandidate[];\n} | {\n    status: \'conflict\';\n    candidates: MappingsCandidate[];\n};',
   },
   {
     name: 'Message',
@@ -3800,6 +4016,38 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface MessageSourceMap {\n    user: {\n        kind: \'user\';\n    };\n    plugin: {\n        kind: \'plugin\';\n        plugin: string;\n    } & ContextFormed;\n    model: ModelMessageSource;\n    tool: ToolMessageSource;\n}',
   },
   {
+    name: 'MinecraftCheckpoints',
+    declaration: 'export class MinecraftCheckpoints {\n    async mutate<T>(cwd: string, work: () => Promise<T>): Promise<T>;\n    async list(cwd: string): Promise<ProjectCheckpoint[]>;\n    create(cwd: string, kind: ProjectCheckpoint[\'kind\'], label: string, signal?: AbortSignal): Promise<ProjectCheckpoint>;\n    async preview(cwd: string, id: string): Promise<RestorePreview>;\n    restore(cwd: string, id: string, fingerprint: string): Promise<void>;\n    async remove(cwd: string, id: string): Promise<void>;\n}',
+  },
+  {
+    name: 'MinecraftDependencies',
+    declaration: 'export class MinecraftDependencies {\n    constructor(private readonly curseforge?: CurseForge);\n    async read(cwd: string): Promise<DependencyManifest>;\n    async search(project: DetectionResult, query: string, signal?: AbortSignal): Promise<ModSearchResult[]>;\n    async versions(project: DetectionResult, id: string, signal?: AbortSignal): Promise<ModVersion[]>;\n    async preview(cwd: string, project: DetectionResult, input: {\n        source?: DependencySource | undefined;\n        role?: DependencyRole | undefined;\n        removeId?: string | undefined;\n        updateId?: string | undefined;\n        enabled?: boolean | undefined;\n    }, signal?: AbortSignal): Promise<DependencyPlan>;\n    async apply(cwd: string, id: string): Promise<DependencyManifest>;\n}',
+  },
+  {
+    name: 'MinecraftNetwork',
+    declaration: 'export class MinecraftNetwork {\n    constructor(private readonly ctx: Context);\n    read(): NetworkSettings;\n    async save(input: unknown): Promise<NetworkSettings>;\n    run<T>(task: () => T): T;\n    async check(signal: AbortSignal): Promise<{\n        name: string;\n        ok: boolean;\n        message: string;\n    }[]>;\n}',
+  },
+  {
+    name: 'MinecraftRuns',
+    declaration: 'export class MinecraftRuns {\n    constructor(private readonly ctx: Context);\n    async whileIdle<T>(cwd: string, action: () => Promise<T>): Promise<T>;\n    async inspect(cwd: string, signal?: AbortSignal): Promise<ProjectFacts>;\n    async history(cwd: string): Promise<RunSnapshot[]>;\n    async start(cwd: string, action: RunAction, runner?: ProcessRunner, options: RunOptions = {}): Promise<RunSnapshot>;\n    async retry(cwd: string, id: string): Promise<RunSnapshot>;\n    async check(cwd: string, mode: \'client\' | \'server\', signal: AbortSignal, timeoutMs: number = 120000, testMode: \'development\' | \'artifact\' = \'development\'): Promise<CheckResult>;\n    async stop(cwd: string, id: string): Promise<void>;\n    async logs(cwd: string, id: string, cursor: number): Promise<LogChunk>;\n    nativeState(cwd: string): {\n        id: string;\n        pid: number;\n    } | undefined;\n    async acceptEula(cwd: string, path: string): Promise<void>;\n    async dispose(): Promise<void>;\n}',
+  },
+  {
+    name: 'MinecraftSources',
+    declaration: 'export class MinecraftSources {\n    constructor(private readonly ctx: Context);\n    async start(cwd: string, dependency: Dependency, sourceArchive?: string): Promise<SourceSnapshot>;\n    status(cwd: string, id: string): SourceSnapshot;\n    async cancel(cwd: string, id: string): Promise<void>;\n    async files(cwd: string, id: string, path: string): Promise<FileEntry[]>;\n    async read(cwd: string, id: string, path: string): Promise<TextFile>;\n    async search(cwd: string, id: string, query: string): Promise<{\n        hits: SearchHit[];\n        truncated: boolean;\n    }>;\n    async dispose(): Promise<void>;\n}',
+  },
+  {
+    name: 'MinecraftVersionCandidate',
+    declaration: 'export interface MinecraftVersionCandidate {\n    value: string;\n    classification: VersionClassification;\n    source: string;\n    evidence: string;\n}',
+  },
+  {
+    name: 'MinecraftVersionResult',
+    declaration: 'export type MinecraftVersionResult = {\n    status: \'unknown\';\n    candidates: [\n    ];\n} | {\n    status: \'determined\';\n    value: string;\n    classification: VersionClassification;\n    candidates: MinecraftVersionCandidate[];\n} | {\n    status: \'conflict\';\n    candidates: MinecraftVersionCandidate[];\n};',
+  },
+  {
+    name: 'MixinConfig',
+    declaration: 'export interface MixinConfig {\n    path: string;\n    source: string;\n}',
+  },
+  {
     name: 'ModelMessageSource',
     declaration: 'export interface ModelMessageSource extends AssistantProvenance {\n    kind: \'model\';\n}',
   },
@@ -3810,6 +4058,22 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ModelModalityMap',
     declaration: 'export interface ModelModalityMap {\n    text: \'text\';\n    image: \'image\';\n}',
+  },
+  {
+    name: 'ModIdCandidate',
+    declaration: 'export interface ModIdCandidate {\n    id: string;\n    source: string;\n    confidence: Confidence;\n}',
+  },
+  {
+    name: 'ModSearchResult',
+    declaration: 'export interface ModSearchResult {\n    id: string;\n    name: string;\n    description: string;\n}',
+  },
+  {
+    name: 'ModVersion',
+    declaration: 'export interface ModVersion {\n    id: string;\n    name: string;\n    version: string;\n}',
+  },
+  {
+    name: 'NetworkSettings',
+    declaration: 'export type NetworkSettings = z.infer<typeof NetworkSettingsSchema>;',
   },
   {
     name: 'NormalizedPath',
@@ -3830,6 +4094,18 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'OneShotSubagentDescriptorData',
     declaration: 'export interface OneShotSubagentDescriptorData extends SubagentDescriptorBase {\n    readonly mode: \'one-shot\';\n    readonly label?: string;\n}',
+  },
+  {
+    name: 'OperationSnapshot',
+    declaration: 'export interface OperationSnapshot {\n    readonly operationId: string;\n    readonly status: OperationStatus;\n    readonly stage: OperationStage;\n    readonly progress: number;\n    readonly projectPath?: string;\n    readonly entry?: CatalogEntry;\n    readonly failureCode?: string;\n    readonly message?: string;\n    readonly logTail: string;\n    readonly updatedAt: string;\n}',
+  },
+  {
+    name: 'OperationStage',
+    declaration: 'export type OperationStage = \'validate\' | \'java\' | \'generate\' | \'gradle-download\' | \'dependencies\' | \'build\' | \'finalize\' | \'done\';',
+  },
+  {
+    name: 'OperationStatus',
+    declaration: 'export type OperationStatus = \'queued\' | \'running\' | \'ready\' | \'failed\' | \'cancelled\';',
   },
   {
     name: 'PermissionSelect',
@@ -3922,6 +4198,22 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'PreToolDecision',
     declaration: 'export type PreToolDecision = {\n    kind: \'allow\';\n} | {\n    kind: \'deny\';\n    reason: string;\n} | {\n    kind: \'ask\';\n    reason?: string;\n};',
+  },
+  {
+    name: 'ProcessOptions',
+    declaration: 'export interface ProcessOptions {\n    cwd: string;\n    argv: string[];\n    signal: AbortSignal;\n    env?: NodeJS.ProcessEnv;\n    output?: (text: string, stream: \'stdout\' | \'stderr\') => Promise<void>;\n    spawned?: (handle: SubprocessHandle) => void;\n    maxBytes?: number;\n}',
+  },
+  {
+    name: 'ProcessRunner',
+    declaration: 'export type ProcessRunner = (options: ProcessOptions) => Promise<{\n    exitCode: number | null;\n    text: string;\n    truncated: boolean;\n}>;',
+  },
+  {
+    name: 'ProjectCheckpoint',
+    declaration: 'export type ProjectCheckpoint = z.infer<typeof manifest>;',
+  },
+  {
+    name: 'ProjectFacts',
+    declaration: 'export interface ProjectFacts {\n    project: DetectionResult;\n    java: JavaEnvironment;\n    javaRoles?: {\n        gradle: JavaEnvironment;\n        compiler: JavaEnvironment;\n        game: JavaEnvironment;\n        basis: {\n            gradle: string;\n            compiler: string;\n            game: string;\n        };\n    };\n    gradleVersion?: string;\n    supported: boolean;\n    reason?: string;\n}',
   },
   {
     name: 'ProjectionChangeListener',
@@ -4040,6 +4332,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface RestoredSessionOptions {\n    readonly seed: SessionEvent[];\n    readonly meta: SessionHeader;\n    readonly seedSource: \'persistence\';\n}',
   },
   {
+    name: 'RestorePreview',
+    declaration: 'export interface RestorePreview {\n    id: string;\n    fingerprint: string;\n    changes: (z.infer<typeof change> & {\n        beforeText?: string;\n        afterText?: string;\n    })[];\n}',
+  },
+  {
     name: 'ResumeAgentOptions',
     declaration: 'export interface ResumeAgentOptions {\n    readonly resumeSessionId: SessionId;\n    readonly agentOptions?: AgentOptions;\n    readonly signal?: AbortSignal;\n    readonly setup?: AgentSetup;\n}',
   },
@@ -4068,8 +4364,32 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type RpcResult<T> = {\n    ok: true;\n    value: T;\n} | {\n    ok: false;\n    error: RpcError;\n};',
   },
   {
+    name: 'RunAction',
+    declaration: 'export type RunAction = \'prepare\' | \'build\' | \'client\' | \'server\';',
+  },
+  {
+    name: 'RunFailure',
+    declaration: 'export interface RunFailure {\n    kind: \'network\' | \'rate-limit\' | \'checksum\' | \'disk-full\' | \'permission\' | \'build\' | \'unknown\';\n    retryable: boolean;\n}',
+  },
+  {
     name: 'RunnerFailureRule',
     declaration: 'export interface RunnerFailureRule {\n    allowedExitCodes?: readonly number[];\n    fatalSignatures: readonly string[];\n    informationalLines?: readonly string[];\n}',
+  },
+  {
+    name: 'RunPhase',
+    declaration: 'export type RunPhase = \'preparing\' | \'validating\' | \'building\' | \'starting\' | \'running\' | \'ready\' | \'stopping\' | \'exited\' | \'failed\' | \'cancelled\' | \'interrupted\' | \'disconnected\';',
+  },
+  {
+    name: 'RunSnapshot',
+    declaration: 'export interface RunSnapshot {\n    format?: 2 | 3 | 4 | undefined;\n    offline?: boolean | undefined;\n    id: WorkbenchId;\n    cwd: string;\n    action: RunAction;\n    phase: RunPhase;\n    startedAt: string;\n    updatedAt: string;\n    message: string;\n    exitCode?: number | null | undefined;\n    logPath: string;\n    eulaPath?: string | undefined;\n    crashReports?: string[] | undefined;\n    steps?: RunStep[] | undefined;\n    failure?: RunFailure | undefined;\n    mode?: \'development\' | \'artifact\' | undefined;\n    dependencies?: \'required\' | \'selected\' | undefined;\n    instance?: string | undefined;\n    artifact?: ArtifactEvidence | undefined;\n    evidence?: {\n        processStartedAt?: string | undefined;\n        worldReadyAt?: string | undefined;\n        gameplay: \'unverified\';\n        exitReason?: string | undefined;\n    } | undefined;\n}',
+  },
+  {
+    name: 'RunStep',
+    declaration: 'export interface RunStep {\n    phase: RunPhase;\n    message: string;\n    at: string;\n    received?: number | undefined;\n    total?: number | undefined;\n}',
+  },
+  {
+    name: 'RuntimeMode',
+    declaration: 'export type RuntimeMode = \'client\' | \'server\';',
   },
   {
     name: 'SandboxEnforcement',
@@ -4118,6 +4438,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SearchFileMatches',
     declaration: 'export interface SearchFileMatches {\n    path: string;\n    matches: SearchLineMatch[];\n}',
+  },
+  {
+    name: 'SearchHit',
+    declaration: 'export interface SearchHit {\n    path: string;\n    line: number;\n    text: string;\n}',
   },
   {
     name: 'SearchLineMatch',
@@ -4496,6 +4820,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface SkillViewOptions extends SkillLookupOptions {\n    readonly scope?: ScopeKey | undefined;\n}',
   },
   {
+    name: 'SourceSetInfo',
+    declaration: 'export interface SourceSetInfo {\n    name: string;\n    java: string[];\n    kotlin: string[];\n    resources: string[];\n}',
+  },
+  {
+    name: 'SourceSnapshot',
+    declaration: 'export interface SourceSnapshot {\n    id: WorkbenchId;\n    dependencyId: string;\n    status: \'running\' | \'ready\' | \'failed\' | \'cancelled\';\n    provenance: string;\n    error?: string;\n}',
+  },
+  {
     name: 'SpawnTeammateRequest',
     declaration: 'export interface SpawnTeammateRequest {\n    readonly name: string;\n    readonly description: string;\n    readonly prompt: ContentBlock[];\n    readonly context: \'fresh\' | \'fork\';\n    readonly provider: string;\n    readonly signal: AbortSignal;\n}',
   },
@@ -4518,6 +4850,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SpillSource',
     declaration: 'export interface SpillSource {\n    toolName: string;\n    callId: CallId;\n    label: string;\n}',
+  },
+  {
+    name: 'StartRpcResponse',
+    declaration: 'export interface StartRpcResponse {\n    readonly operationId: string;\n}',
   },
   {
     name: 'StorageBackend',
@@ -5012,6 +5348,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface UserQuestionProvider {\n    ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer>;\n}',
   },
   {
+    name: 'VersionClassification',
+    declaration: 'export type VersionClassification = \'exact\' | \'range\';',
+  },
+  {
     name: 'WebBootEntry',
     declaration: 'export interface WebBootEntry {\n    id: string;\n    url: string;\n    rev: string;\n    inject?: string[];\n    immediately?: boolean;\n    external?: string[];\n}',
   },
@@ -5078,6 +5418,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'WebUpgradeRoute',
     declaration: 'export interface WebUpgradeRoute {\n    path: string;\n    handler: (req: IncomingMessage, socket: Duplex, head: Buffer) => void | Promise<void>;\n}',
+  },
+  {
+    name: 'WorkbenchId',
+    declaration: 'export type WorkbenchId = string & {\n    readonly [workbenchIdBrand]: true;\n};',
   },
   {
     name: 'WorkflowAgentEndInfo',

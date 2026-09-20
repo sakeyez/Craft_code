@@ -33,7 +33,7 @@
     "skills",
     "lib/types/**/*.d.ts"
   ],
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
@@ -44,8 +44,8 @@
     "@deepseek-ai/dsh-lsp-stdio": "workspace:^",
     "@deepseek-ai/dsh-mcmod-agent": "workspace:^",
     "@deepseek-ai/dsh-tool-mc-project": "workspace:^",
-    "@deepseek-ai/dsh-tool-mc-bootstrap": "workspace:^",
-    "@deepseek-ai/dsh-tool-lsp": "workspace:^"
+    "@deepseek-ai/dsh-tool-lsp": "workspace:^",
+    "@deepseek-ai/dsh-mc-workbench": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-invariants": "workspace:^",
@@ -60,7 +60,6 @@
     "@deepseek-ai/dsh-lsp-stdio": "workspace:^",
     "@deepseek-ai/dsh-mcmod-agent": "workspace:^",
     "@deepseek-ai/dsh-tool-mc-project": "workspace:^",
-    "@deepseek-ai/dsh-tool-mc-bootstrap": "workspace:^",
     "@deepseek-ai/dsh-tool-lsp": "workspace:^",
     "js-yaml": "^4.2.0"
   }

@@ -35,7 +35,7 @@ Java 命令刻意保持为普通的 `jdtls` 并标记为可选。启动日志会
 
 #### 模型会看到什么
 
-模型会看到 headless persona、`@deepseek-ai/dsh-mcmod-agent` 提供的五个统一 Fabric/NeoForge Minecraft 模组开发提示词段落、skill catalog 中的六个随包 Minecraft skills（`fabric-mod-dev`、`fabric-datagen`、`minecraft-resources`、`mixin-debugging`、`neoforge-mod-dev` 和 `neoforge-datagen`），以及剩余的模型可见工具 schema：文件系统 read/write/edit/search、`detect_mc_project`、`validate_mc_resources`、`run_mc_check`、一个只前台执行的平台 shell 工具、`lsp` 与 `skill`。shell schema 不包含 `run_in_background`；长验证应使用有界前台调用或 `run_mc_check`。
+模型会看到 headless persona、`@deepseek-ai/dsh-mcmod-agent` 提供的五个统一 Fabric/NeoForge Minecraft 模组开发提示词段落、skill catalog 中的九个随包 Minecraft skills（`fabric-mod-dev`、`fabric-datagen`、`minecraft-add-content`、`minecraft-build-diagnose`、`minecraft-environment-doctor`、`minecraft-resources`、`mixin-debugging`、`neoforge-mod-dev` 和 `neoforge-datagen`），以及剩余的模型可见工具 schema：文件系统 read/write/edit/search、`detect_mc_project`、`validate_mc_resources`、`run_mc_check`、一个只前台执行的平台 shell 工具、`lsp` 与 `skill`。shell schema 不包含 `run_in_background`；长验证应使用有界前台调用或 `run_mc_check`。新项目由宿主本地“新模组”向导初始化：向导在 headless 编辑会话开始前解析受支持的 loader 和 Minecraft 版本、生成项目与 Gradle Wrapper，并完成首次构建；模型不会合成空白项目，也不会把未构建的目录视为可用。
 
 #### Token 影响
 
@@ -50,3 +50,5 @@ Java 命令刻意保持为普通的 `jdtls` 并标记为可选。启动日志会
 - **仅限 headless** — 该 bundle 不挂载 Web Host 行，也不挂载 Web agent-preset roster。desktop profile 层使用 [`mcmod/`](../mcmod/README.zh.md)。
 - **JDTLS 由部署拥有且可选** — 默认命令名在启动时解析。缺少 JDTLS 会产生诊断并只禁用 Java provider；项目或机器特定的启动细节属于 profile 自己的 overlay。
 - **v1 不提供后台 jobs** — shell 工具不暴露 `run_in_background`，因此调用方应优先选择有界检查；需要后台进程控制时，应在 profile overlay 中同时重新启用 jobs 与 shell 后台支持。
+
+授权后的运行检查共用[工作台运行管理](../../minecraft/mc-workbench/README.zh.md)，Gradle 命令仍受已挂载的 shell 执行策略约束。

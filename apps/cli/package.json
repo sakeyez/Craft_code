@@ -18,7 +18,7 @@
     "lib/*.js",
     "config"
   ],
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "dependencies": {
     "@deepseek-ai/cordis-plugin-hmr": "workspace:^",
     "@deepseek-ai/cordis-plugin-include": "workspace:^",

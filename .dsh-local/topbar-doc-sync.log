@@ -1,0 +1,255 @@
+$ tsx scripts/run-gates.ts doc-sync
+run-gates: doc-sync running 28 gate(s) with 4 worker(s) from 16 available CPU(s), doc-sync cap 4.
+run-gates: start doc-typecheck
+run-gates: start documentation build
+run-gates: start doc graphs
+run-gates: start markdown links
+run-gates: PASS markdown links (20.53s)
+run-gates: start type equivalence
+run-gates: PASS type equivalence (14.73s)
+run-gates: start cordis catalog
+run-gates: PASS doc graphs (45.04s)
+run-gates: start verify-mermaid
+run-gates: PASS doc-typecheck (49.40s)
+run-gates: start scoped events
+run-gates: PASS verify-mermaid (15.41s)
+run-gates: start translation pairing
+run-gates: PASS documentation build (61.24s)
+run-gates: start markdown wrap
+run-gates: PASS cordis catalog (26.35s)
+run-gates: start client catalog
+run-gates: PASS client catalog (4.96s)
+run-gates: start export jsdoc
+run-gates: PASS scoped events (20.59s)
+run-gates: start tool catalog
+run-gates: PASS markdown wrap (12.48s)
+run-gates: start config catalog
+
+== FAILED export jsdoc (8.67s) ==
+command: pnpm run verify-export-jsdoc
+outcome: exit 1
+$ tsx scripts/verify-export-jsdoc.ts
+verify-export-jsdoc: 148 JSDoc completeness violation(s) (see AGENTS.md):
+  exported interface 'ConvOwnerProps' (packages/client/ui-layout/src/client/index.ts:125) has no JSDoc.
+  exported type 'BootstrapKey' (packages/client/ui-mcmod-bootstrap/src/client/locales.ts:61) has no JSDoc.
+  exported const 'en' (packages/client/ui-mcmod-bootstrap/src/client/locales.ts:63) has no JSDoc.
+  exported interface 'WizardForm' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:105) has no JSDoc.
+  exported interface 'WizardSnapshot' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:115) has no JSDoc.
+  exported class property 'BootstrapWizardModel.getSnapshot' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:184) has no JSDoc.
+  exported class property 'BootstrapWizardModel.subscribe' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:186) has no JSDoc.
+  exported class method 'BootstrapWizardModel.dispose' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:191) has no JSDoc.
+  exported class method 'BootstrapWizardModel.open' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:198) has no JSDoc.
+  exported class method 'BootstrapWizardModel.close' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:210) has no JSDoc.
+  exported class method 'BootstrapWizardModel.toggleAdvanced' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:215) has no JSDoc.
+  exported class method 'BootstrapWizardModel.setModName' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:217) has no JSDoc.
+  exported class method 'BootstrapWizardModel.setLoader' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:227) has no JSDoc.
+  exported class method 'BootstrapWizardModel.setEntry' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:238) has no JSDoc.
+  exported class method 'BootstrapWizardModel.setParentDirectory' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:240) has no JSDoc.
+  exported class method 'BootstrapWizardModel.setDirectoryName' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:244) has no JSDoc.
+  exported class method 'BootstrapWizardModel.setModId' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:249) has no JSDoc.
+  exported class method 'BootstrapWizardModel.setPackageName' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:257) has no JSDoc.
+  exported class method 'BootstrapWizardModel.chooseParent' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:262) has no JSDoc.
+  exported class method 'BootstrapWizardModel.refreshCatalog' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:275) has no JSDoc.
+  exported class method 'BootstrapWizardModel.start' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:297) has no JSDoc.
+  exported class method 'BootstrapWizardModel.retry' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:322) has no JSDoc.
+  exported class method 'BootstrapWizardModel.cancel' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:330) has no JSDoc.
+  exported class method 'BootstrapWizardModel.openDirectory' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:344) has no JSDoc.
+  exported class method 'BootstrapWizardModel.acceptProgress' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:355) is missing @param value.
+  exported function 'defaultCatalogCachePath' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:19) is missing @returns (return type: string).
+  exported interface 'NeoForgeMdkRecipe' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:68) has no JSDoc.
+  exported function 'parseFabricGameVersions' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:101) is missing @param value.
+  exported function 'parseFabricGameVersions' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:101) is missing @returns (return type: string[]).
+  exported function 'parseFabricLoaderVersions' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:115) is missing @param value.
+  exported function 'parseFabricLoaderVersions' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:115) is missing @returns (return type: Array<{ loader: string; intermediary: string }>).
+  exported function 'parseFabricYarnVersions' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:128) is missing @param value.
+  exported function 'parseFabricYarnVersions' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:128) is missing @param minecraftVersion.
+  exported function 'parseFabricYarnVersions' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:128) is missing @returns (return type: string[]).
+  exported function 'parseFabricApiVersion' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:146) is missing @param xml.
+  exported function 'parseFabricApiVersion' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:146) is missing @param minecraftVersion.
+  exported function 'parseFabricApiVersion' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:146) is missing @returns (return type: string | undefined).
+  exported function 'parseNeoForgeMetadata' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:156) is missing @param xml.
+  exported function 'parseNeoForgeMetadata' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:156) is missing @returns (return type: Array<{ minecraftVersion: string; loaderVersion: string }>).
+  exported function 'parseNeoForgeDirectoryIndex' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:162) is missing @param html.
+  exported function 'parseNeoForgeDirectoryIndex' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:162) is missing @returns (return type: Array<{ minecraftVersion: string; loaderVersion: string }>).
+  exported function 'parseNeoForgeMdkRecipe' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:168) is missing @param buildGradle.
+  exported function 'parseNeoForgeMdkRecipe' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:168) is missing @param wrapperProperties.
+  exported function 'parseNeoForgeMdkRecipe' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:168) is missing @returns (return type: NeoForgeMdkRecipe | undefined).
+  exported function 'parseNeoForgeMdkRepositories' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:177) is missing @param value.
+  exported function 'parseNeoForgeMdkRepositories' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:177) is missing @returns (return type: string[]).
+  exported function 'parseNeoForgeMdkLoader' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:191) is missing @param properties.
+  exported function 'parseNeoForgeMdkLoader' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:191) is missing @param minecraftVersion.
+  exported function 'parseNeoForgeMdkLoader' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:191) is missing @returns (return type: string | undefined).
+  exported function 'fabricEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:224) is missing @param minecraftVersion.
+  exported function 'fabricEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:224) is missing @param loaderVersion.
+  exported function 'fabricEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:224) is missing @param intermediary.
+  exported function 'fabricEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:224) is missing @param yarn.
+  exported function 'fabricEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:224) is missing @param apiVersion.
+  exported function 'fabricEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:224) is missing @returns (return type: CatalogEntry).
+  exported function 'neoForgeEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:246) is missing @param minecraftVersion.
+  exported function 'neoForgeEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:246) is missing @param loaderVersion.
+  exported function 'neoForgeEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:246) is missing @param recipe.
+  exported function 'neoForgeEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:246) is missing @returns (return type: CatalogEntry).
+  exported function 'normalizeCatalogEntries' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:271) is missing @param entries.
+  exported function 'normalizeCatalogEntries' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:271) is missing @returns (return type: CatalogEntry[]).
+  exported class method 'MinecraftCatalogResolver.load' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:309) is missing @param signal.
+  exported class method 'MinecraftCatalogResolver.load' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:309) is missing @returns (return type: Promise<CatalogSnapshot>).
+  exported function 'probeJava' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:629) is missing @param signal.
+  exported function 'probeJava' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:629) is missing @returns (return type: Promise<JavaProbe>).
+  exported function 'parseJavaMajor' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:703) is missing @param output.
+  exported function 'parseJavaMajor' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:703) is missing @returns (return type: number | undefined).
+  exported function 'createMinecraftBootstrap' (packages/minecraft/tool-mc-bootstrap/src/index.d.ts:34) is missing @param ctx.
+  exported function 'createMinecraftBootstrap' (packages/minecraft/tool-mc-bootstrap/src/index.d.ts:34) is missing @param options.
+  exported function 'createMinecraftBootstrap' (packages/minecraft/tool-mc-bootstrap/src/index.d.ts:34) is missing @returns (return type: MinecraftBootstrapService).
+  exported function 'createMinecraftBootstrap' (packages/minecraft/tool-mc-bootstrap/src/index.ts:55) is missing @param ctx.
+  exported function 'createMinecraftBootstrap' (packages/minecraft/tool-mc-bootstrap/src/index.ts:55) is missing @param options.
+  exported function 'createMinecraftBootstrap' (packages/minecraft/tool-mc-bootstrap/src/index.ts:55) is missing @returns (return type: MinecraftBootstrapService).
+  exported function 'applyBootstrapService' (packages/minecraft/tool-mc-bootstrap/src/service.d.ts:24) is missing @param ctx.
+  exported function 'applyBootstrapService' (packages/minecraft/tool-mc-bootstrap/src/service.d.ts:24) is missing @param options.
+  exported class method 'MinecraftBootstrapService.dispose' (packages/minecraft/tool-mc-bootstrap/src/service.d.ts:40) has no JSDoc.
+  exported function 'applyBootstrapService' (packages/minecraft/tool-mc-bootstrap/src/service.ts:109) is missing @param ctx.
+  exported function 'applyBootstrapService' (packages/minecraft/tool-mc-bootstrap/src/service.ts:109) is missing @param options.
+  exported class method 'MinecraftBootstrapService.dispose' (packages/minecraft/tool-mc-bootstrap/src/service.ts:196) has no JSDoc.
+  exported function 'projectFiles' (packages/minecraft/tool-mc-bootstrap/src/template.d.ts:4) is missing @param input.
+  exported function 'projectFiles' (packages/minecraft/tool-mc-bootstrap/src/template.d.ts:4) is missing @returns (return type: Record<string, string>).
+  exported function 'wrapperFiles' (packages/minecraft/tool-mc-bootstrap/src/template.d.ts:11) is missing @param gradleVersion.
+  exported function 'wrapperFiles' (packages/minecraft/tool-mc-bootstrap/src/template.d.ts:11) is missing @param checksum.
+  exported function 'wrapperFiles' (packages/minecraft/tool-mc-bootstrap/src/template.d.ts:11) is missing @returns (return type: Record<string, string>).
+  exported function 'projectFiles' (packages/minecraft/tool-mc-bootstrap/src/template.ts:6) is missing @param input.
+  exported function 'projectFiles' (packages/minecraft/tool-mc-bootstrap/src/template.ts:6) is missing @returns (return type: Record<string, string>).
+  exported function 'wrapperFiles' (packages/minecraft/tool-mc-bootstrap/src/template.ts:182) is missing @param gradleVersion.
+  exported function 'wrapperFiles' (packages/minecraft/tool-mc-bootstrap/src/template.ts:182) is missing @param checksum.
+  exported function 'wrapperFiles' (packages/minecraft/tool-mc-bootstrap/src/template.ts:182) is missing @returns (return type: Record<string, string>).
+  exported function 'jdkForMinecraft' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:81) is missing @param version.
+  exported function 'jdkForMinecraft' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:81) is missing @returns (return type: 17 | 21 | undefined).
+  exported function 'isSupportedMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:83) is missing @param version.
+  exported function 'isSupportedMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:83) is missing @returns (return type: boolean).
+  exported function 'isStableMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:85) is missing @param version.
+  exported function 'isStableMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:85) is missing @param stable.
+  exported function 'isStableMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:85) is missing @returns (return type: boolean).
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:87) is missing @param loader.
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:87) is missing @param minecraftVersion.
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:87) is missing @param loaderVersion.
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:87) is missing @returns (return type: string).
+  exported function 'isValidModId' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:89) is missing @param value.
+  exported function 'isValidModId' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:89) is missing @returns (return type: boolean).
+  exported function 'isValidPackageName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:91) is missing @param value.
+  exported function 'isValidPackageName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:91) is missing @returns (return type: boolean).
+  exported function 'isValidModName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:93) is missing @param value.
+  exported function 'isValidModName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:93) is missing @returns (return type: boolean).
+  exported function 'isValidDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:95) is missing @param value.
+  exported function 'isValidDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:95) is missing @returns (return type: boolean).
+  exported function 'deriveDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:97) is missing @param modName.
+  exported function 'deriveDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:97) is missing @param modId.
+  exported function 'deriveDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:97) is missing @returns (return type: string).
+  exported function 'recordPayload' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:99) is missing @param value.
+  exported function 'recordPayload' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:99) is missing @returns (return type: Record<string, unknown> | undefined).
+  exported function 'isSha256' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:101) is missing @param value.
+  exported function 'isSha256' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:101) is missing @returns (return type: value is string).
+  exported function 'isCatalogEntry' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:103) is missing @param value.
+  exported function 'isCatalogEntry' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:103) is missing @returns (return type: value is CatalogEntry).
+  exported function 'jdkForMinecraft' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:19) is missing @param version.
+  exported function 'jdkForMinecraft' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:19) is missing @returns (return type: 17 | 21 | undefined).
+  exported function 'isSupportedMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:35) is missing @param version.
+  exported function 'isSupportedMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:35) is missing @returns (return type: boolean).
+  exported function 'isStableMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:42) is missing @param version.
+  exported function 'isStableMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:42) is missing @param stable.
+  exported function 'isStableMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:42) is missing @returns (return type: boolean).
+  exported function 'isSupportedNeoForgeMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:53) is missing @param version.
+  exported function 'isSupportedNeoForgeMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:53) is missing @returns (return type: boolean).
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:59) is missing @param loader.
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:59) is missing @param minecraftVersion.
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:59) is missing @param loaderVersion.
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:59) is missing @returns (return type: string).
+  exported function 'isValidModId' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:64) is missing @param value.
+  exported function 'isValidModId' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:64) is missing @returns (return type: boolean).
+  exported function 'isValidPackageName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:69) is missing @param value.
+  exported function 'isValidPackageName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:69) is missing @returns (return type: boolean).
+  exported function 'isValidModName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:78) is missing @param value.
+  exported function 'isValidModName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:78) is missing @returns (return type: boolean).
+  exported function 'isValidDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:84) is missing @param value.
+  exported function 'isValidDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:84) is missing @returns (return type: boolean).
+  exported function 'deriveDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:94) is missing @param modName.
+  exported function 'deriveDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:94) is missing @param modId.
+  exported function 'deriveDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:94) is missing @returns (return type: string).
+[ELIFECYCLE] Command failed with exit code 1.
+  exported function 'recordPayload' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:104) is missing @param value.
+  exported function 'recordPayload' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:104) is missing @returns (return type: Record<string, unknown> | undefined).
+  exported function 'isSha256' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:110) is missing @param value.
+  exported function 'isSha256' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:110) is missing @returns (return type: value is string).
+  exported function 'isCatalogEntry' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:115) is missing @param value.
+  exported function 'isCatalogEntry' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:115) is missing @returns (return type: value is CatalogEntry).
+  exported class property 'JsonlSessionPersistence.config' (packages/session/session-persistence-jsonl/src/index.d.ts:53) has no JSDoc.
+run-gates: start persistence catalog
+run-gates: PASS config catalog (2.71s)
+run-gates: start public repository links
+run-gates: PASS persistence catalog (3.13s)
+run-gates: start doc refs
+run-gates: PASS doc refs (2.00s)
+run-gates: start package paths
+run-gates: PASS public repository links (6.15s)
+run-gates: start config source ownership
+run-gates: PASS package paths (2.95s)
+run-gates: start package README model experience
+run-gates: PASS config source ownership (0.86s)
+run-gates: start agent note classification
+run-gates: PASS tool catalog (13.99s)
+run-gates: start agent note format
+
+== FAILED translation pairing (23.71s) ==
+command: pnpm run verify-translation-pairing
+outcome: exit 1
+$ tsx scripts/verify-translation-pairing.ts
+verify-translation-pairing: bilingual pairing rules violated (see docs/i18n/README.md):
+  .agents/notes/implemented/mcmod/2026-09-13-mcmod-only-preset.md: in-scope documentation must merge bilingual (docs/i18n/README.md); add the counterpart and record the pair
+[ELIFECYCLE] Command failed with exit code 1.
+  .agents/notes/implemented/bug-fix/2026-09-14-desktop-clipboard-copy.zh.md: missing language switcher — no link to 2026-09-14-desktop-clipboard-copy.md
+  .agents/notes/implemented/bug-fix/2026-09-14-desktop-clipboard-copy.md ↔ .agents/notes/implemented/bug-fix/2026-09-14-desktop-clipboard-copy.zh.md: link target #1 diverges between the pair: nothing vs "dsh-translation-target:.agents/notes/implemented/bug-fix/2026-09-14-des…
+  packages/client/ui-sidebar/README.md: out of sync — content no longer matches the pair's last confirmed-consistent state in packages/client/ui-sidebar/README.i18n.yaml (bring the other side along, then re-record with --write)
+  packages/client/ui-sidebar/README.zh.md: out of sync — content no longer matches the pair's last confirmed-consistent state in packages/client/ui-sidebar/README.i18n.yaml (bring the other side along, then re-record with --write)
+run-gates: start archived agent notes
+
+== FAILED agent note classification (1.00s) ==
+command: pnpm run verify-agent-note-classification
+outcome: exit 1
+$ tsx scripts/verify-agent-note-classification.ts
+verify-agent-note-classification: violations found:
+  structure: implemented/mcmod/2026-09-13-mcmod-only-preset.md — unknown class folder "mcmod" (allowed: feature, bug-fix, simplification, architecture, process, testing)
+[ELIFECYCLE] Command failed with exit code 1.
+run-gates: start skill invocation metadata
+
+== FAILED agent note format (1.03s) ==
+command: pnpm run verify-agent-note-format
+outcome: exit 1
+$ tsx scripts/verify-agent-note-format.ts
+verify-agent-note-format: violations found:
+  structure: implemented/mcmod/2026-09-13-mcmod-only-preset.md — unknown class folder "mcmod" (allowed: feature, bug-fix, simplification, architecture, process, testing)
+  format: implemented/feature/2026-09-14-independent-game-window-current-session-annotation.md — line 2 must be blank
+  format: implemented/feature/2026-09-14-independent-game-window-current-session-annotation.md — line 3 must match the implemented status grammar (/^Status: implemented$/)
+  format: implemented/feature/2026-09-14-independent-game-window-current-session-annotation.md — line 4 must be blank
+  format: implemented/feature/2026-09-14-minecraft-host-bootstrap.md — line 2 must be blank
+  format: implemented/feature/2026-09-14-minecraft-host-bootstrap.md — line 3 must match the implemented status grammar (/^Status: implemented$/)
+  format: implemented/feature/2026-09-14-minecraft-host-bootstrap.md — line 4 must be blank
+[ELIFECYCLE] Command failed with exit code 1.
+run-gates: start translation prompt
+run-gates: PASS skill invocation metadata (0.87s)
+run-gates: start doc budgets
+run-gates: PASS archived agent notes (1.28s)
+run-gates: start documentation site checks
+run-gates: PASS translation prompt (0.86s)
+run-gates: start package README limitations
+run-gates: PASS doc budgets (0.81s)
+run-gates: PASS package README model experience (4.80s)
+run-gates: PASS package README limitations (4.42s)
+run-gates: PASS documentation site checks (7.93s)
+
+run-gates: 24 passed, 4 failed, 0 skipped in 93.42s.
+run-gates: unsuccessful gates:
+  - FAILED translation pairing (23.71s, exit 1)
+    pnpm run verify-translation-pairing
+  - FAILED export jsdoc (8.67s, exit 1)
+    pnpm run verify-export-jsdoc
+  - FAILED agent note classification (1.00s, exit 1)
+    pnpm run verify-agent-note-classification
+  - FAILED agent note format (1.03s, exit 1)
+    pnpm run verify-agent-note-format
+[ELIFECYCLE] Command failed with exit code 1.

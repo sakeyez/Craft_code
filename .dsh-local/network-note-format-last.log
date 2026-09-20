@@ -1,0 +1,7 @@
+$ tsx scripts/verify-agent-note-format.ts
+verify-agent-note-format: violations found:
+  structure: implemented/mcmod/2026-09-13-mcmod-only-preset.md — unknown class folder "mcmod" (allowed: feature, bug-fix, simplification, architecture, process, testing)
+  format: implemented/feature/2026-09-14-independent-game-window-current-session-annotation.md — line 2 must be blank
+  format: implemented/feature/2026-09-14-independent-game-window-current-session-annotation.md — line 3 must match the implemented status grammar (/^Status: implemented$/)
+  format: implemented/feature/2026-09-14-independent-game-window-current-session-annotation.md — line 4 must be blank
+[ELIFECYCLE] Command failed with exit code 1.

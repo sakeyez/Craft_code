@@ -1,0 +1,35 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.8 E:/.sake/Desktop/craftcode
+
+ ❯ |thread-safe| packages/client/ui-mcmod-bootstrap/tests/model.client.spec.ts (6 tests | 1 failed) 536ms
+     × allows cached selection during refresh and preserves a compatible version across loaders 73ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |thread-safe| packages/client/ui-mcmod-bootstrap/tests/model.client.spec.ts > BootstrapWizardModel build/session ordering > allows cached selection during refresh and preserves a compatible version across loaders
+AssertionError: expected '' to be 'neoforge:1.21.1:21.1.1' // Object.is equality
+
+- Expected
++ Received
+
+- neoforge:1.21.1:21.1.1
+
+ ❯ packages/client/ui-mcmod-bootstrap/tests/model.client.spec.ts:78:46
+     76|     model.setEntry(entry.entryId)
+     77|     model.setLoader('neoforge')
+     78|     expect(model.getSnapshot().form.entryId).toBe(neo.entryId)
+       |                                              ^
+     79|     model.setLoader('fabric')
+     80|     expect(model.getSnapshot().form.entryId).toBe(entry.entryId)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 9 passed (10)
+      Tests  1 failed | 104 passed (105)
+   Start at  00:07:14
+   Duration  3.99s (transform 10.18s, setup 4.26s, import 13.60s, tests 3.99s, environment 1.99s)
+

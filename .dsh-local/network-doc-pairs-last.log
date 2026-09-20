@@ -1,0 +1,5 @@
+$ tsx scripts/verify-translation-pairing.ts "--write" "apps/desktop/README.md" "packages/client/ui-layout/README.md" "packages/client/ui-settings-general/README.md"
+verify-translation-pairing: recorded apps/desktop/README.i18n.yaml
+verify-translation-pairing: recorded packages/client/ui-layout/README.i18n.yaml
+verify-translation-pairing: recorded packages/client/ui-settings-general/README.i18n.yaml
+verify-translation-pairing: 3 record(s) written; run the check to validate the pairs.

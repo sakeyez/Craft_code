@@ -1,0 +1,23 @@
+$ tsx scripts/gen-cordis-catalog.ts
+E:\.sake\Desktop\craftcode\packages\typert\generator\src\cordis-catalog.ts:572
+  throw new Error(
+        ^
+
+Error: gen-cordis-catalog: 4 JSDoc completeness violation(s) (see AGENTS.md):
+  event 'minecraft-bootstrap/progress' (packages/api/remotes/src/types.ts:17) is missing an @mode tag. Add '@mode emit|bail|waterfall|parallel|serial' to its JSDoc (see AGENTS.md).
+  event 'minecraft-bootstrap/progress' (packages/api/remotes/src/types.ts:17) is missing @param snapshot.
+  event 'minecraft-bootstrap/progress' (packages/minecraft/tool-mc-bootstrap/src/index.ts:39) is missing an @mode tag. Add '@mode emit|bail|waterfall|parallel|serial' to its JSDoc (see AGENTS.md).
+  event 'minecraft-bootstrap/progress' (packages/minecraft/tool-mc-bootstrap/src/index.ts:39) is missing @param snapshot.
+    at reportViolations (E:\.sake\Desktop\craftcode\packages\typert\generator\src\cordis-catalog.ts:572:9)
+    at CordisCatalogProjector.collectEvents (E:\.sake\Desktop\craftcode\packages\typert\generator\src\cordis-catalog.ts:234:5)
+    at CordisCatalogProjector.project (E:\.sake\Desktop\craftcode\packages\typert\generator\src\cordis-catalog.ts:158:20)
+    at projectCordisCatalog (E:\.sake\Desktop\craftcode\packages\typert\generator\src\cordis-catalog.ts:394:40)
+    at computeOutputs (E:\.sake\Desktop\craftcode\scripts\gen-cordis-catalog.ts:847:32)
+    at main (E:\.sake\Desktop\craftcode\scripts\gen-cordis-catalog.ts:962:8)
+    at <anonymous> (E:\.sake\Desktop\craftcode\scripts\gen-cordis-catalog.ts:1018:3)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:643:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.18.0
+[ELIFECYCLE] Command failed with exit code 1.

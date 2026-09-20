@@ -4,12 +4,12 @@ import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 /** Native menu actions admitted by the sandboxed desktop preload bridge. */
 export type DesktopAction =
   | 'project:new' | 'project:export-jar' | 'project:toggle-game' | 'project:settings'
-  | 'editor:find-current' | 'editor:find-project'
+  | 'project:checkpoints' | 'help:about'
   | 'git:status' | 'git:diff' | 'git:log' | 'git:branch' | 'git:commit' | 'git:push' | 'git:pull'
   | 'help:docs' | 'help:sponsor'
 
 /** Closed set of top-level application menus available to the Web menu bar. */
-export type DesktopMenuId = 'project' | 'editor' | 'git' | 'help'
+export type DesktopMenuId = 'project' | 'git' | 'help'
 
 /** Renderer-relative popup position in device-independent CSS pixels. */
 export interface DesktopMenuAnchor {
@@ -66,11 +66,10 @@ export interface DesktopBridge {
     cwd: string
     state:
       | { status: 'idle' }
-      | { status: 'starting' | 'reconnecting'; gameName?: string }
+      | { status: 'starting'; gameName?: string }
       | { status: 'connected'; gameName?: string; surfaceKind: 'external-window' }
       | { status: 'failed' | 'disconnected' | 'unsupported'; gameName?: string; error: string }
   }) => void) => () => void
-  reconnectGameSurface?: (cwd: string) => Promise<unknown>
   /** Bind the active conversation; dispose releases only this subscription. */
   bindGameAnnotationShortcut?: (request: GameAnnotationRequest, listener: (error?: string) => void) => () => void
   beginGameAnnotation?: (
@@ -78,7 +77,6 @@ export interface DesktopBridge {
     commit: (drafts: GameAnnotationDraft[], snapshot?: GameAnnotationSnapshot) => Promise<void>,
   ) => Promise<void>
   endGameAnnotation?: (operationId: string) => Promise<void>
-  repositionGameCompanion?: (cwd: string) => Promise<void>
 }
 
 /** Observable renderer event derived from a native menu action. */
@@ -98,12 +96,6 @@ export interface DesktopGameEvent extends Partial<DesktopGameProcessEvent> {
   sequence: number
 }
 
-/** One project-wide conversation search match. */
-export interface ProjectSearchItem {
-  sessionId: string
-  snippet: string
-}
-
 /** Host capabilities injected into the desktop menu overlay component. */
 export interface DesktopMenuInjected {
   hooks: {
@@ -113,13 +105,16 @@ export interface DesktopMenuInjected {
   invoke: (request: DesktopCommandRequest) => Promise<DesktopCommandResult>
   setActiveProject: (cwd?: string) => Promise<void>
   createProject: () => Promise<string | null>
-  searchProject: (query: string, cwd: string, signal: AbortSignal) => Promise<ProjectSearchItem[]>
 }
 
 /** Capability injected only into the desktop top menu bar. */
 export interface DesktopMenuBarInjected {
   openMenu: (menu: DesktopMenuId, anchor: DesktopMenuAnchor, cwd?: string) => Promise<void>
-  windowControls?: {
+}
+
+/** Window controls and draggable space at the trailing edge of the title bar. */
+export interface DesktopWindowControlsInjected {
+  windowControls: {
     minimize: () => Promise<void>
     toggleMaximize: () => Promise<void>
     close: () => Promise<void>
@@ -131,6 +126,5 @@ export interface DesktopMenuBarInjected {
 declare global {
   interface Window {
     craftCodeDesktop?: DesktopBridge
-    find?(text: string): boolean
   }
 }

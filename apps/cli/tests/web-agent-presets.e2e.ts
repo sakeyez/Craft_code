@@ -31,6 +31,9 @@ const CLAUDE_CODE_PACKAGE_DIR = join(REPO_ROOT, 'packages/subagent/subagent-clau
 const MCMOD_BUNDLE_PACKAGE_DIR = join(REPO_ROOT, 'packages/bundle/mcmod')
 const MCMOD_PRESET_SKILL_DIR = join(CONFIG_DIR, 'agent-presets/mcmod/skills')
 const MINECRAFT_SKILL_NAMES = [
+  'minecraft-add-content',
+  'minecraft-build-diagnose',
+  'minecraft-environment-doctor',
   'fabric-datagen',
   'fabric-mod-dev',
   'minecraft-resources',
@@ -323,6 +326,7 @@ describe('the shipped Web composition', () => {
         'read_image', 'run_mc_check', shellTool, 'skill', 'validate_mc_resources',
         'write',
       ].sort())
+      expect(toolNames(minecraftCtx, handle.agent)).not.toContain('bootstrap_mc_project')
       for (const forbidden of [
         'create_goal', 'exit_plan_mode', 'get_goal', 'interrupt_agent',
         'job_kill', 'job_list', 'job_output',

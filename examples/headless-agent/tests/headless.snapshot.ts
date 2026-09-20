@@ -329,6 +329,7 @@ describe('headless stream-json snapshots', () => {
         expect(session).toContain('detect_mc_project')
         expect(session).toContain('validate_mc_resources')
         expect(session).toContain('run_mc_check')
+        expect(actual.content).toContain('query_mc_api')
       },
     })
 

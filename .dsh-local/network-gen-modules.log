@@ -1,0 +1,2 @@
+$ tsx scripts/gen-module-graph.ts
+gen-module-graph: wrote docs/module-graph.md.

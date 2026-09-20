@@ -35,7 +35,7 @@ The patch disables web retrieval, workflow orchestration, Ralph, general subagen
 
 #### What the model sees
 
-The model sees the headless persona, the five shared Fabric/NeoForge Minecraft modding prompt sections from `@deepseek-ai/dsh-mcmod-agent`, ten bundled Minecraft skills (`fabric-mod-dev`, `fabric-datagen`, `minecraft-add-content`, `minecraft-build-diagnose`, `minecraft-environment-doctor`, `minecraft-project-create`, `minecraft-resources`, `mixin-debugging`, `neoforge-mod-dev`, and `neoforge-datagen`) in the skill catalog, and the remaining model-facing tool schemas: filesystem read/write/edit/search, `bootstrap_mc_project`, `detect_mc_project`, `validate_mc_resources`, `run_mc_check`, one foreground-only platform shell tool, `lsp`, and `skill`. The shell schema omits `run_in_background`; long validation should use bounded foreground calls or `run_mc_check`.
+The model sees the headless persona, the five shared Fabric/NeoForge Minecraft modding prompt sections from `@deepseek-ai/dsh-mcmod-agent`, nine bundled Minecraft skills (`fabric-mod-dev`, `fabric-datagen`, `minecraft-add-content`, `minecraft-build-diagnose`, `minecraft-environment-doctor`, `minecraft-resources`, `mixin-debugging`, `neoforge-mod-dev`, and `neoforge-datagen`) in the skill catalog, and the remaining model-facing tool schemas: filesystem read/write/edit/search, `detect_mc_project`, `validate_mc_resources`, `run_mc_check`, one foreground-only platform shell tool, `lsp`, and `skill`. The shell schema omits `run_in_background`; long validation should use bounded foreground calls or `run_mc_check`. New projects are initialized by the host-local New Mod wizard, which resolves the supported loader and Minecraft version, creates the project and Gradle Wrapper, and completes the first build before a headless editing session; the model does not synthesize a blank project or claim an unbuilt directory is ready.
 
 #### Token effect
 
@@ -50,3 +50,5 @@ The profile has a stable prefix for a given installed patch and skill catalog. C
 - **Headless only** - this bundle does not mount Web Host rows or the Web agent-preset roster. Use [`mcmod/`](../mcmod/README.md) for the desktop profile layer.
 - **JDTLS is deployment-owned and optional** - the default command name is resolved at startup. Missing JDTLS produces a diagnostic and disables only the Java provider; project-specific launch details belong in the profile's own overlay.
 - **No background jobs in v1** - shell tools omit `run_in_background`, so callers should prefer bounded checks or re-enable jobs and shell background support together in a profile overlay when they need background process controls.
+
+Approved runtime checks share [workbench run ownership](../../minecraft/mc-workbench/README.md) while Gradle commands remain subject to the mounted shell policy.

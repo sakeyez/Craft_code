@@ -19,7 +19,7 @@ beforeEach(() => { localStorage.clear() })
 describe('createLayoutStore', () => {
   it('initializes the sidebar at its default width, details closed, wide viewport assumed', () => {
     const { store } = createLayoutStore().create()
-    expect(store.getSnapshot()).toEqual({ sidebar: SIDEBAR_DEFAULT, details: 0, narrow: false, narrowExpanded: false, gameByCwd: {} })
+    expect(store.getSnapshot()).toEqual({ sidebar: SIDEBAR_DEFAULT, details: 0, narrow: false, narrowExpanded: false, gameByCwd: {}, workbenchByCwd: {} })
   })
 
   it('each create() is an independent instance (factory is not a singleton)', () => {
@@ -55,7 +55,7 @@ describe('createLayoutStore', () => {
     actions.setSidebar(400)
     actions.setNarrow(true)
     actions.toggleSidebar()
-    expect(store.getSnapshot()).toEqual({ sidebar: 400, details: 0, narrow: true, narrowExpanded: true, gameByCwd: {} })
+    expect(store.getSnapshot()).toEqual({ sidebar: 400, details: 0, narrow: true, narrowExpanded: true, gameByCwd: {}, workbenchByCwd: {} })
     actions.toggleSidebar()
     expect(store.getSnapshot().narrowExpanded).toBe(false)
     expect(store.getSnapshot().sidebar).toBe(400)
@@ -99,6 +99,7 @@ describe('createLayoutStore', () => {
       narrow: false,
       narrowExpanded: false,
       gameByCwd: {},
+      workbenchByCwd: {},
     })
   })
 

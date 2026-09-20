@@ -42,6 +42,8 @@ describe('desktop preload boundary', () => {
     expect(source).not.toContain('desktop:exec')
     expect(source).not.toContain('project:save')
     expect(source).not.toContain('project-save')
+    expect(source).not.toContain('reconnectGameSurface')
+    expect(source).not.toContain('repositionGameCompanion')
   })
 
   it('accepts only strict project-scoped game states and bounded JPEG snapshots', () => {
@@ -77,5 +79,7 @@ describe('desktop preload boundary', () => {
     expect(source).not.toContain("require('node:")
     expect(source).not.toContain('desktop:exec')
     expect(source).not.toContain('project:save')
+    expect(source).not.toContain('reconnectGameSurface')
+    expect(source).not.toContain('repositionGameCompanion')
   })
 })

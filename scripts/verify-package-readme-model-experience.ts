@@ -70,6 +70,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'packages/client/runtime': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
   'packages/client/ui-layout': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
   'packages/client/ui-sidebar': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
+  'packages/client/ui-mcmod-bootstrap': { kind: 'none', reason: 'Browser-side host bootstrap wizard; it does not create model context or sessions before a host build succeeds.' },
   'packages/client/ui-brand-official': { kind: 'none', reason: 'Browser-side presentation occupants; registers nothing model-facing.' },
   'packages/client/ui-conversation': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
   'packages/client/ui-message-feedback': { kind: 'none', reason: 'Browser-side controls over the message-feedback sidecar; ratings and notes never enter the Session log, model context, or telemetry.' },
@@ -111,6 +112,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'packages/host/webserver': { kind: 'none', reason: 'The HTTP carrier bridges browser and API handler and registers nothing model-facing.' },
   'packages/host/frontend-static': { kind: 'none', reason: 'The SPA dist server answers browser asset requests and registers nothing model-facing.' },
   'packages/host/plugin-inventory': { kind: 'none', reason: 'Host-side read-only Loader projection; registers nothing model-facing.' },
+  'packages/minecraft/tool-mc-bootstrap': { kind: 'none', reason: 'Host-local project bootstrap service; it exposes only a loopback RPC and registers no model-facing tool or prompt.' },
   'packages/bundle/base': { kind: 'indirect', reason: 'The bundle is a patch-list carrier; each inserted row\'s package owns its model-facing behavior.' },
   'packages/bundle/headless': { kind: 'none', reason: 'The one-shot runner submits the task as an ordinary user message; prompts and tools belong to the composed base and headless bundles.' },
   'packages/llm/llm': { kind: 'none', reason: 'The adapter registry forwards already-assembled requests unchanged.' },
@@ -292,8 +294,8 @@ for (const packageJson of packageJsons) {
     continue
   }
 
-  const text = readFileSync(abs, 'utf8')
-  const rawLines = text.split('\n')
+  const text = readFileSync(abs, 'utf8').replaceAll('\r\n', '\n')
+  const rawLines = text.split(/\r?\n/u)
   const lines = markdownProseLines(text)
   const headings = markdownHeadingLines(text)
   const h2Headings = headings.filter(heading => heading.depth === 2)

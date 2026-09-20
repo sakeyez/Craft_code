@@ -98,6 +98,18 @@ const GROUP_ORDER = [
 
 const SERVICE_ROLES: ServiceRole[] = [
   {
+    key: 'minecraftBootstrap', pkg: 'tool-mc-bootstrap', title: 'Minecraft project creation', mode: 'core',
+    consumers: ['ui-mcmod-bootstrap'], note: 'Owns release catalogs, project staging and first-build publication.',
+  },
+  {
+    key: 'minecraftRuntime', pkg: 'tool-mc-project', title: 'Approved Minecraft runtime checks', mode: 'core',
+    consumers: ['tool-mc-project'], note: 'The workbench provides retained development runs through the mounted shell policy.',
+  },
+  {
+    key: 'minecraftWorkbench', pkg: 'mc-workbench', title: 'Minecraft workbench', mode: 'core',
+    consumers: ['ui-mcmod-workbench'], note: 'Owns project runs, dependency transactions and read-only source operations.',
+  },
+  {
     key: 'attachments',
     pkg: 'attachment',
     title: 'Durable binary attachment storage',

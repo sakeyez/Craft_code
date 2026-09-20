@@ -1,3 +1,3 @@
 name: Minecraft Mod
-description: Minecraft Java mod development with project detection, file, search, foreground shell, LSP, skills, ask-user, and compaction.
+description: Minecraft Java mod development for projects initialized by the host New Mod wizard, with project detection, file, search, foreground shell, LSP, skills, ask-user, and compaction.
 order: 5

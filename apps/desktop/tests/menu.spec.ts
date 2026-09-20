@@ -13,19 +13,18 @@ import {
 import type { DesktopMenuAction } from '../src/menu.ts'
 
 describe('desktop application menu', () => {
-  it('has exactly the four product menus and fixed actions', () => {
+  it('has exactly the three product menus and fixed actions', () => {
     const send = vi.fn<(action: DesktopMenuAction) => void>()
     const external = vi.fn()
     const template = desktopMenuTemplate(send, external)
-    expect(template.map(item => item.label)).toEqual(['项目', '编辑', 'Git', '帮助'])
+    expect(template.map(item => item.label)).toEqual(['项目', 'Git', '帮助'])
     expect(template.map(item => item.id)).toEqual([
       DESKTOP_MENU_ITEM_IDS.project,
-      DESKTOP_MENU_ITEM_IDS.editor,
       DESKTOP_MENU_ITEM_IDS.git,
       DESKTOP_MENU_ITEM_IDS.help,
     ])
     expect(DESKTOP_MENU_ACTIONS).toHaveLength(15)
-    const help = template[3]?.submenu as Array<{ click?: () => void }> | undefined
+    const help = template[2]?.submenu as Array<{ click?: () => void }> | undefined
     help?.[0]?.click?.()
     expect(external).toHaveBeenCalledWith(HELP_URLS.docs)
   })
@@ -34,13 +33,14 @@ describe('desktop application menu', () => {
     const send = vi.fn<(action: DesktopMenuAction) => void>()
     const template = desktopMenuTemplate(send, vi.fn())
     const project = template[0]?.submenu as Array<{ id?: string; label?: string; type?: string; accelerator?: string; click?: () => void }>
-    expect(project.map(item => item.label ?? item.type)).toEqual(['新建', '导出 JAR', '启动游戏', 'separator', '项目设置'])
-    expect(project[2]?.id).toBe(DESKTOP_GAME_MENU_ITEM_ID)
+    expect(project.map(item => item.label ?? item.type)).toEqual(['新建', '导出模组', '恢复点', '启动游戏', 'separator', '项目设置'])
+    expect(project[3]?.id).toBe(DESKTOP_GAME_MENU_ITEM_ID)
     project[0]?.click?.()
     project[1]?.click?.()
     project[2]?.click?.()
+    project[3]?.click?.()
     expect(send.mock.calls.map(([action]) => action)).toEqual([
-      'project:new', 'project:export-jar', 'project:toggle-game',
+      'project:new', 'project:export-jar', 'project:checkpoints', 'project:toggle-game',
     ])
     expect(project[0]?.accelerator).toBe('Ctrl+N')
     expect(project[1]?.accelerator).toBeUndefined()

@@ -11,6 +11,17 @@
 
 import type { API_REMOTE_FORWARDED_EVENTS } from './remote-events.ts'
 
+declare module '@deepseek-ai/cordis' {
+  interface Events {
+    /**
+     * Host-local Minecraft bootstrap snapshots; payload is validated by the client feature.
+     * @mode emit
+     * @param snapshot - Current host bootstrap operation snapshot.
+     */
+    'minecraft-bootstrap/progress'(snapshot: unknown): void
+  }
+}
+
 /** Type projection of the allowlist; the consumer and the Host read this one. */
 export type ApiRemoteForwardedEvent = typeof API_REMOTE_FORWARDED_EVENTS[number]
 

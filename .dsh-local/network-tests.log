@@ -1,0 +1,36 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.8 E:/.sake/Desktop/craftcode
+
+noise before readiness
+dsh desktop: http://127.0.0.1:43123
+noise before readiness
+dsh desktop: http://127.0.0.1:43123
+shutdown requested
+fixture exited before readiness
+ ❯ |thread-safe| packages/minecraft/tool-mc-bootstrap/tests/service.spec.ts (15 tests | 1 failed) 1186ms
+     × keeps the RPC surface narrow and rejects unknown or malformed endpoints 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |thread-safe| packages/minecraft/tool-mc-bootstrap/tests/service.spec.ts > Minecraft bootstrap host service > keeps the RPC surface narrow and rejects unknown or malformed endpoints
+TypeError: this.ctx.get is not a function
+ ❯ MinecraftBootstrapService.handleRpc packages/minecraft/tool-mc-bootstrap/src/service.ts:208:30
+    206|   /** RPC adapter used by HostConnectionService after envelope validat…
+    207|   readonly handleRpc = async (endpoint: string, payload: unknown, sign…
+    208|     const network = this.ctx.get('minecraftWorkbench')?.network
+       |                              ^
+    209|     return network ? network.run(() => this.dispatchRpc(endpoint, payl…
+    210|   }
+ ❯ packages/minecraft/tool-mc-bootstrap/tests/service.spec.ts:403:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 22 passed (23)
+      Tests  1 failed | 198 passed (199)
+   Start at  23:48:19
+   Duration  9.38s (transform 19.72s, setup 9.62s, import 33.44s, tests 5.07s, environment 11.13s)
+

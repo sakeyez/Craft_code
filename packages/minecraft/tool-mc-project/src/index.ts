@@ -1,3 +1,5 @@
+import type { Confidence, VersionClassification, MinecraftVersionCandidate, MinecraftVersionResult, MappingsCandidate, MappingsResult, ModIdCandidate, SourceSetInfo, MixinConfig, DatagenClue, DetectionResult, ResourceIssue, ResourceValidationResult } from './types.ts'
+export type { DetectionResult, ResourceValidationResult } from './types.ts'
 /**
  * Model-facing Minecraft project detector. The tool reads Gradle files,
  * mod metadata, source roots, and resource roots through `ctx.fs` and returns
@@ -18,8 +20,8 @@ import type {} from '@deepseek-ai/dsh-fs'
 import type { CollectedOutput, ShellRunResult, ShellSandboxInfo } from '@deepseek-ai/dsh-shell'
 import type {} from '@deepseek-ai/dsh-shell'
 import { datagenTaskCandidates, loaderSupport, validationCommands } from './loader-support.ts'
-import type { Loader, LoaderSupport } from './loader-support.ts'
-import { parseGradleTaskNames, runtimeTaskCandidates } from './gradle-tasks.ts'
+import type { Loader } from './loader-support.ts'
+import { parseGradleTaskNames, runtimeTaskCandidates, hasMinecraftReadiness } from './gradle-tasks.ts'
 import type { RuntimeMode } from './gradle-tasks.ts'
 import {
   errorCode,
@@ -32,25 +34,37 @@ import {
   sessionResolveOptions,
   walkFiles,
 } from './fs-support.ts'
-import type { TextFile, WalkState } from './fs-support.ts'
+import type { ProjectExecution, TextFile, WalkState } from './fs-support.ts'
 
-/** Cordis plugin name. */
+/**
+ * Cordis plugin name.
+ */
 export const name = 'tool-mc-project'
-/** Services required by the detector. */
+/**
+ * Services required by the detector.
+ */
 export const inject = ['tools', 'fs']
 
-/** Model-facing tool name. */
+/**
+ * Model-facing tool name.
+ */
 export const DETECT_MC_PROJECT = 'detect_mc_project'
-/** Model-facing Minecraft resource validator tool name. */
+/**
+ * Model-facing Minecraft resource validator tool name.
+ */
 export const VALIDATE_MC_RESOURCES = 'validate_mc_resources'
-/** Model-facing Minecraft project check runner tool name. */
+/**
+ * Model-facing Minecraft project check runner tool name.
+ */
 export const RUN_MC_CHECK = 'run_mc_check'
 
 const DEFAULT_MAX_ENTRIES = 2_000
 const DEFAULT_MAX_FILE_BYTES = 512 * 1024
 const DEFAULT_MAX_OUTPUT_SUMMARY_BYTES = 4_096
 const DEFAULT_MAX_TASK_DISCOVERY_BYTES = 64 * 1024
-/** Tool configuration. */
+/**
+ * Tool configuration.
+ */
 export interface Config {
   /**
    * Maximum directory entries walked while discovering source/resource and
@@ -76,7 +90,9 @@ export interface Config {
   maxTaskDiscoveryBytes?: number
 }
 
-/** Schemastery configuration for the detector. */
+/**
+ * Schemastery configuration for the detector.
+ */
 export const Config: z<Config> = z.object({
   maxEntries: z.number().default(DEFAULT_MAX_ENTRIES),
   maxFileBytes: z.number().default(DEFAULT_MAX_FILE_BYTES),
@@ -84,8 +100,6 @@ export const Config: z<Config> = z.object({
   maxTaskDiscoveryBytes: z.number().default(DEFAULT_MAX_TASK_DISCOVERY_BYTES),
 })
 
-type Confidence = 'high' | 'medium' | 'low'
-type VersionClassification = 'exact' | 'range'
 type CheckTarget = 'build' | 'test' | 'datagen' | 'resources' | 'runtime' | 'startup' | 'all'
 type CheckStepStatus = 'passed' | 'failed' | 'skipped'
 
@@ -94,105 +108,6 @@ interface ResolvedConfig {
   maxFileBytes: number
   maxOutputSummaryBytes: number
   maxTaskDiscoveryBytes: number
-}
-
-interface MinecraftVersionCandidate {
-  value: string
-  classification: VersionClassification
-  source: string
-  evidence: string
-}
-
-type MinecraftVersionResult =
-  | { status: 'unknown'; candidates: [] }
-  | {
-    status: 'determined'
-    value: string
-    classification: VersionClassification
-    candidates: MinecraftVersionCandidate[]
-  }
-  | { status: 'conflict'; candidates: MinecraftVersionCandidate[] }
-
-interface MappingsCandidate {
-  type: string
-  version: string | null
-  source: string
-  evidence: string
-}
-
-type MappingsResult =
-  | { status: 'unknown'; candidates: [] }
-  | { status: 'determined'; type: string; version: string | null; candidates: MappingsCandidate[] }
-  | { status: 'conflict'; candidates: MappingsCandidate[] }
-
-interface LoaderEvidence {
-  loader: Exclude<Loader, 'unknown'>
-  evidence: string[]
-}
-
-interface ModIdCandidate {
-  id: string
-  source: string
-  confidence: Confidence
-}
-
-interface SourceSetInfo {
-  name: string
-  java: string[]
-  kotlin: string[]
-  resources: string[]
-}
-
-interface MixinConfig {
-  path: string
-  source: string
-}
-
-interface DatagenClue {
-  kind: string
-  source: string
-  detail: string
-}
-
-interface DetectionResult {
-  workspace: string
-  loader: Loader
-  loaderSupport: LoaderSupport
-  loaderEvidence: LoaderEvidence[]
-  minecraftVersion: MinecraftVersionResult
-  mappings: MappingsResult
-  modIdCandidates: ModIdCandidate[]
-  languages: { java: boolean; kotlin: boolean }
-  mainSourceSets: SourceSetInfo[]
-  resourceRoots: string[]
-  mixinConfigs: MixinConfig[]
-  datagenClues: DatagenClue[]
-  recommendedValidationCommands: string[]
-  gradleTaskCandidates: string[]
-  inspected: {
-    gradleFiles: string[]
-    metadataFiles: string[]
-    sourceRoots: string[]
-    resourceRoots: string[]
-  }
-  warnings: string[]
-  scanComplete: boolean
-}
-
-interface ResourceIssue {
-  code: string
-  path: string
-  message: string
-  reference: string | null
-  expectedPath: string | null
-}
-
-interface ResourceValidationResult {
-  errors: ResourceIssue[]
-  warnings: ResourceIssue[]
-  checkedFiles: string[]
-  detectedModId: string | null
-  scanComplete: boolean
 }
 
 interface DetectionScan {
@@ -228,7 +143,10 @@ interface CheckStepResult {
   message?: string
 }
 
-interface CheckResult {
+/**
+ * Structured command outcomes with failing phase and next-action guidance.
+ */
+export interface CheckResult {
   commands: string[]
   exitCode: number | null
   steps: CheckStepResult[]
@@ -236,10 +154,31 @@ interface CheckResult {
   suggestedNextAction: string | null
 }
 
+/**
+ * Optional host runtime used by approved model launches and desktop controls.
+ */
+export interface MinecraftRuntimeBridge {
+  /**
+   * Run an approved, bounded development launch through the mounted shell and retain its logs.
+   * @param cwd - Absolute project directory.
+   * @param mode - Client or dedicated-server runtime.
+   * @param signal - Caller-owned cancellation signal.
+   * @param timeoutMs - Per-command timeout in milliseconds.
+   * @param testMode - Development tasks or isolated artifact test, defaulting to development.
+   * @returns Preflight and readiness outcome with the retained log path.
+   */
+  check(cwd: string, mode: RuntimeMode, signal: AbortSignal, timeoutMs?: number, testMode?: 'development' | 'artifact'): Promise<CheckResult>
+}
+
+declare module '@deepseek-ai/cordis' {
+  interface Context { minecraftRuntime: MinecraftRuntimeBridge }
+}
+
 interface RunCheckArgs {
   target: CheckTarget
   timeoutMs?: number
   runtimeMode?: RuntimeMode
+  testMode?: 'development' | 'artifact'
 }
 
 function isApprovedRuntimeCheck(exec: ToolExecution): boolean {
@@ -767,17 +706,6 @@ function commandStep(step: string, command: string, result: ShellRunResult, conf
   }
 }
 
-/**
- * A Gradle run task is long-lived and commonly ends by timeout, so an exit
- * code alone cannot prove that Minecraft reached its loading boundary. These
- * markers are emitted after the vanilla client/server has initialised.
- */
-const RUNTIME_READY_MARKERS = [
-  /\bDone \([^\n]*\)!/u,
-  /For help, type ["']help["']/u,
-  /Setting user:/u,
-]
-
 function runtimeProbeStep(step: CheckStepResult, mode: RuntimeMode, ready: boolean): CheckStepResult {
   if (ready && (step.status === 'passed' || (step.timedOut && step.exitCode === null))) {
     return {
@@ -838,7 +766,7 @@ function unavailableStep(step: string, message: string): CheckStepResult {
   }
 }
 
-async function gradleLauncher(ctx: Context, exec: ToolExecution, detected: DetectionResult): Promise<string | null> {
+async function gradleLauncher(ctx: Context, exec: ProjectExecution, detected: DetectionResult): Promise<string | null> {
   if (detected.inspected.gradleFiles.length === 0) return null
   const hasPosixWrapper = (await optionalStat(ctx, exec, 'gradlew'))?.type === 'file'
   const hasWindowsWrapper = (await optionalStat(ctx, exec, 'gradlew.bat'))?.type === 'file'
@@ -940,7 +868,7 @@ function taskDiscoveryFailure(step: CheckStepResult, message: string): CheckStep
 
 async function listGradleTasks(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   config: ResolvedConfig,
   launcher: string,
   timeoutMs: number | undefined,
@@ -953,7 +881,7 @@ async function listGradleTasks(
     ...timeoutMs !== undefined ? { timeoutMs } : {},
     stdoutMaxBytes: config.maxTaskDiscoveryBytes,
     signal: exec.signal,
-    ...exec.agent?.session.header.cwd !== undefined ? { workdir: exec.agent.session.header.cwd } : {},
+    ...sessionResolveOptions(exec).cwd !== undefined ? { workdir: sessionResolveOptions(exec).cwd } : {},
   }))
   const step = commandStep('gradle:tasks', command, result, config)
   if (step.status === 'failed') {
@@ -976,7 +904,7 @@ async function listGradleTasks(
 
 async function discoverDatagenTask(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   config: ResolvedConfig,
   detected: DetectionResult,
   launcher: string,
@@ -1014,7 +942,7 @@ async function discoverDatagenTask(
 
 async function discoverRuntimeTask(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   config: ResolvedConfig,
   detected: DetectionResult,
   launcher: string,
@@ -1052,7 +980,7 @@ async function discoverRuntimeTask(
 
 async function unsupportedGradleLayout(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   config: ResolvedConfig,
 ): Promise<string | undefined> {
   for (const path of ['settings.gradle', 'settings.gradle.kts']) {
@@ -1075,7 +1003,7 @@ async function unsupportedGradleLayout(
 
 async function runCommandStep(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   config: ResolvedConfig,
   plan: CommandPlan,
   launcher: string,
@@ -1088,10 +1016,10 @@ async function runCommandStep(
     command,
     ...timeoutMs !== undefined ? { timeoutMs } : {},
     signal: exec.signal,
-    ...exec.agent?.session.header.cwd !== undefined ? { workdir: exec.agent.session.header.cwd } : {},
+    ...sessionResolveOptions(exec).cwd !== undefined ? { workdir: sessionResolveOptions(exec).cwd } : {},
   }))
   const step = commandStep(plan.step, command, result, config)
-  const runtimeReady = RUNTIME_READY_MARKERS.some(marker => marker.test(`${result.stdout.text}\n${result.stderr.text}`))
+  const runtimeReady = runtimeMode !== undefined && hasMinecraftReadiness(runtimeMode, `${result.stdout.text}\n${result.stderr.text}`)
   return plan.step === 'runtime' && runtimeMode !== undefined
     ? runtimeProbeStep(step, runtimeMode, runtimeReady)
     : step
@@ -1099,7 +1027,7 @@ async function runCommandStep(
 
 async function runStaticResourceStep(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   config: ResolvedConfig,
   scan?: DetectionScan,
 ): Promise<CheckStepResult> {
@@ -1251,7 +1179,7 @@ function pngError(bytes: Uint8Array): string | undefined {
 
 async function validatePngFiles(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   root: string,
   namespace: string,
   config: ResolvedConfig,
@@ -1347,7 +1275,7 @@ function parseJsonForValidation(result: ResourceValidationResult, path: string, 
 
 async function readValidationText(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   path: string,
   entry: FsDirEntry,
   config: ResolvedConfig,
@@ -1449,7 +1377,7 @@ function detectedHighConfidenceModId(detected: DetectionResult, result: Resource
   return null
 }
 
-async function fallbackResourceRoots(ctx: Context, exec: ToolExecution, warnings: ResourceIssue[]): Promise<string[]> {
+async function fallbackResourceRoots(ctx: Context, exec: ProjectExecution, warnings: ResourceIssue[]): Promise<string[]> {
   const roots: string[] = []
   const srcEntries = await listOptionalDir(ctx, exec, 'src')
   for (const entry of srcEntries.filter(candidate => candidate.type === 'directory')) {
@@ -1466,11 +1394,11 @@ async function fallbackResourceRoots(ctx: Context, exec: ToolExecution, warnings
   return []
 }
 
-async function localFileExists(ctx: Context, exec: ToolExecution, path: string): Promise<boolean> {
+async function localFileExists(ctx: Context, exec: ProjectExecution, path: string): Promise<boolean> {
   return (await optionalStat(ctx, exec, path))?.type === 'file'
 }
 
-async function resourceNamespaces(ctx: Context, exec: ToolExecution, roots: readonly string[], kind: 'assets' | 'data'): Promise<string[]> {
+async function resourceNamespaces(ctx: Context, exec: ProjectExecution, roots: readonly string[], kind: 'assets' | 'data'): Promise<string[]> {
   const namespaces: string[] = []
   for (const root of roots) {
     const entries = await listOptionalDir(ctx, exec, posix.join(root, kind))
@@ -1663,7 +1591,7 @@ function resourceValidationOutputSchema() {
   } as const
 }
 
-async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig): Promise<DetectionScan> {
+async function detect(ctx: Context, exec: ProjectExecution, config: ResolvedConfig): Promise<DetectionScan> {
   const warnings: string[] = []
   const root = await ctx.fs.resolve('.', sessionResolveOptions(exec))
   const rootInfo = await ctx.fs.stat(root, exec.signal)
@@ -1834,7 +1762,7 @@ async function detect(ctx: Context, exec: ToolExecution, config: ResolvedConfig)
 
 async function resourceFileExists(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   roots: readonly string[],
   expected: (root: string) => string,
 ): Promise<boolean> {
@@ -1846,7 +1774,7 @@ async function resourceFileExists(
 
 async function readJsonResourceFiles(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   base: string,
   config: ResolvedConfig,
   result: ResourceValidationResult,
@@ -1874,7 +1802,7 @@ async function readJsonResourceFiles(
 
 async function validateModelTextures(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   roots: readonly string[],
   root: string,
   namespace: string,
@@ -1942,7 +1870,7 @@ async function validateModelTextures(
 
 async function validateBlockstateModels(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   roots: readonly string[],
   root: string,
   namespace: string,
@@ -1979,7 +1907,7 @@ async function validateBlockstateModels(
 
 async function validateDataJson(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   root: string,
   namespace: string,
   folder: typeof DATA_JSON_FOLDERS[number],
@@ -2050,7 +1978,7 @@ async function validateDataJson(
 
 async function validateItemDefinitions(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   root: string,
   namespace: string,
   config: ResolvedConfig,
@@ -2086,7 +2014,7 @@ async function validateItemDefinitions(
 
 async function validateResources(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   config: ResolvedConfig,
   scan?: DetectionScan,
 ): Promise<ResourceValidationResult> {
@@ -2169,7 +2097,7 @@ async function validateResources(
   return sortValidation(result)
 }
 
-async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedConfig, args: RunCheckArgs): Promise<CheckResult> {
+async function runMcCheck(ctx: Context, exec: ProjectExecution, config: ResolvedConfig, args: RunCheckArgs): Promise<CheckResult> {
   const scan = await detect(ctx, exec, config)
   const detected = scan.project
   const unsupportedLayout = await unsupportedGradleLayout(ctx, exec, config)
@@ -2300,8 +2228,8 @@ async function runMcCheck(ctx: Context, exec: ToolExecution, config: ResolvedCon
 
 /**
  * Register the Minecraft project tools.
- * @param ctx - plugin context carrying tool and filesystem services.
- * @param rawConfig - optional scan and output-summary bounds.
+@param ctx - plugin context carrying tool and filesystem services.
+@param rawConfig - optional scan and output-summary bounds.
  */
 export function apply(ctx: Context, rawConfig: Config = {}): void {
   const config = resolveConfig(rawConfig)
@@ -2358,13 +2286,17 @@ export function apply(ctx: Context, rawConfig: Config = {}): void {
           target: {
             type: 'string',
             required: true,
-            description: 'Check to run. resources performs static Minecraft resource validation before Gradle processResources. runtime launches a client or dedicated server after approval. startup runs the complete preflight and then a bounded readiness probe; it blocks launch on any failed or unverified phase. all stops at the first failed step.',
+            description: 'Check to run. resources performs static Minecraft resource validation before Gradle processResources. runtime executes the project client/server Gradle task after approval, without extra preflight tasks. startup runs the complete preflight and then a bounded readiness probe; it blocks launch on any failed or unverified phase. all stops at the first failed step.',
             enum: ['build', 'test', 'datagen', 'resources', 'runtime', 'startup', 'all'],
           },
           runtimeMode: {
             type: 'string',
             enum: ['client', 'server'],
             description: 'Required for target runtime or startup: choose client or dedicated server after user approval.',
+          },
+          testMode: {
+            type: 'string', enum: ['development', 'artifact'],
+            description: 'Runtime mode. Defaults to the project Gradle runtime task using the shared local environment and caches. It adds no assistant preflight tasks and retains the mounted shell policy; process start does not prove gameplay. artifact builds and validates the published JAR, then installs an isolated exact-version local test instance. Requires the Minecraft workbench and separate server EULA acceptance.',
           },
           timeoutMs: {
             type: 'number',
@@ -2375,7 +2307,21 @@ export function apply(ctx: Context, rawConfig: Config = {}): void {
           schema: checkOutputSchema(),
           render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
         },
-        execute: (args: RunCheckArgs, exec) => runMcCheck(shellCtx, exec, config, args),
+        execute: async (args: RunCheckArgs, exec) => {
+          const runtime = shellCtx.get('minecraftRuntime')
+          const cwd = sessionResolveOptions(exec).cwd
+          if (runtime && cwd && args.runtimeMode && (args.target === 'runtime' || args.target === 'startup')) {
+            const preflight = args.target === 'startup' && args.testMode !== 'artifact'
+              ? await runMcCheck(shellCtx, exec, config, { ...args, target: 'all' }) : undefined
+            if (preflight?.failedStep || preflight?.steps.some(step => step.status !== 'passed')) return preflight
+            const result = await runtime.check(cwd, args.runtimeMode, exec.signal, args.timeoutMs, args.testMode)
+            return preflight ? {
+              ...result, commands: [...preflight.commands, ...result.commands], steps: [...preflight.steps, ...result.steps],
+            } : result
+          }
+          if (args.testMode === 'artifact') throw new Error('成品模式需要 Minecraft 工作台及 runtime/startup 目标。')
+          return runMcCheck(shellCtx, exec, config, args)
+        },
         presentCall: args => ({ card: 'generic', title: `Run Minecraft check: ${args.target}`, kind: 'execute' }),
         presentResult: (_args, result: ToolResult) => ({
           card: 'generic',
@@ -2386,4 +2332,26 @@ export function apply(ctx: Context, rawConfig: Config = {}): void {
     })
     return fiber.dispose
   }, 'tool-mc-project.run_mc_check')
+}
+
+/**
+ * Inspect a trusted host workspace using the same evidence parser as detect_mc_project.
+ * @param ctx - Host context providing the required capabilities.
+ * @param cwd - Absolute project directory.
+ * @param signal - Cancellation signal for the caller-owned operation.
+ * @returns Inspect a trusted host workspace using the same evidence parser as detect_mc_project.
+ */
+export async function inspectMinecraftProject(ctx: Context, cwd: string, signal?: AbortSignal): Promise<DetectionResult> {
+  return (await detect(ctx, { cwd, signal: signal ?? new AbortController().signal }, resolveConfig({}))).project
+}
+
+/**
+ * Run bounded static resource validation without launching Gradle or Minecraft.
+ * @param ctx - Host context providing the required capabilities.
+ * @param cwd - Absolute project directory.
+ * @param signal - Cancellation signal for the caller-owned operation.
+ * @returns Run bounded static resource validation without launching Gradle or Minecraft.
+ */
+export async function validateMinecraftProject(ctx: Context, cwd: string, signal?: AbortSignal): Promise<ResourceValidationResult> {
+  return validateResources(ctx, { cwd, signal: signal ?? new AbortController().signal }, resolveConfig({}))
 }

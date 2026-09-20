@@ -1,0 +1,2 @@
+$ tsx scripts/verify-client-packages.ts
+verify-client-packages: 43 client packages (40 dynamic, 3 statically linked) satisfy dependency and module-request rules; 0 explicit external request(s).

@@ -1,0 +1,5 @@
+$ tsx scripts/verify-translation-pairing.ts "--write" "packages/minecraft/mcmod-agent/README.md" "packages/minecraft/tool-mc-project/README.md" "packages/minecraft/tool-mc-bootstrap/README.md"
+verify-translation-pairing: recorded packages/minecraft/mcmod-agent/README.i18n.yaml
+verify-translation-pairing: recorded packages/minecraft/tool-mc-bootstrap/README.i18n.yaml
+verify-translation-pairing: recorded packages/minecraft/tool-mc-project/README.i18n.yaml
+verify-translation-pairing: 3 record(s) written; run the check to validate the pairs.

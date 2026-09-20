@@ -24,6 +24,8 @@ export interface BackendOptions {
   cwd: string
   /** Parent environment; tests may isolate Harness homes through this value. */
   env: NodeJS.ProcessEnv
+  /** Resolve system proxy only for Minecraft HTTPS publication requests. */
+  resolveProxy?: (url: string) => Promise<string>
   /** Startup deadline, replaceable by focused tests. */
   startTimeoutMs?: number
   /** Graceful shutdown deadline, replaceable by focused tests. */
@@ -135,6 +137,20 @@ export async function startBackend(options: BackendOptions): Promise<BackendHand
     shell: false,
     stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     windowsHide: true,
+  })
+  child.on('message', (message: unknown) => {
+    if (!options.resolveProxy || typeof message !== 'object' || message === null || !('type' in message)
+      || message.type !== 'dsh/network-proxy' || !('id' in message) || typeof message.id !== 'string'
+      || message.id.length > 64 || !('url' in message) || typeof message.url !== 'string' || message.url.length > 4096) return
+    let url: URL
+    try { url = new URL(message.url) } catch { return }
+    if (url.protocol !== 'https:' || url.username || url.password) return
+    const id = message.id
+    void options.resolveProxy(url.href).then((proxy) => {
+      if (child.connected) child.send({ type: 'dsh/network-proxy-result', id, proxy }, () => {})
+    }).catch(() => {
+      if (child.connected) child.send({ type: 'dsh/network-proxy-result', id, error: 'system-proxy-unavailable' }, () => {})
+    })
   })
   options.log?.(`backend spawned pid=${String(child.pid)}`)
   const exited = new Promise<BackendExit>((resolve) => {

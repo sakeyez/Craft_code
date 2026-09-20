@@ -152,6 +152,11 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
 declare module '@deepseek-ai/cordis' {
   interface Events {
+    /** Explicit conversation navigation, including reopening the current session.
+     * @mode emit
+     * @param id - Successfully selected session id.
+     */
+    'sessions/navigate'(id: import('@deepseek-ai/dsh-api-remotes/client').SessionId): void
     /**
      * A slot's definition or registration set changed.
      * @mode emit

@@ -23,6 +23,7 @@
   // cannot see both sides of the cordis Context merges).
   "exclude": [
     "tests/scaffold.ts",
+    "tests/mcmod-workbench.e2e.ts",
     "tests/scaffold-hermetic.e2e.ts",
     "tests/startup-rpc-budget.e2e.ts",
     "tests/minimal-preset.snapshot.ts",
@@ -93,6 +94,7 @@
     "tests/turn-tail-actions.e2e.ts",
     "tests/goal-multi-turn-actions.e2e.ts",
     "tests/game-focus.e2e.ts",
+    "tests/mcmod-bootstrap.e2e.ts",
     "tests/chat-scroll-fixture.ts",
     "tests/chat-scroll-contract.e2e.ts",
     "tests/chat-long-interactions.e2e.ts",

@@ -1,0 +1,11 @@
+ℹ tsdown v0.22.2 powered by rolldown v1.1.1
+ℹ config file: E:\.sake\Desktop\craftcode\packages\minecraft\mc-workbench\tsdown.config.ts 
+ℹ entry: lib/types/index.js, lib/types/invariant.js, lib/types/contracts.js
+ℹ target: es2024
+ℹ tsconfig: tsconfig.json
+ℹ Build start
+ℹ lib\index.js      79.68 kB │ gzip: 22.91 kB
+ℹ lib\contracts.js   7.15 kB │ gzip:  2.27 kB
+ℹ lib\invariant.js   0.85 kB │ gzip:  0.44 kB
+ℹ 3 files, total: 87.69 kB
+✔ Build complete in 29ms

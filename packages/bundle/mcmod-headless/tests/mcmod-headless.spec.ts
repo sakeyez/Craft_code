@@ -26,7 +26,6 @@ const MINECRAFT_SKILL_NAMES = [
   'minecraft-add-content',
   'minecraft-build-diagnose',
   'minecraft-environment-doctor',
-  'minecraft-project-create',
   'minecraft-resources',
   'mixin-debugging',
   'neoforge-datagen',
@@ -105,6 +104,7 @@ describe('dsh-mcmod-headless bundle', () => {
       name: '@deepseek-ai/dsh-mcmod-agent',
     })
     expect(byId.get('tool-mc-project')).toMatchObject({ name: '@deepseek-ai/dsh-tool-mc-project' })
+    expect(byId.has('tool-mc-bootstrap')).toBe(false)
     expect(byId.get('lsp')).toMatchObject({ name: '@deepseek-ai/dsh-lsp' })
     expect(byId.get('lsp-stdio')).toMatchObject({
       name: '@deepseek-ai/dsh-lsp-stdio',
@@ -174,6 +174,7 @@ describe('dsh-mcmod-headless bundle', () => {
     expect(byId.get('headless-runner')?.name).toBe('@deepseek-ai/dsh-headless')
     expect(byId.get('mcmod-agent')?.name).toBe('@deepseek-ai/dsh-mcmod-agent')
     expect(byId.get('tool-mc-project')?.name).toBe('@deepseek-ai/dsh-tool-mc-project')
+    expect(byId.has('tool-mc-bootstrap')).toBe(false)
     expect(byId.get('tool-lsp')?.name).toBe('@deepseek-ai/dsh-tool-lsp')
     expect(byId.get('tool-web')?.disabled).toBe(true)
     expect(byId.get('tool-workflow')?.disabled).toBe(true)

@@ -30,7 +30,7 @@
     "lib/invariant.js",
     "lib/types/**/*.d.ts"
   ],
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "dependencies": {
     "diff": "^9.0.0",
     "@deepseek-ai/schemastery": "workspace:^"

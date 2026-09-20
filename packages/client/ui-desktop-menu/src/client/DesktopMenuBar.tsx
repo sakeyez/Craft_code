@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { DesktopMenuBarInjected, DesktopMenuId } from './contract.ts'
+import type { DesktopMenuBarInjected, DesktopMenuId, DesktopWindowControlsInjected } from './contract.ts'
 import css from './DesktopMenuBar.module.css'
 
 type DesktopMenuBarProps = PropsRuntime<'shell.topbar'> & InjectFace<DesktopMenuBarInjected>
@@ -24,33 +24,17 @@ function CloseIcon() {
 
 const MENUS: readonly { id: DesktopMenuId; label: string }[] = [
   { id: 'project', label: '项目' },
-  { id: 'editor', label: '编辑' },
   { id: 'git', label: 'Git' },
   { id: 'help', label: '帮助' },
 ]
 
 /** Theme-aware top-level controls backed by Electron's native submenus. */
-export function DesktopMenuBar({ useSessions, openMenu, windowControls }: DesktopMenuBarProps) {
+export function DesktopMenuBar({ useSessions, openMenu }: DesktopMenuBarProps) {
   const sessions = useSessions(value => value)
   const cwd = sessions.current === undefined ? undefined : sessions.byId[sessions.current]?.cwd
   const buttons = useRef<Array<HTMLButtonElement | null>>([])
   const [focusIndex, setFocusIndex] = useState(0)
   const [expanded, setExpanded] = useState<DesktopMenuId>()
-  const [maximized, setMaximized] = useState(false)
-
-  useEffect(() => {
-    if (windowControls === undefined) return
-    let active = true
-    void windowControls.isMaximized().then((value) => {
-      if (active) setMaximized(value)
-    }).catch(() => {})
-    const dispose = windowControls.onMaximizedChange(setMaximized)
-    return () => {
-      active = false
-      dispose()
-    }
-  }, [windowControls])
-
   const moveFocus = useCallback((index: number): void => {
     const next = (index + MENUS.length) % MENUS.length
     setFocusIndex(next)
@@ -103,19 +87,10 @@ export function DesktopMenuBar({ useSessions, openMenu, windowControls }: Deskto
     }
   }, [moveFocus, showMenu])
 
-  const invokeWindowControl = useCallback((action: () => Promise<void>): void => {
-    void action().catch(() => {})
-  }, [])
-
   return (
     <nav
       className={css.menuBar}
       aria-label="应用菜单"
-      onDoubleClick={(event) => {
-        if (event.target === event.currentTarget && windowControls !== undefined) {
-          invokeWindowControl(windowControls.toggleMaximize)
-        }
-      }}
     >
       <div className={css.menuItems} role="menubar">
         {MENUS.map((menu, index) => (
@@ -136,37 +111,66 @@ export function DesktopMenuBar({ useSessions, openMenu, windowControls }: Deskto
           </button>
         ))}
       </div>
-      {windowControls !== undefined && (
-        <div className={css.windowControls} aria-label="窗口控制">
-          <button
-            type="button"
-            className={css.windowButton}
-            aria-label="最小化窗口"
-            data-window-control="minimize"
-            onClick={() => { invokeWindowControl(windowControls.minimize) }}
-          >
-            <MinimizeIcon />
-          </button>
-          <button
-            type="button"
-            className={css.windowButton}
-            aria-label={maximized ? '还原窗口' : '最大化窗口'}
-            data-window-control="maximize"
-            onClick={() => { invokeWindowControl(windowControls.toggleMaximize) }}
-          >
-            {maximized ? <RestoreIcon /> : <MaximizeIcon />}
-          </button>
-          <button
-            type="button"
-            className={`${css.windowButton} ${css.closeButton}`}
-            aria-label="关闭窗口"
-            data-window-control="close"
-            onClick={() => { invokeWindowControl(windowControls.close) }}
-          >
-            <CloseIcon />
-          </button>
-        </div>
-      )}
     </nav>
+  )
+}
+
+/** Host window actions and the remaining draggable title-bar space. */
+export function DesktopWindowControls({ windowControls }: PropsRuntime<'shell.window-controls'> & InjectFace<DesktopWindowControlsInjected>) {
+  const [maximized, setMaximized] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    void windowControls.isMaximized().then((value) => {
+      if (active) setMaximized(value)
+    }).catch(() => {})
+    const dispose = windowControls.onMaximizedChange(setMaximized)
+    return () => {
+      active = false
+      dispose()
+    }
+  }, [windowControls])
+
+  const invokeWindowControl = useCallback((action: () => Promise<void>): void => {
+    void action().catch(() => {})
+  }, [])
+
+  return (
+    <div
+      className={css.windowChrome}
+      onDoubleClick={(event) => {
+        if (event.target === event.currentTarget) invokeWindowControl(windowControls.toggleMaximize)
+      }}
+    >
+      <div className={css.windowControls} aria-label="窗口控制">
+        <button
+          type="button"
+          className={css.windowButton}
+          aria-label="最小化窗口"
+          data-window-control="minimize"
+          onClick={() => { invokeWindowControl(windowControls.minimize) }}
+        >
+          <MinimizeIcon />
+        </button>
+        <button
+          type="button"
+          className={css.windowButton}
+          aria-label={maximized ? '还原窗口' : '最大化窗口'}
+          data-window-control="maximize"
+          onClick={() => { invokeWindowControl(windowControls.toggleMaximize) }}
+        >
+          {maximized ? <RestoreIcon /> : <MaximizeIcon />}
+        </button>
+        <button
+          type="button"
+          className={`${css.windowButton} ${css.closeButton}`}
+          aria-label="关闭窗口"
+          data-window-control="close"
+          onClick={() => { invokeWindowControl(windowControls.close) }}
+        >
+          <CloseIcon />
+        </button>
+      </div>
+    </div>
   )
 }

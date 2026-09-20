@@ -26,6 +26,7 @@ type LayoutState = {
   details: number
   narrow: boolean
   narrowExpanded: boolean
+  workbenchByCwd: Record<string, 'conversation' | 'code' | 'dependencies' | 'test' | undefined>
   gameByCwd: Record<string, GameSurfaceState | undefined>
 }
 
@@ -40,6 +41,7 @@ type LayoutActions = {
   setNarrow: (draft: LayoutState, narrow: boolean) => void
   openDetails: (draft: LayoutState) => void
   closeDetails: (draft: LayoutState) => void
+  setWorkbenchView: (draft: LayoutState, cwd: string, view: 'conversation' | 'code' | 'dependencies' | 'test') => void
   setGameSurface: (draft: LayoutState, cwd: string, state: GameSurfaceState) => void
 }
 
@@ -55,7 +57,7 @@ type LayoutActions = {
  */
 export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutActions>  {
   const handle = defineStore({
-    init: (): LayoutState => ({ sidebar: SIDEBAR_DEFAULT, details: 0, narrow: false, narrowExpanded: false, gameByCwd: {} }),
+    init: (): LayoutState => ({ sidebar: SIDEBAR_DEFAULT, details: 0, narrow: false, narrowExpanded: false, workbenchByCwd: {}, gameByCwd: {} }),
     actions: {
       setSidebar: (d, px: number) => { d.sidebar = clampWidth(px, SIDEBAR_MIN, SIDEBAR_MAX) },
       setDetails: (d, px: number) => { d.details = clampWidth(px, DETAILS_MIN, DETAILS_MAX) },
@@ -74,6 +76,7 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
       },
       openDetails: (d) => { if (d.details === 0) d.details = DETAILS_DEFAULT },
       closeDetails: (d) => { d.details = 0 },
+      setWorkbenchView: (d, cwd: string, view: 'conversation' | 'code' | 'dependencies' | 'test') => { d.workbenchByCwd[gameProjectKey(cwd)] = view },
       setGameSurface: (d, cwd: string, state: GameSurfaceState) => { d.gameByCwd[gameProjectKey(cwd)] = state },
     },
   })

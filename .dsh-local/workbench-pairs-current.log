@@ -1,0 +1,8 @@
+$ tsx scripts/verify-translation-pairing.ts "--write" "docs/config-catalog.md" "docs/capability-seams.md" "docs/event-producer-consumer.md" "packages/minecraft/tool-mc-project/README.md" "packages/minecraft/tool-mc-bootstrap/README.md" "packages/minecraft/mc-workbench/README.md"
+verify-translation-pairing: recorded docs/capability-seams.i18n.yaml
+verify-translation-pairing: recorded docs/config-catalog.i18n.yaml
+verify-translation-pairing: recorded docs/event-producer-consumer.i18n.yaml
+verify-translation-pairing: recorded packages/minecraft/mc-workbench/README.i18n.yaml
+verify-translation-pairing: recorded packages/minecraft/tool-mc-bootstrap/README.i18n.yaml
+verify-translation-pairing: recorded packages/minecraft/tool-mc-project/README.i18n.yaml
+verify-translation-pairing: 6 record(s) written; run the check to validate the pairs.

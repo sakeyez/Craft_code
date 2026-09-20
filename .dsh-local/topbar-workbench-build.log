@@ -1,0 +1,23 @@
+native/landlock-run/packages/linux-arm64 | [WARN] Unsupported platform: wanted: {"cpu":["arm64"],"os":["linux"],"libc":["any"]} (current: {"os":"win32","cpu":"x64","libc":"unknown"})
+native/landlock-run/packages/linux-x64   | [WARN] Unsupported platform: wanted: {"cpu":["x64"],"os":["linux"],"libc":["any"]} (current: {"os":"win32","cpu":"x64","libc":"unknown"})
+$ tsdown
+ℹ tsdown v0.22.2 powered by rolldown v1.1.1
+ℹ config file: E:\.sake\Desktop\craftcode\packages\client\ui-mcmod-workbench\tsdown.config.ts 
+ℹ [@deepseek-ai/dsh-client-ui-mcmod-workbench] entry: lib/types/index.js, lib/types/invariant.js
+ℹ [@deepseek-ai/dsh-client-ui-mcmod-workbench] target: es2024
+ℹ [@deepseek-ai/dsh-client-ui-mcmod-workbench] tsconfig: tsconfig.json
+ℹ [@deepseek-ai/dsh-client-ui-mcmod-workbench/client] entry: src/client/index.ts
+ℹ [@deepseek-ai/dsh-client-ui-mcmod-workbench/client] tsconfig: tsconfig.json
+ℹ Build start
+ℹ [@deepseek-ai/dsh-client-ui-mcmod-workbench] [ESM] lib\index.js      3.86 kB │ gzip: 1.70 kB
+ℹ [@deepseek-ai/dsh-client-ui-mcmod-workbench] [ESM] lib\invariant.js  0.91 kB │ gzip: 0.45 kB
+ℹ [@deepseek-ai/dsh-client-ui-mcmod-workbench] [ESM] 2 files, total: 4.76 kB
+✔ [@deepseek-ai/dsh-client-ui-mcmod-workbench] Build complete in 81ms
+ℹ [@deepseek-ai/dsh-client-ui-mcmod-workbench/client] Hint: consider adding deps.onlyBundle option to avoid unintended bundling of dependencies, or set deps.onlyBundle: false to disable this hint.
+See more at https://tsdown.dev/options/dependencies#deps-onlybundle
+Detected dependencies in bundle:
+- zod
+ℹ [@deepseek-ai/dsh-client-ui-mcmod-workbench/client] [CJS] lib\client.js      206.25 kB │ gzip: 40.96 kB
+ℹ [@deepseek-ai/dsh-client-ui-mcmod-workbench/client] [CJS] lib\client.js.map  475.82 kB │ gzip: 88.61 kB
+ℹ [@deepseek-ai/dsh-client-ui-mcmod-workbench/client] [CJS] 2 files, total: 682.08 kB
+✔ [@deepseek-ai/dsh-client-ui-mcmod-workbench/client] Build complete in 160ms

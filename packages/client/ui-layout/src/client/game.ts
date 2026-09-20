@@ -1,11 +1,11 @@
 import type { GameAnnotation, NormalizedPoint } from '@deepseek-ai/dsh-session/types'
 
 /** Lifecycle status reported by the desktop external-window provider. */
-export type GameSurfaceStatus = 'idle' | 'starting' | 'connected' | 'failed' | 'disconnected' | 'reconnecting' | 'unsupported'
+export type GameSurfaceStatus = 'idle' | 'starting' | 'connected' | 'failed' | 'disconnected' | 'unsupported'
 /** Strict state carried by a project-scoped external-game event. */
 export type GameSurfaceState =
   | { status: 'idle' }
-  | { status: 'starting' | 'reconnecting'; gameName?: string }
+  | { status: 'starting'; gameName?: string }
   | { status: 'connected'; gameName?: string; surfaceKind: 'external-window' }
   | { status: 'failed' | 'disconnected' | 'unsupported'; gameName?: string; error: string }
 /** Project-scoped external-game update from the desktop host. */
@@ -17,13 +17,11 @@ export interface GameAnnotationSnapshot { dataUrl: string; width: number; height
 /** Renderer operations backed by the desktop game capture provider. */
 export interface GameSurfaceBridge {
   bindAnnotationShortcut?(request: GameAnnotationRequest, listener: (error?: string) => void): () => void
-  reconnect(cwd: string): Promise<GameSurfaceState>
   beginAnnotation(
     request: GameAnnotationRequest,
     commit: (drafts: GameAnnotationDraft[], snapshot?: GameAnnotationSnapshot) => Promise<void>,
   ): Promise<void>
   endAnnotation(operationId: string): Promise<void>
-  reposition(cwd: string): Promise<void>
 }
 
 /** Normalize Windows project aliases while preserving case-sensitive POSIX paths.

@@ -11,10 +11,6 @@
   padding: 0 24px 8vh;
 }
 
-:global([data-game-focus]) .root {
-  display: none;
-}
-
 /* Cap matches the InputBar card. Glow may paint past the sides. */
 .stack {
   display: flex;

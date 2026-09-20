@@ -177,6 +177,7 @@ class McmodScriptedAdapter extends LlmAdapter {
 
   override stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
     if (!hasTool(options, 'detect_mc_project')) return textResponse('mcmod fixture')
+    if (!hasTool(options, 'query_mc_api')) throw new Error('Minecraft API tool is not mounted')
     if (!options.system?.includes('Choose only the steps needed for the current request')
       || options.system.includes('First define the scope, acceptance criteria, and explicit non-goals')) {
       throw new Error('Minecraft task-dependent workflow missing or generic coding workflow leaked into the model request')

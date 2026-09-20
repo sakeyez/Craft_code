@@ -35,16 +35,27 @@ declare module '@deepseek-ai/cordis' {
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
+    /**
+     * Topbar project navigation receives cwd, optional session and selected view.
+     * A registration replaces the navigation occupant; absence consumes no height.
+     */
+    'workbench.nav': { kind: 'single'; scope: 'session-maybe'; owner: WorkbenchOwnerProps }
+    /**
+     * Project tool panel receives cwd, optional session and selected view.
+     * A registration replaces the tool occupant; absence leaves an empty tool area.
+     */
+    'workbench.panel': { kind: 'single'; scope: 'session-maybe'; owner: WorkbenchOwnerProps }
     // The 'root' entry itself is the runtime's built-in slot (declared
     // there); these five are the frame's children, declared by the same
     // register() call that contributes AppFrame. Session owners never pass
     // sessionId: the framework injects it as a standard prop.
     /**
-     * Optional application chrome above the three-column body. An absent
-     * occupant consumes no height; desktop hosts can contribute their own
-     * menu bar without changing the browser composition.
+     * Optional application menus at the leading edge of the topbar. An absent
+     * occupant consumes no space; project navigation follows in the same row.
      */
     'shell.topbar': { kind: 'single'; scope: 'root' }
+    /** Optional trailing window controls; the host also owns their draggable title-bar space. */
+    'shell.window-controls': { kind: 'single'; scope: 'root' }
     /**
      * The whole left column. OCCUPIED by ui-sidebar's SidebarRoot, which
      * declares the workspace and settings seats inside it — registering here
@@ -69,7 +80,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      * framework hooks of the `session-maybe` scope.
      */
     'conversation': { kind: 'single'; scope: 'session-maybe'; owner: ConvOwnerProps }
-    /** Session-scoped external-game companion controls; absent when no game is active. */
+    /** Session-scoped external-game status and annotation entry; absent when no game is active. */
     'game': { kind: 'single'; scope: 'session-maybe'; owner: GameOwnerProps }
     /**
      * The right details column, shown when the layout opens it. OCCUPIED by
@@ -110,6 +121,7 @@ export interface SidebarOwnerProps {
 }
 
 /** Conversation owner share: business state and actions belong to the registrant. */
+export interface WorkbenchOwnerProps { cwd: string; view: 'conversation' | 'code' | 'dependencies' | 'test' }
 export interface ConvOwnerProps {}
 /** Game owner share: current desktop external-window state. */
 export interface GameOwnerProps { cwd?: string; state: GameSurfaceState }
@@ -118,10 +130,8 @@ export interface GameOwnerProps { cwd?: string; state: GameSurfaceState }
 export interface GameWorkspaceInjected {
   /** Persist annotations; rejects when the session is unavailable or the host refuses the update. */
   annotate?: (annotations: import('@deepseek-ai/dsh-session/types').GameAnnotation[]) => Promise<void>
-  reconnect: (cwd: string) => Promise<GameSurfaceState>
   beginAnnotation: (request: import('./game.ts').GameAnnotationRequest) => Promise<void>
-  endAnnotation: (cwd: string) => Promise<void>
-  reposition: (cwd: string) => Promise<void>
+  endAnnotation: (operationId: string) => Promise<void>
 }
 
 /** Details owner share: empty — sessionId arrives as a framework-standard prop. */
@@ -138,14 +148,21 @@ export const inject = ['slots', 'theme', 'sessions']
  */
 export function apply(ctx: ClientContext): void {
   const layout = new LayoutController()
+  ctx.on('sessions/navigate', (id) => {
+    const cwd = ctx.sessions.list.getSnapshot().byId[id]?.cwd
+    if (cwd) layout.setWorkbenchView(cwd, 'conversation')
+  })
   ctx.effect(() => {
     const disposeService = ctx.reflect.provide('layout', layout)
     const disposeRegistration = ctx.slots.register({
       name: 'root',
       children: {
         'shell.topbar': { kind: 'single', scope: 'root' },
+        'shell.window-controls': { kind: 'single', scope: 'root' },
         'sidebar': { kind: 'single', scope: 'root' },
         'conversation': { kind: 'single', scope: 'session-maybe' },
+        'workbench.nav': { kind: 'single', scope: 'session-maybe' },
+        'workbench.panel': { kind: 'single', scope: 'session-maybe' },
         'game': { kind: 'single', scope: 'session-maybe' },
         'details': { kind: 'single', scope: 'session' },
         'shell.overlay': { kind: 'list', scope: 'root' },
@@ -171,13 +188,13 @@ export function apply(ctx: ClientContext): void {
           if (!result.ok) throw new Error(result.error.message)
         },
         bindAnnotationShortcut: (request: import('./game.ts').GameAnnotationRequest, listener: (error?: string) => void) => layout.bindAnnotationShortcut(request, listener),
-        reconnect: (cwd: string) => layout.reconnectGameSurface(cwd),
         beginAnnotation: async (request: import('./game.ts').GameAnnotationRequest) => {
           if (sessionId === undefined || request.sessionId !== sessionId) throw new Error('标注会话无效。')
-          const session = ctx.sessions.binding(sessionId)?.session
-          const annotate = session?.annotate
-          if (session === undefined || annotate === undefined) throw new Error('当前会话无法保存游戏标注。')
           await layout.beginGameAnnotation(request, async (drafts, snapshot) => {
+            const current = ctx.sessions.list.getSnapshot().current
+            const session = current === undefined ? undefined : ctx.sessions.binding(current)?.session
+            const annotate = session?.annotate
+            if (session === undefined || annotate === undefined) throw new Error('当前会话无法保存游戏标注。')
             const ids = new Set(drafts.map(draft => draft.id))
             const existing = (session.getSnapshot().annotations ?? []).filter(annotation => !ids.has(annotation.id))
             const labels = new Set(existing.map(annotation => annotation.label))
@@ -187,8 +204,7 @@ export function apply(ctx: ClientContext): void {
             if (!result.ok) throw new Error(result.error.message)
           })
         },
-        endAnnotation: (cwd: string) => layout.endGameAnnotation(cwd),
-        reposition: (cwd: string) => layout.repositionGameCompanion(cwd),
+        endAnnotation: (operationId: string) => layout.endGameAnnotation(operationId),
       }),
     }, GameWorkspace)
     return () => {

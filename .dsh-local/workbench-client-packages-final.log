@@ -1,0 +1,5 @@
+$ tsx scripts/verify-client-packages.ts
+verify-client-packages: 2 violation(s):
+  packages/client/ui-conversation/package.json: @deepseek-ai/dsh-session (packages/client/ui-conversation/src/client/apply.ts, packages/client/ui-conversation/src/client/skeleton/AnnotationContext.tsx) is a peer-installed DSH relationship; declare it in peerDependencies and devDependencies with matching ranges, not dependencies; found no dependency declaration
+  packages/client/ui-layout/package.json: @deepseek-ai/dsh-session (packages/client/ui-layout/src/client/GameWorkspace.tsx, packages/client/ui-layout/src/client/game.ts, and 1 more) is a peer-installed DSH relationship; declare it in peerDependencies and devDependencies with matching ranges, not dependencies; found no dependency declaration
+[ELIFECYCLE] Command failed with exit code 1.

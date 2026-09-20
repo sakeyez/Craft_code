@@ -23,7 +23,6 @@ class Source<T> {
 
 function bench(options: {
   invoke?: (request: DesktopCommandRequest) => Promise<DesktopCommandResult>
-  searchProject?: (query: string, cwd: string, signal: AbortSignal) => Promise<{ sessionId: string; snippet: string }[]>
 } = {}) {
   const source = new Source<DesktopMenuEvent>({ sequence: 0 })
   const gameSource = new Source<DesktopGameEvent>({ sequence: 0 })
@@ -32,7 +31,6 @@ function bench(options: {
   const invoke = vi.fn(options.invoke ?? (async () => ({ ok: true, title: 'command', message: '完成' })))
   const createProject = vi.fn(async () => '/projects/new')
   const setActiveProject = vi.fn(async () => {})
-  const searchProject = vi.fn(options.searchProject ?? (async () => []))
   const useDesktopMenu = <S,>(selector: (value: DesktopMenuEvent) => S): S =>
     useSyncExternalStore(source.subscribe, () => selector(source.getSnapshot()))
   const useDesktopGame = <S,>(selector: (value: DesktopGameEvent) => S): S =>
@@ -51,7 +49,6 @@ function bench(options: {
       invoke={invoke}
       setActiveProject={setActiveProject}
       createProject={createProject}
-      searchProject={searchProject}
     />,
   )
   return {
@@ -59,7 +56,6 @@ function bench(options: {
     invoke,
     createProject,
     setActiveProject,
-    searchProject,
     emit(action: DesktopAction) {
       act(() => { source.set({ sequence: ++sequence, action }) })
     },
@@ -148,17 +144,8 @@ describe('DesktopMenuSurface', () => {
     await waitFor(() => { expect(b.queryByRole('dialog', { name: '项目设置' })).toBeNull() })
   })
 
-  it('uses controlled search and commit dialogs instead of browser prompts', async () => {
-    const find = vi.fn(() => true)
-    window.find = find
+  it('uses a controlled commit dialog', async () => {
     const b = bench()
-    b.emit('editor:find-current')
-    const search = await b.findByLabelText('查找内容')
-    fireEvent.change(search, { target: { value: '方块注册' } })
-    fireEvent.submit(search.closest('form')!)
-    expect(find).toHaveBeenCalledWith('方块注册')
-    expect(await b.findByText('已定位匹配内容。')).toBeTruthy()
-
     b.emit('git:commit')
     const message = await b.findByLabelText('Commit message')
     fireEvent.change(message, { target: { value: 'fix: export jar' } })
@@ -168,20 +155,6 @@ describe('DesktopMenuSurface', () => {
         kind: 'git-commit', message: 'fix: export jar', cwd: '/projects/example',
       })
     })
-  })
-
-  it('renders project search matches as expandable command output', async () => {
-    const b = bench({
-      searchProject: async () => [{ sessionId: 's-1', snippet: '匹配的注册代码' }],
-    })
-    b.emit('editor:find-project')
-    const input = await b.findByLabelText('查找内容')
-    fireEvent.change(input, { target: { value: 'register' } })
-    fireEvent.submit(input.closest('form')!)
-    expect(await b.findByText('找到 1 条匹配内容。')).toBeTruthy()
-    fireEvent.click(b.getByRole('button', { name: '查看详情' }))
-    expect(b.getByText(/s-1: 匹配的注册代码/u)).toBeTruthy()
-    expect(b.searchProject).toHaveBeenCalledWith('register', '/projects/example', expect.any(AbortSignal))
   })
 
   it('offers explicit branch modes and confirms a dirty switch', async () => {

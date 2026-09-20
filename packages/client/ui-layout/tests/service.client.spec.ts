@@ -17,6 +17,7 @@ function fakePanels(): PanelActions {
     openDetails: vi.fn(),
     closeDetails: vi.fn(),
     setGameSurface: vi.fn(),
+    setWorkbenchView: vi.fn(),
   }
 }
 
@@ -68,15 +69,10 @@ describe('LayoutController', () => {
   it('forwards external-game operations only while the desktop bridge is attached', async () => {
     const service = new LayoutController()
     const bridge = {
-      reconnect: vi.fn(async () => ({ status: 'reconnecting' as const })),
       beginAnnotation: vi.fn(async () => {}),
       endAnnotation: vi.fn(async () => {}),
-      reposition: vi.fn(async () => {}),
     }
     const dispose = service.attachGameSurfaceBridge(bridge)
-    await expect(service.reconnectGameSurface('C:\\Project')).resolves.toEqual({ status: 'reconnecting' })
-    await service.repositionGameCompanion('C:\\Project')
-    expect(bridge.reposition).toHaveBeenCalledWith('C:\\Project')
     dispose()
     expect(() => service.beginGameAnnotation({ cwd: 'C:\\Project', sessionId: 's', operationId: 'id', labels: [] }, async () => {})).toThrow(/not attached/)
   })

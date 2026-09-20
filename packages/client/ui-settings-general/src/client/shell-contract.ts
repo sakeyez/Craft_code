@@ -32,7 +32,11 @@ export interface SettingsOnboardingStep {
  * the shell reads no locale state and subscribes through the bound hook.
  */
 export type SettingsRootInjected = {
+  openSection: (id?: string) => void
+  closeSection: () => void
   hooks: {
+    /** Client-local settings panel navigation. */
+    navigation: HostObservable<{ open: boolean; activeId?: string }>
     /** settings.section ledger projected into ordered nav rows. */
     sections: HostObservable<readonly SettingsSectionRow[]>
     /** settings.onboarding ledger projected into coordinator order. */
@@ -43,8 +47,8 @@ export type SettingsRootInjected = {
 /**
  * Full component props of the settings shell root: the sidebar owner share
  * (wide/rail state) plus the declared render shares and the injected face
- * (hooks compartment bound to useSections). No store is registered — modal
- * open state and active section id are component-local viewing state.
+ * (hooks compartment bound to useSections). The navigation service
+ * supplies modal state through the framework-bound useNavigation hook.
  */
 export type SettingsRootComponentProps =
   PropsRuntime<'sidebar.settings'>

@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 const DESKTOP_MENU_ACTIONS = new Set([
   'project:new', 'project:export-jar', 'project:toggle-game', 'project:settings',
-  'editor:find-current', 'editor:find-project',
+  'project:checkpoints', 'help:about',
   'git:status', 'git:diff', 'git:log', 'git:branch', 'git:commit', 'git:push', 'git:pull',
   'help:docs', 'help:sponsor',
 ])
@@ -28,7 +28,7 @@ function isGameCaptureState(value) {
   const only = allowed => keys.every(key => allowed.includes(key))
   const named = value.gameName === undefined || typeof value.gameName === 'string'
   if (value.status === 'idle') return only(['status'])
-  if (value.status === 'starting' || value.status === 'reconnecting') return named && only(['status', 'gameName'])
+  if (value.status === 'starting') return named && only(['status', 'gameName'])
   if (value.status === 'connected') return named && value.surfaceKind === 'external-window' && only(['status', 'gameName', 'surfaceKind'])
   if (value.status === 'failed' || value.status === 'disconnected' || value.status === 'unsupported') {
     return named && typeof value.error === 'string' && only(['status', 'gameName', 'error'])
@@ -102,11 +102,6 @@ contextBridge.exposeInMainWorld('craftCodeDesktop', {
     ipcRenderer.on('desktop:game-surface-state', wrapped)
     return () => { ipcRenderer.removeListener('desktop:game-surface-state', wrapped) }
   },
-  async reconnectGameSurface(cwd) {
-    const value = await ipcRenderer.invoke('desktop:game-surface-reconnect', cwd)
-    if (!isGameCaptureState(value)) throw new Error('主进程返回了无效的游戏状态。')
-    return value
-  },
   bindGameAnnotationShortcut(request, listener) {
     let disposed = false
     const wrapped = (_event, value) => {
@@ -122,7 +117,7 @@ contextBridge.exposeInMainWorld('craftCodeDesktop', {
   },
   async beginGameAnnotation(request, commit) {
     const receive = (_event, value) => {
-      if (value.operationId !== request.operationId || value.sessionId !== request.sessionId) return
+      if (value.operationId !== request.operationId) return
       void (async () => {
         let error
         try { await commit(value.drafts, value.snapshot) } catch (failure) { error = (failure instanceof Error ? failure.message : String(failure)).slice(0, 10000) }
@@ -134,5 +129,4 @@ contextBridge.exposeInMainWorld('craftCodeDesktop', {
     finally { ipcRenderer.removeListener('desktop:game-annotation-commit', receive) }
   },
   endGameAnnotation(operationId) { return ipcRenderer.invoke('desktop:game-annotation-end', operationId) },
-  repositionGameCompanion(cwd) { return ipcRenderer.invoke('desktop:game-companion-reposition', cwd) },
 })

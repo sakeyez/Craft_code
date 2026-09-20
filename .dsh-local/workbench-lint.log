@@ -1,0 +1,204 @@
+packages/client/ui-mcmod-workbench/src/index.ts:12:29: error @stylistic(arrow-parens): Expected parentheses around arrow function argument having a body with curly braces.
+packages/minecraft/mc-workbench/src/contracts.ts:10:1: error @stylistic(max-len): This line has a length of 142. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/process.ts:15:1: error @stylistic(max-len): This line has a length of 145. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/process.ts:40:1: error @stylistic(max-len): This line has a length of 164. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/process.ts:8:15: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/process.ts:8:31: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/process.ts:8:52: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/process.ts:45:73: error @stylistic(arrow-parens): Expected parentheses around arrow function argument having a body with curly braces.
+packages/client/ui-mcmod-workbench/src/client/index.ts:21:1: error @stylistic(max-len): This line has a length of 146. Maximum allowed is 140.
+packages/client/ui-mcmod-workbench/src/client/index.ts:22:1: error @stylistic(max-len): This line has a length of 159. Maximum allowed is 140.
+packages/client/ui-mcmod-workbench/src/client/index.ts:39:1: error @stylistic(max-len): This line has a length of 161. Maximum allowed is 140.
+packages/client/ui-mcmod-workbench/src/client/index.ts:14:47: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/index.ts:14:74: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/index.ts:15:35: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/index.ts:15:70: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/index.ts:16:65: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/index.ts:17:41: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/index.ts:17:85: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/index.ts:18:40: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/index.ts:19:58: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/index.ts:20:48: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/index.ts:22:27: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/index.ts:22:59: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/index.ts:22:126: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/index.ts:23:40: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/index.ts:42:16: error @stylistic(arrow-parens): Expected parentheses around arrow function argument having a body with curly braces.
+packages/client/ui-mcmod-workbench/src/client/index.ts:51:21: error @stylistic(arrow-parens): Expected parentheses around arrow function argument having a body with curly braces.
+packages/minecraft/mc-workbench/src/sources.ts:53:76: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/sources.ts:82:1: error @stylistic(max-len): This line has a length of 152. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/sources.ts:85:1: error @stylistic(max-len): This line has a length of 148. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/sources.ts:86:1: error @stylistic(max-len): This line has a length of 205. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/sources.ts:72:16: error @stylistic(arrow-parens): Expected parentheses around arrow function argument having a body with curly braces.
+packages/minecraft/mc-workbench/src/files.ts:28:29: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/files.ts:79:47: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/files.ts:85:1: error @stylistic(max-len): This line has a length of 157. Maximum allowed is 140.
+packages/client/ui-mcmod-workbench/src/client/model.ts:54:19: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/client/ui-mcmod-workbench/src/client/model.ts:55:86: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/client/ui-mcmod-workbench/src/client/model.ts:60:25: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/client/ui-mcmod-workbench/src/client/model.ts:86:40: error typescript(no-non-null-assertion): Forbidden non-null assertion. help: Consider using the optional chain operator `?.` instead. `x!.y` is equivalent to `x.y` at runtime and will throw if `x` is `null` or `undefined`, but `x?.y` will return `undefined`.
+packages/client/ui-mcmod-workbench/src/client/model.ts:115:40: error typescript(no-non-null-assertion): Forbidden non-null assertion. help: Consider using the optional chain operator `?.` instead. `x!.y` is equivalent to `x.y` at runtime and will throw if `x` is `null` or `undefined`, but `x?.y` will return `undefined`.
+packages/client/ui-mcmod-workbench/src/client/model.ts:129:36: error typescript(no-non-null-assertion): Forbidden non-null assertion. help: Consider using the optional chain operator `?.` instead. `x!.y` is equivalent to `x.y` at runtime and will throw if `x` is `null` or `undefined`, but `x?.y` will return `undefined`.
+packages/client/ui-mcmod-workbench/src/client/model.ts:138:36: error typescript(no-non-null-assertion): Forbidden non-null assertion. help: Consider using the optional chain operator `?.` instead. `x!.y` is equivalent to `x.y` at runtime and will throw if `x` is `null` or `undefined`, but `x?.y` will return `undefined`.
+packages/client/ui-mcmod-workbench/src/client/model.ts:145:36: error typescript(no-non-null-assertion): Forbidden non-null assertion. help: Consider using the optional chain operator `?.` instead. `x!.y` is equivalent to `x.y` at runtime and will throw if `x` is `null` or `undefined`, but `x?.y` will return `undefined`.
+packages/client/ui-mcmod-workbench/src/client/model.ts:61:1: error @stylistic(max-len): This line has a length of 159. Maximum allowed is 140.
+packages/client/ui-mcmod-workbench/src/client/model.ts:115:1: error @stylistic(max-len): This line has a length of 192. Maximum allowed is 140.
+packages/client/ui-mcmod-workbench/src/client/model.ts:129:1: error @stylistic(max-len): This line has a length of 170. Maximum allowed is 140.
+packages/client/ui-mcmod-workbench/src/client/model.ts:132:1: error @stylistic(max-len): This line has a length of 182. Maximum allowed is 140.
+packages/client/ui-mcmod-workbench/src/client/model.ts:138:1: error @stylistic(max-len): This line has a length of 152. Maximum allowed is 140.
+packages/client/ui-mcmod-workbench/src/client/model.ts:8:15: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/model.ts:8:33: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/model.ts:8:61: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/model.ts:9:23: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/model.ts:9:51: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/model.ts:9:64: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/model.ts:10:24: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/model.ts:10:43: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/model.ts:10:66: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/model.ts:11:21: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/model.ts:11:46: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/model.ts:11:70: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/model.ts:12:39: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/client/ui-mcmod-workbench/src/client/model.ts:12:70: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/runtime.ts:46:24: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/runtime.ts:114:28: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/runtime.ts:115:24: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/runtime.ts:200:61: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/runtime.ts:210:53: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/runtime.ts:42:1: error @stylistic(max-len): This line has a length of 215. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/runtime.ts:50:1: error @stylistic(max-len): This line has a length of 165. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/runtime.ts:157:1: error @stylistic(max-len): This line has a length of 174. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/runtime.ts:162:1: error @stylistic(max-len): This line has a length of 142. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/runtime.ts:83:60: error @stylistic(arrow-parens): Expected parentheses around arrow function argument having a body with curly braces.
+packages/minecraft/mc-workbench/src/runtime.ts:88:33: error @stylistic(arrow-parens): Expected parentheses around arrow function argument having a body with curly braces.
+packages/minecraft/mc-workbench/src/runtime.ts:166:16: error @stylistic(arrow-parens): Expected parentheses around arrow function argument having a body with curly braces.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:58:293: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:101:189: error typescript(no-non-null-assertion): Forbidden non-null assertion. help: Consider using the optional chain operator `?.` instead. `x!.y` is equivalent to `x.y` at runtime and will throw if `x` is `null` or `undefined`, but `x?.y` will return `undefined`.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:41:1: error @stylistic(max-len): This line has a length of 153. Maximum allowed is 140.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:46:1: error @stylistic(max-len): This line has a length of 180. Maximum allowed is 140.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:110:1: error @stylistic(max-len): This line has a length of 259. Maximum allowed is 140.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:111:1: error @stylistic(max-len): This line has a length of 177. Maximum allowed is 140.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:82:71: error @stylistic(arrow-parens): Expected parentheses around arrow function argument having a body with curly braces.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:101:258: error @stylistic(arrow-parens): Expected parentheses around arrow function argument having a body with curly braces.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:103:390: error @stylistic(arrow-parens): Expected parentheses around arrow function argument having a body with curly braces.
+packages/minecraft/mc-workbench/src/dependencies.ts:171:56: error typescript(no-non-null-assertion): Forbidden non-null assertion. help: Consider using the optional chain operator `?.` instead. `x!.y` is equivalent to `x.y` at runtime and will throw if `x` is `null` or `undefined`, but `x?.y` will return `undefined`.
+packages/minecraft/mc-workbench/src/dependencies.ts:173:49: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/dependencies.ts:173:78: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/dependencies.ts:242:174: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/dependencies.ts:245:49: error typescript(no-dynamic-delete): Do not delete dynamically computed property keys. help: Use a static property key, or use a Map/Set for dynamic keys.
+packages/minecraft/mc-workbench/src/dependencies.ts:16:1: error @stylistic(max-len): This line has a length of 240. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/dependencies.ts:18:1: error @stylistic(max-len): This line has a length of 152. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/dependencies.ts:34:1: error @stylistic(max-len): This line has a length of 157. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/dependencies.ts:104:1: error @stylistic(max-len): This line has a length of 281. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/dependencies.ts:122:1: error @stylistic(max-len): This line has a length of 188. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/dependencies.ts:146:1: error @stylistic(max-len): This line has a length of 230. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/dependencies.ts:149:1: error @stylistic(max-len): This line has a length of 159. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/dependencies.ts:217:1: error @stylistic(max-len): This line has a length of 243. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/dependencies.ts:255:1: error @stylistic(max-len): This line has a length of 144. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/dependencies.ts:290:1: error @stylistic(max-len): This line has a length of 186. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/dependencies.ts:291:1: error @stylistic(max-len): This line has a length of 182. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/dependencies.ts:88:30: error @stylistic(arrow-parens): Expected parentheses around arrow function argument having a body with curly braces.
+packages/minecraft/mc-workbench/src/types.ts:7:1: error @stylistic(max-len): This line has a length of 142. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/types.ts:9:14: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:9:27: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:9:46: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:9:63: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:9:82: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:10:19: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:10:45: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:10:62: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:10:81: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:19:14: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:19:28: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:19:45: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:19:61: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:19:83: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:20:28: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:20:44: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:20:58: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:20:82: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:21:41: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/types.ts:21:61: error @stylistic(member-delimiter-style): Unexpected separator (;).
+packages/minecraft/mc-workbench/src/environment.ts:21:1: error @stylistic(max-len): This line has a length of 148. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/environment.ts:48:1: error @stylistic(max-len): This line has a length of 153. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/environment.ts:57:1: error @stylistic(max-len): This line has a length of 147. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/index.ts:65:1: error @stylistic(max-len): This line has a length of 185. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/index.ts:93:30: error @stylistic(arrow-parens): Expected parentheses around arrow function argument having a body with curly braces.
+packages/minecraft/mc-workbench/src/download.ts:35:37: error @stylistic(arrow-parens): Expected parentheses around arrow function argument having a body with curly braces.
+packages/client/ui-mcmod-workbench/src/client/index.ts:30:26: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/index.ts:32:51: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/index.ts:35:22: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/index.ts:37:28: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/index.ts:37:77: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/index.ts:38:27: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/index.ts:40:64: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/index.ts:43:13: error typescript(no-unsafe-assignment): Unsafe assignment of an error typed value.
+packages/client/ui-mcmod-workbench/src/client/index.ts:43:68: error typescript(no-unsafe-member-access): Unsafe member access .session on an `error` typed value.
+packages/client/ui-mcmod-workbench/src/client/index.ts:43:35: error typescript(no-unsafe-call): Unsafe call of a(n) `error` type typed value.
+packages/client/ui-mcmod-workbench/src/client/index.ts:47:13: error typescript(no-unsafe-assignment): Unsafe assignment of an error typed value.
+packages/client/ui-mcmod-workbench/src/client/index.ts:47:28: error typescript(no-unsafe-call): Unsafe call of a(n) `error` type typed value.
+packages/client/ui-mcmod-workbench/src/client/index.ts:47:36: error typescript(no-unsafe-member-access): Unsafe member access .prompt on an `error` typed value.
+packages/client/ui-mcmod-workbench/src/client/index.ts:48:19: error typescript(no-unsafe-member-access): Unsafe member access .ok on an `error` typed value.
+packages/client/ui-mcmod-workbench/src/client/index.ts:48:39: error typescript(no-unsafe-argument): Unsafe argument of type error typed assigned to a parameter of type string | undefined.
+packages/client/ui-mcmod-workbench/src/client/index.ts:48:46: error typescript(no-unsafe-member-access): Unsafe member access .error on an `error` typed value.
+packages/client/ui-mcmod-workbench/src/client/model.ts:73:12: error typescript(no-unnecessary-condition): Unnecessary conditional, value is always falsy.
+packages/client/ui-mcmod-workbench/src/client/model.ts:73:12: error typescript(no-unnecessary-condition): Unnecessary optional chain on a non-nullish value.
+packages/client/ui-mcmod-workbench/src/client/model.ts:73:12: error typescript(no-unnecessary-condition): Unnecessary optional chain on a non-nullish value.
+packages/client/ui-mcmod-workbench/src/client/model.ts:73:80: error typescript(no-unnecessary-condition): Unnecessary optional chain on a non-nullish value.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:20:150: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:21:125: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:60:113: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:60:465: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:60:567: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:60:692: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:62:211: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:78:333: error typescript(use-unknown-in-catch-callback-variable): Prefer the safe `: unknown` for a `catch` callback variable.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:78:342: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:81:100: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:81:338: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:82:264: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:82:716: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:83:126: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:83:271: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:84:138: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:98:343: error typescript(use-unknown-in-catch-callback-variable): Prefer the safe `: unknown` for a `catch` callback variable.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:98:352: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:101:426: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:102:169: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:103:189: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:104:659: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:104:712: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:104:765: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:123:136: error typescript(no-unnecessary-type-conversion): This type conversion does not change the type or value of the expression.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:125:178: error typescript(no-unnecessary-type-conversion): This type conversion does not change the type or value of the expression.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:127:64: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/client/ui-mcmod-workbench/src/client/Workbench.tsx:134:204: error typescript(no-confusing-void-expression): Returning a void expression from an arrow function shorthand is forbidden. help: Add braces to the arrow function.
+packages/minecraft/mc-workbench/tests/dependencies.spec.ts:41:97: error typescript(no-unsafe-member-access): Unsafe member access .depends on an `any` value.
+packages/minecraft/mc-workbench/src/dependencies.ts:28:101: error typescript(no-unnecessary-condition): Unnecessary conditional, value is always truthy.
+packages/minecraft/mc-workbench/src/files.ts:29:46: error typescript(use-unknown-in-catch-callback-variable): Prefer the safe `: unknown` for a `catch` callback variable.
+packages/minecraft/mc-workbench/src/dependencies.ts:62:54: error typescript(use-unknown-in-catch-callback-variable): Prefer the safe `: unknown` for a `catch` callback variable.
+packages/minecraft/mc-workbench/src/contracts.ts:7:18: error typescript(no-deprecated): `uuid` is deprecated. Use `z.uuid()` instead.
+packages/minecraft/mc-workbench/src/contracts.ts:9:25: error typescript(no-deprecated): `datetime` is deprecated. Use `z.iso.datetime()` instead.
+packages/minecraft/mc-workbench/src/files.ts:79:60: error typescript(no-unnecessary-type-assertion): This assertion is unnecessary since the receiver accepts the original type of the expression.
+packages/minecraft/mc-workbench/src/contracts.ts:9:75: error typescript(no-deprecated): `datetime` is deprecated. Use `z.iso.datetime()` instead.
+packages/minecraft/mc-workbench/src/dependencies.ts:69:60: error typescript(use-unknown-in-catch-callback-variable): Prefer the safe `: unknown` for a `catch` callback variable.
+packages/minecraft/mc-workbench/src/dependencies.ts:72:148: error typescript(no-unnecessary-condition): Unnecessary comparison between literal values.
+packages/minecraft/mc-workbench/src/dependencies.ts:72:206: error typescript(no-unnecessary-condition): Unnecessary comparison between literal values.
+packages/minecraft/mc-workbench/src/dependencies.ts:76:59: error typescript(use-unknown-in-catch-callback-variable): Prefer the safe `: unknown` for a `catch` callback variable.
+packages/minecraft/mc-workbench/src/process.ts:45:73: error typescript(use-unknown-in-catch-callback-variable): Prefer the safe `: unknown` for a `catch` callback variable.
+packages/minecraft/mc-workbench/src/process.ts:50:28: error typescript(only-throw-error): Expected an error object to be thrown.
+packages/minecraft/mc-workbench/src/sources.ts:72:16: error typescript(use-unknown-in-catch-callback-variable): Prefer the safe `: unknown` for a `catch` callback variable.
+packages/minecraft/mc-workbench/src/runtime.ts:56:78: error typescript(use-unknown-in-catch-callback-variable): Prefer the safe `: unknown` for a `catch` callback variable.
+packages/minecraft/mc-workbench/src/runtime.ts:83:60: error typescript(use-unknown-in-catch-callback-variable): Prefer the safe `: unknown` for a `catch` callback variable.
+packages/minecraft/mc-workbench/src/runtime.ts:88:33: error typescript(use-unknown-in-catch-callback-variable): Prefer the safe `: unknown` for a `catch` callback variable.
+packages/minecraft/mc-workbench/src/index.ts:47:75: error typescript(no-deprecated): `uuid` is deprecated. Use `z.uuid()` instead.
+packages/minecraft/mc-workbench/src/index.ts:48:61: error typescript(no-deprecated): `uuid` is deprecated. Use `z.uuid()` instead.
+packages/minecraft/mc-workbench/src/dependencies.ts:242:146: error typescript(no-unnecessary-type-assertion): This assertion is unnecessary since it does not change the type of the expression.
+packages/minecraft/mc-workbench/src/index.ts:70:74: error typescript(no-deprecated): `uuid` is deprecated. Use `z.uuid()` instead.
+packages/minecraft/mc-workbench/src/dependencies.ts:272:126: error typescript(use-unknown-in-catch-callback-variable): Prefer the safe `: unknown` for a `catch` callback variable.
+packages/minecraft/mc-workbench/src/index.ts:78:90: error typescript(no-deprecated): `uuid` is deprecated. Use `z.uuid()` instead.
+packages/minecraft/mc-workbench/src/index.ts:79:89: error typescript(no-deprecated): `uuid` is deprecated. Use `z.uuid()` instead.
+packages/minecraft/mc-workbench/src/dependencies.ts:293:14: error typescript(return-await): Returning an awaited promise is required in this context.
+packages/minecraft/mc-workbench/src/index.ts:80:69: error typescript(no-deprecated): `uuid` is deprecated. Use `z.uuid()` instead.
+packages/minecraft/mc-workbench/src/index.ts:81:68: error typescript(no-deprecated): `uuid` is deprecated. Use `z.uuid()` instead.
+packages/minecraft/mc-workbench/src/index.ts:82:70: error typescript(no-deprecated): `uuid` is deprecated. Use `z.uuid()` instead.

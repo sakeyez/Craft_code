@@ -10,6 +10,8 @@ A loopback browser loads the provider's `hasDocument` capability through `settin
 
 The Host half registers `ui-onboarding` in the user-settings seam. The welcome step contributed by `ui-settings-models` reads and writes its `welcomeNoticeVersion` through the existing public settings boundary; the shell itself remains policy-free.
 
+Settings panel visibility and the selected section come from the settingsNavigation service through the framework-bound useNavigation hook. Features can open their section directly; closing the panel resets selection without changing sessions.
+
 ## Model Experience
 
 None, as the plugin renders browser settings UI; nothing here reaches a model request.

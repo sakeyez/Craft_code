@@ -1,0 +1,16 @@
+native/landlock-run/packages/linux-arm64 | [WARN] Unsupported platform: wanted: {"cpu":["arm64"],"os":["linux"],"libc":["any"]} (current: {"os":"win32","cpu":"x64","libc":"unknown"})
+native/landlock-run/packages/linux-x64   | [WARN] Unsupported platform: wanted: {"cpu":["x64"],"os":["linux"],"libc":["any"]} (current: {"os":"win32","cpu":"x64","libc":"unknown"})
+Scope: all 255 workspace projects
+[WARN] There are cyclic workspace dependencies: E:\.sake\Desktop\craftcode\packages\api\gateway, E:\.sake\Desktop\craftcode\packages\client\connection, E:\.sake\Desktop\craftcode\packages\host\apiproxy, E:\.sake\Desktop\craftcode\packages\api\remotes; E:\.sake\Desktop\craftcode\packages\client\ui-renderer, E:\.sake\Desktop\craftcode\packages\test-support\client-runtime; E:\.sake\Desktop\craftcode\packages\sandbox\sandbox-local, E:\.sake\Desktop\craftcode\packages\sandbox\sandbox-windows-acl; E:\.sake\Desktop\craftcode\packages\subagent\subagent-spawn-in-process, E:\.sake\Desktop\craftcode\packages\subagent\tool-subagent; E:\.sake\Desktop\craftcode\vendor\cordis, E:\.sake\Desktop\craftcode\vendor\include
+✓ Lockfile passes supply-chain policies (verified 11m ago)
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Progress: resolved 72, reused 72, downloaded 0, added 0
+Progress: resolved 115, reused 115, downloaded 0, added 0
+Progress: resolved 418, reused 320, downloaded 0, added 0
+Progress: resolved 1018, reused 705, downloaded 0, added 0
+[WARN] 4 deprecated subdependencies found: glob@10.5.0, glob@11.1.0, node-domexception@1.0.0, tsconfck@3.1.6
+Progress: resolved 1216, reused 940, downloaded 0, added 0
+Already up to date
+Progress: resolved 1216, reused 940, downloaded 0, added 0, done
+
+Done in 7.3s using pnpm v11.19.0

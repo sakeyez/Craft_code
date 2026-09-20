@@ -30,7 +30,7 @@
     "assets",
     "lib/types/**/*.d.ts"
   ],
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "peerDependencies": {
     "@deepseek-ai/dsh-invariants": "workspace:^",
     "@deepseek-ai/dsh-skill": "workspace:^",

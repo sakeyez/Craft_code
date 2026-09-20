@@ -1,16 +1,17 @@
+import { toggleWorkbenchGame, exportWorkbenchMod, workbenchRequest, type NativeWorkbenchRun, type WorkbenchRun } from './workbench-client.ts'
 import { GameAnnotationShortcut } from './game-annotation-shortcut.ts'
 import { GameCaptureStream } from './game-capture-stream.ts'
 import { GameAnnotationController } from './game-annotation.ts'
 import { isAnnotationRequest } from './game-annotation-contract.ts'
 /** Electron application shell over the private loopback desktop runtime. */
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
-import { copyFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { copyFileSync, writeFileSync } from 'node:fs'
+import { basename, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell, type NativeImage, type WebContents } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, session, shell, type NativeImage, type WebContents } from 'electron'
 import { startBackend, type BackendHandle } from './backend.ts'
 import {
-  desktopGameMenuState, executeDesktopCommand, onDesktopGameEvent, onDesktopGameLifecycle, stopActiveCommands,
+  executeDesktopCommand, stopActiveCommands,
 } from './commands.ts'
 import { decodeEmbeddedPng } from './icon.ts'
 import {
@@ -22,7 +23,7 @@ import type { DesktopCommandRequest, DesktopCommandResult } from './preload.ts'
 import { resolveDesktopRuntime } from './runtime.ts'
 import { desktopAppUserModelId, desktopPermissionAllowed, desktopWindowOptions, navigationDisposition } from './window.ts'
 import {
-  createGameCaptureProvider, type GameCaptureProvider, type GameCaptureState,
+  createGameCaptureProvider, type GameCaptureProvider,
 } from './game-capture.ts'
 
 const REPOSITORY_ROOT = fileURLToPath(new URL('../../..', import.meta.url))
@@ -194,32 +195,39 @@ async function startDesktop(): Promise<void> {
     openExternal,
   ))
   Menu.setApplicationMenu(applicationMenu)
+  const workbenchCapture = new Map<string, string>()
+  const workbenchRuns = new Map<string, WorkbenchRun[]>()
+  let pollingWorkbench = false
+  const workbenchTimer = setInterval(() => {
+    if (!backend || pollingWorkbench) return
+    pollingWorkbench = true
+    void (async () => {
+      for (const cwd of knownProjects) {
+        try {
+          const native = await workbenchRequest<NativeWorkbenchRun | null>(backend.url, cwd, 'native-state')
+          if (native && typeof native.id === 'string' && Number.isSafeInteger(native.pid) && native.pid > 0) {
+            if (workbenchCapture.get(cwd) !== native.id) { workbenchCapture.set(cwd, native.id); await gameCapture?.start(cwd, native.pid) }
+          } else if (workbenchCapture.delete(cwd)) await gameCapture?.stop(cwd)
+          if (cwd === activeProjectCwd) {
+            const runs = await workbenchRequest<WorkbenchRun[]>(backend.url, cwd, 'runs')
+            workbenchRuns.set(cwd, runs)
+            const active = runs.find(run => !['exited', 'failed', 'cancelled', 'interrupted'].includes(run.phase))
+            const item = applicationMenu.getMenuItemById(DESKTOP_GAME_MENU_ITEM_ID)
+            if (item) { item.label = active ? '停止游戏' : '启动游戏'; item.enabled = active?.phase !== 'stopping' }
+          }
+        } catch { /* Host reconnects are retried without detaching a live game window. */ }
+      }
+    })().finally(() => { pollingWorkbench = false })
+  }, 1000)
+  app.once('before-quit', () =>{  clearInterval(workbenchTimer) })
   const refreshGameMenu = (cwd: string | undefined): void => {
     const gameItem = applicationMenu.getMenuItemById(DESKTOP_GAME_MENU_ITEM_ID)
     if (gameItem === null) return
-    const presentation = desktopGameMenuPresentation(desktopGameMenuState(cwd))
+    const active = cwd ? workbenchRuns.get(cwd)?.find(run => !['exited', 'failed', 'cancelled', 'interrupted'].includes(run.phase)) : undefined
+    const presentation = desktopGameMenuPresentation(!cwd ? 'unavailable' : active?.phase === 'stopping' ? 'stopping' : active ? 'running' : 'idle')
     gameItem.label = presentation.label
     gameItem.enabled = presentation.enabled
   }
-  onDesktopGameEvent((event) => {
-    refreshGameMenu(activeProjectCwd)
-    const window = mainWindow
-    if (window !== undefined && !window.isDestroyed()) window.webContents.send('desktop:game-event', event)
-  })
-  onDesktopGameLifecycle((event) => {
-    const capture = gameCapture
-    if (capture === undefined) return
-    if (event.type === 'spawned') {
-      knownProjects.add(event.cwd)
-      void capture.start(event.cwd, event.rootPid).catch((error: unknown) => {
-        desktopLog(`game capture start failed cwd=${event.cwd} error=${error instanceof Error ? error.message : String(error)}`)
-      })
-      return
-    }
-    void capture.stop(event.cwd).catch((error: unknown) => {
-      desktopLog(`game capture stop failed cwd=${event.cwd} error=${error instanceof Error ? error.message : String(error)}`)
-    })
-  })
   ipcMain.removeHandler('desktop:open-menu')
   ipcMain.handle('desktop:open-menu', async (event, rawRequest: unknown): Promise<void> => {
     const window = mainWindow
@@ -278,15 +286,6 @@ async function startDesktop(): Promise<void> {
     if (mainWindow === undefined || event.sender !== mainWindow.webContents) throw new Error('Invalid desktop window request')
     return mainWindow.isMaximized()
   })
-  ipcMain.removeHandler('desktop:game-surface-reconnect')
-  ipcMain.handle('desktop:game-surface-reconnect', async (event, cwd: unknown): Promise<GameCaptureState> => {
-    const canonical = canonicalProjectCwd(cwd)
-    if (mainWindow === undefined || event.sender !== mainWindow.webContents || canonical === undefined
-      || canonical !== activeProjectCwd || !knownProjects.has(canonical) || gameCapture === undefined) {
-      return { status: 'failed', error: '请求来源或项目无效。' }
-    }
-    return gameCapture.reconnect(canonical)
-  })
   ipcMain.removeHandler('desktop:annotation-shortcut-bind')
   ipcMain.handle('desktop:annotation-shortcut-bind', (event, raw: unknown, token: unknown) => {
     if (event.sender !== mainWindow?.webContents) throw new Error('请求来源无效。')
@@ -311,13 +310,6 @@ async function startDesktop(): Promise<void> {
     if (mainWindow === undefined || event.sender !== mainWindow.webContents || typeof operationId !== 'string') throw new Error('请求来源无效。')
     gameAnnotation?.cancel(operationId)
   })
-  ipcMain.removeHandler('desktop:game-companion-reposition')
-  ipcMain.handle('desktop:game-companion-reposition', async (event, cwd: unknown): Promise<void> => {
-    const canonical = canonicalProjectCwd(cwd)
-    if (mainWindow === undefined || event.sender !== mainWindow.webContents || canonical === undefined
-      || canonical !== activeProjectCwd || !knownProjects.has(canonical) || gameCapture === undefined) throw new Error('请求来源或项目无效。')
-    await gameCapture.reposition(canonical)
-  })
   ipcMain.removeHandler('desktop:command')
   ipcMain.handle('desktop:command', async (event, rawRequest: unknown): Promise<DesktopCommandResult> => {
     if (mainWindow === undefined || event.sender !== mainWindow.webContents) {
@@ -331,7 +323,8 @@ async function startDesktop(): Promise<void> {
     try {
       const canonical = canonicalProjectCwd(request.cwd)
       if (canonical !== undefined) knownProjects.add(canonical)
-      let result = await executeDesktopCommand(request)
+      let result = request.kind === 'game-toggle' && backend ? await toggleWorkbenchGame(backend.url, request.cwd)
+        : request.kind === 'export-jar' && backend ? await exportWorkbenchMod(backend.url, request.cwd) : await executeDesktopCommand(request)
       if (request.kind === 'game-toggle') refreshGameMenu(activeProjectCwd)
       if (request.kind === 'export-jar' && result.ok && result.path !== undefined && result.artifacts !== undefined && result.artifacts.length > 0) {
         let selected = result.artifacts[0] ?? 'artifact.jar'
@@ -345,6 +338,8 @@ async function startDesktop(): Promise<void> {
         const destination = await dialog.showSaveDialog(mainWindow, { defaultPath: selected, filters: [{ name: 'JAR', extensions: ['jar'] }] })
         if (destination.canceled) return { ok: false, title: '导出 JAR', message: '已取消保存位置选择。' }
         copyFileSync(join(result.path, selected), destination.filePath)
+        writeFileSync(`${destination.filePath}.sha256`, `${readFileSync(join(result.path, `${selected}.sha256`), 'utf8').split(/\s/u)[0]}  ${basename(destination.filePath)}\n`)
+        copyFileSync(join(result.path, `${selected}.json`), `${destination.filePath}.json`)
         result = { ...result, path: destination.filePath, message: `JAR 已导出到 ${destination.filePath}` }
       }
       return result
@@ -361,7 +356,7 @@ async function startDesktop(): Promise<void> {
       log: desktopLog,
     })
     desktopLog(`desktop start packaged=${String(app.isPackaged)} repository=${REPOSITORY_ROOT}`)
-    backend = await startBackend(runtime)
+    backend = await startBackend({ ...runtime, resolveProxy: url => session.defaultSession.resolveProxy(url) })
     desktopLog(`backend ready pid=${String(backend.child.pid)} url=${backend.url}`)
     mainWindow = await createWindow(backend.url)
     // Hidden capture windows must not keep the application alive after its main window closes.

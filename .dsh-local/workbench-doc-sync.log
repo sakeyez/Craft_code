@@ -1,0 +1,508 @@
+$ tsx scripts/run-gates.ts doc-sync
+run-gates: doc-sync running 28 gate(s) with 4 worker(s) from 16 available CPU(s), doc-sync cap 4.
+run-gates: start doc-typecheck
+run-gates: start documentation build
+run-gates: start doc graphs
+run-gates: start markdown links
+
+== FAILED doc graphs (11.24s) ==
+command: pnpm run verify-doc-graphs
+outcome: exit 1
+$ tsx scripts/gen-doc-graphs.ts --check
+[ELIFECYCLE] Command failed with exit code 1.
+E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2518
+    throw new TypertAnalysisError(
+          ^
+
+TypertAnalysisError: typert(host): packages/minecraft/mc-workbench/src/runtime.ts:177:76: public parameter is missing an explicit type annotation
+    at FaceAnalyzer.fail (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2518:11)
+    at FaceAnalyzer.requiredType (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2165:12)
+    at <anonymous> (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2099:35)
+    at Array.map (<anonymous>)
+    at FaceAnalyzer.signature (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2092:58)
+    at FaceAnalyzer.members (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2028:64)
+    at FaceAnalyzer.ensureDeclaration (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:1965:16)
+    at FaceAnalyzer.targetForReference (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2374:68)
+    at FaceAnalyzer.convertType (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2210:22)
+    at FaceAnalyzer.members (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2026:61)
+
+Node.js v24.18.0
+run-gates: start type equivalence
+run-gates: PASS markdown links (14.51s)
+run-gates: start cordis catalog
+run-gates: PASS type equivalence (13.35s)
+run-gates: start verify-mermaid
+
+== FAILED cordis catalog (12.12s) ==
+[ELIFECYCLE] Command failed with exit code 1.
+command: pnpm run verify-cordis-catalog
+outcome: exit 1
+$ tsx scripts/gen-cordis-catalog.ts --check
+E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2518
+    throw new TypertAnalysisError(
+          ^
+
+TypertAnalysisError: typert(host): packages/minecraft/mc-workbench/src/runtime.ts:177:76: public parameter is missing an explicit type annotation
+    at FaceAnalyzer.fail (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2518:11)
+    at FaceAnalyzer.requiredType (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2165:12)
+    at <anonymous> (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2099:35)
+    at Array.map (<anonymous>)
+    at FaceAnalyzer.signature (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2092:58)
+    at FaceAnalyzer.members (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2028:64)
+    at FaceAnalyzer.ensureDeclaration (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:1965:16)
+    at FaceAnalyzer.targetForReference (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2374:68)
+    at FaceAnalyzer.convertType (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2210:22)
+    at FaceAnalyzer.members (E:\.sake\Desktop\craftcode\packages\typert\generator\src\analyzer.ts:2026:61)
+
+Node.js v24.18.0
+run-gates: start scoped events
+run-gates: PASS verify-mermaid (17.19s)
+run-gates: start translation pairing
+run-gates: PASS scoped events (21.39s)
+run-gates: start markdown wrap
+run-gates: PASS documentation build (51.07s)
+run-gates: start client catalog
+
+== FAILED client catalog (3.92s) ==
+[ELIFECYCLE] Command failed with exit code 1.
+command: pnpm run verify-client-catalog
+outcome: exit 1
+$ tsx scripts/gen-client-catalog.ts --check
+E:\.sake\Desktop\craftcode\scripts\gen-client-catalog.ts:139
+    throw new Error(`gen-client-catalog: ${String(problems.length)} contract violation(s):\n${problems.map(problem => `  ${problem}`).join('\n')}`)
+          ^
+
+Error: gen-client-catalog: 2 contract violation(s):
+  slot 'workbench.nav' (packages/client/ui-layout/src/client/index.ts:38) has no JSDoc prose. Write it from the REGISTRANT's side: what to pass, what the component receives, whom a registration replaces, and what absence looks like (packages/client/ui-settings/src/client/contract/slots.ts is the template).
+  slot 'workbench.panel' (packages/client/ui-layout/src/client/index.ts:39) has no JSDoc prose. Write it from the REGISTRANT's side: what to pass, what the component receives, whom a registration replaces, and what absence looks like (packages/client/ui-settings/src/client/contract/slots.ts is the template).
+    at collectSlotEntries (E:\.sake\Desktop\craftcode\scripts\gen-client-catalog.ts:139:11)
+    at main (E:\.sake\Desktop\craftcode\scripts\gen-client-catalog.ts:532:39)
+    at <anonymous> (E:\.sake\Desktop\craftcode\scripts\gen-client-catalog.ts:557:3)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:643:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.18.0
+run-gates: start export jsdoc
+run-gates: PASS markdown wrap (10.90s)
+run-gates: start tool catalog
+
+== FAILED export jsdoc (7.28s) ==
+command: pnpm run verify-export-jsdoc
+outcome: exit 1
+$ tsx scripts/verify-export-jsdoc.ts
+verify-export-jsdoc: 308 JSDoc completeness violation(s) (see AGENTS.md):
+  exported interface 'ConvOwnerProps' (packages/client/ui-layout/src/client/index.ts:116) has no JSDoc.
+  exported type 'BootstrapKey' (packages/client/ui-mcmod-bootstrap/src/client/locales.ts:61) has no JSDoc.
+  exported const 'en' (packages/client/ui-mcmod-bootstrap/src/client/locales.ts:63) has no JSDoc.
+  exported interface 'WizardForm' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:105) has no JSDoc.
+  exported interface 'WizardSnapshot' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:115) has no JSDoc.
+  exported class property 'BootstrapWizardModel.getSnapshot' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:184) has no JSDoc.
+  exported class property 'BootstrapWizardModel.subscribe' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:186) has no JSDoc.
+  exported class method 'BootstrapWizardModel.dispose' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:191) has no JSDoc.
+  exported class method 'BootstrapWizardModel.open' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:198) has no JSDoc.
+  exported class method 'BootstrapWizardModel.close' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:210) has no JSDoc.
+  exported class method 'BootstrapWizardModel.toggleAdvanced' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:215) has no JSDoc.
+  exported class method 'BootstrapWizardModel.setModName' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:217) has no JSDoc.
+  exported class method 'BootstrapWizardModel.setLoader' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:227) has no JSDoc.
+  exported class method 'BootstrapWizardModel.setEntry' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:238) has no JSDoc.
+  exported class method 'BootstrapWizardModel.setParentDirectory' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:240) has no JSDoc.
+  exported class method 'BootstrapWizardModel.setDirectoryName' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:244) has no JSDoc.
+  exported class method 'BootstrapWizardModel.setModId' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:249) has no JSDoc.
+  exported class method 'BootstrapWizardModel.setPackageName' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:257) has no JSDoc.
+  exported class method 'BootstrapWizardModel.chooseParent' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:262) has no JSDoc.
+  exported class method 'BootstrapWizardModel.refreshCatalog' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:275) has no JSDoc.
+  exported class method 'BootstrapWizardModel.start' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:297) has no JSDoc.
+  exported class method 'BootstrapWizardModel.retry' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:321) has no JSDoc.
+  exported class method 'BootstrapWizardModel.cancel' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:329) has no JSDoc.
+  exported class method 'BootstrapWizardModel.openDirectory' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:343) has no JSDoc.
+  exported class method 'BootstrapWizardModel.acceptProgress' (packages/client/ui-mcmod-bootstrap/src/client/model.ts:354) is missing @param value.
+  exported interface 'WorkbenchInjected' (packages/client/ui-mcmod-workbench/src/client/index.ts:10) has no JSDoc.
+  exported interface 'Document' (packages/client/ui-mcmod-workbench/src/client/model.ts:20) has no JSDoc.
+  exported interface 'WorkbenchState' (packages/client/ui-mcmod-workbench/src/client/model.ts:27) has no JSDoc.
+  exported class 'WorkbenchModel' (packages/client/ui-mcmod-workbench/src/client/model.ts:63) has no JSDoc.
+  exported class method 'WorkbenchModel.request' (packages/client/ui-mcmod-workbench/src/client/model.ts:90) has no JSDoc.
+  exported class method 'WorkbenchModel.activate' (packages/client/ui-mcmod-workbench/src/client/model.ts:95) has no JSDoc.
+  exported class method 'WorkbenchModel.refresh' (packages/client/ui-mcmod-workbench/src/client/model.ts:142) has no JSDoc.
+  exported class method 'WorkbenchModel.perform' (packages/client/ui-mcmod-workbench/src/client/model.ts:154) has no JSDoc.
+  exported class method 'WorkbenchModel.start' (packages/client/ui-mcmod-workbench/src/client/model.ts:164) has no JSDoc.
+  exported class method 'WorkbenchModel.stop' (packages/client/ui-mcmod-workbench/src/client/model.ts:171) has no JSDoc.
+  exported class method 'WorkbenchModel.selectRun' (packages/client/ui-mcmod-workbench/src/client/model.ts:179) has no JSDoc.
+  exported class method 'WorkbenchModel.exportLogs' (packages/client/ui-mcmod-workbench/src/client/model.ts:182) has no JSDoc.
+  exported class method 'WorkbenchModel.eula' (packages/client/ui-mcmod-workbench/src/client/model.ts:195) has no JSDoc.
+  exported class method 'WorkbenchModel.directory' (packages/client/ui-mcmod-workbench/src/client/model.ts:202) has no JSDoc.
+  exported class method 'WorkbenchModel.open' (packages/client/ui-mcmod-workbench/src/client/model.ts:212) has no JSDoc.
+  exported class method 'WorkbenchModel.selectDocument' (packages/client/ui-mcmod-workbench/src/client/model.ts:236) has no JSDoc.
+  exported class method 'WorkbenchModel.closeDocument' (packages/client/ui-mcmod-workbench/src/client/model.ts:239) has no JSDoc.
+  exported class method 'WorkbenchModel.reloadDocument' (packages/client/ui-mcmod-workbench/src/client/model.ts:247) has no JSDoc.
+  exported class method 'WorkbenchModel.edit' (packages/client/ui-mcmod-workbench/src/client/model.ts:261) has no JSDoc.
+  exported class method 'WorkbenchModel.save' (packages/client/ui-mcmod-workbench/src/client/model.ts:265) has no JSDoc.
+  exported class method 'WorkbenchModel.diff' (packages/client/ui-mcmod-workbench/src/client/model.ts:281) has no JSDoc.
+  exported class method 'WorkbenchModel.search' (packages/client/ui-mcmod-workbench/src/client/model.ts:298) has no JSDoc.
+  exported class method 'WorkbenchModel.searchMods' (packages/client/ui-mcmod-workbench/src/client/model.ts:312) has no JSDoc.
+  exported class method 'WorkbenchModel.modVersions' (packages/client/ui-mcmod-workbench/src/client/model.ts:318) has no JSDoc.
+  exported class method 'WorkbenchModel.preview' (packages/client/ui-mcmod-workbench/src/client/model.ts:324) has no JSDoc.
+  exported class method 'WorkbenchModel.dismissPlan' (packages/client/ui-mcmod-workbench/src/client/model.ts:336) has no JSDoc.
+  exported class method 'WorkbenchModel.applyPlan' (packages/client/ui-mcmod-workbench/src/client/model.ts:339) has no JSDoc.
+  exported class method 'WorkbenchModel.source' (packages/client/ui-mcmod-workbench/src/client/model.ts:348) has no JSDoc.
+  exported class method 'WorkbenchModel.cancelSource' (packages/client/ui-mcmod-workbench/src/client/model.ts:358) has no JSDoc.
+  exported class method 'WorkbenchModel.dispose' (packages/client/ui-mcmod-workbench/src/client/model.ts:365) has no JSDoc.
+  exported const 'terminal' (packages/client/ui-mcmod-workbench/src/client/model.ts:371) has no JSDoc.
+  exported const 'runSchema' (packages/minecraft/mc-workbench/src/contracts.ts:6) has no JSDoc.
+  exported const 'dependencySourceSchema' (packages/minecraft/mc-workbench/src/contracts.ts:33) has no JSDoc.
+  exported const 'dependencySchema' (packages/minecraft/mc-workbench/src/contracts.ts:38) has no JSDoc.
+  exported const 'manifestSchema' (packages/minecraft/mc-workbench/src/contracts.ts:62) has no JSDoc.
+  exported function 'inspectJar' (packages/minecraft/mc-workbench/src/dependencies.ts:75) is missing @param bytes.
+  exported function 'inspectJar' (packages/minecraft/mc-workbench/src/dependencies.ts:75) is missing @returns (return type: JarDescriptor).
+  exported class 'MinecraftDependencies' (packages/minecraft/mc-workbench/src/dependencies.ts:118) has no JSDoc.
+  exported class method 'MinecraftDependencies.read' (packages/minecraft/mc-workbench/src/dependencies.ts:122) has no JSDoc.
+  exported class method 'MinecraftDependencies.search' (packages/minecraft/mc-workbench/src/dependencies.ts:163) has no JSDoc.
+  exported class method 'MinecraftDependencies.versions' (packages/minecraft/mc-workbench/src/dependencies.ts:193) has no JSDoc.
+  exported class method 'MinecraftDependencies.preview' (packages/minecraft/mc-workbench/src/dependencies.ts:201) has no JSDoc.
+  exported class method 'MinecraftDependencies.apply' (packages/minecraft/mc-workbench/src/dependencies.ts:559) is missing @param cwd.
+  exported class method 'MinecraftDependencies.apply' (packages/minecraft/mc-workbench/src/dependencies.ts:559) is missing @param id.
+  exported class method 'MinecraftDependencies.apply' (packages/minecraft/mc-workbench/src/dependencies.ts:559) is missing @returns (return type: Promise<DependencyManifest>).
+  exported function 'fetchJson' (packages/minecraft/mc-workbench/src/download.ts:7) has no JSDoc.
+  exported function 'download' (packages/minecraft/mc-workbench/src/download.ts:12) has no JSDoc.
+  exported function 'zipEntries' (packages/minecraft/mc-workbench/src/download.ts:45) is missing @param bytes.
+  exported function 'zipEntries' (packages/minecraft/mc-workbench/src/download.ts:45) is missing @param maxBytes.
+  exported function 'zipEntries' (packages/minecraft/mc-workbench/src/download.ts:45) is missing @returns (return type: Record<string, Uint8Array>).
+  exported function 'extractZip' (packages/minecraft/mc-workbench/src/download.ts:64) has no JSDoc.
+  exported function 'cachedDownload' (packages/minecraft/mc-workbench/src/download.ts:78) is missing @param directory.
+  exported function 'cachedDownload' (packages/minecraft/mc-workbench/src/download.ts:78) is missing @param url.
+  exported function 'cachedDownload' (packages/minecraft/mc-workbench/src/download.ts:78) is missing @param sha256.
+  exported function 'cachedDownload' (packages/minecraft/mc-workbench/src/download.ts:78) is missing @param signal.
+  exported function 'cachedDownload' (packages/minecraft/mc-workbench/src/download.ts:78) is missing @returns (return type: Promise<Buffer>).
+  exported const 'cacheRoot' (packages/minecraft/mc-workbench/src/environment.ts:12) has no JSDoc.
+  exported function 'requiredJava' (packages/minecraft/mc-workbench/src/environment.ts:15) has no JSDoc.
+  exported function 'findJava' (packages/minecraft/mc-workbench/src/environment.ts:45) is missing @param ctx.
+  exported function 'findJava' (packages/minecraft/mc-workbench/src/environment.ts:45) is missing @param major.
+  exported function 'findJava' (packages/minecraft/mc-workbench/src/environment.ts:45) is missing @param signal.
+  exported function 'findJava' (packages/minecraft/mc-workbench/src/environment.ts:45) is missing @returns (return type: Promise<JavaEnvironment>).
+  exported function 'ensureJava' (packages/minecraft/mc-workbench/src/environment.ts:74) is missing @param ctx.
+  exported function 'ensureJava' (packages/minecraft/mc-workbench/src/environment.ts:74) is missing @param major.
+  exported function 'ensureJava' (packages/minecraft/mc-workbench/src/environment.ts:74) is missing @param signal.
+  exported function 'ensureJava' (packages/minecraft/mc-workbench/src/environment.ts:74) is missing @param progress.
+  exported function 'ensureJava' (packages/minecraft/mc-workbench/src/environment.ts:74) is missing @returns (return type: Promise<JavaEnvironment>).
+  exported function 'javaEnv' (packages/minecraft/mc-workbench/src/environment.ts:147) has no JSDoc.
+  exported const 'MAX_TEXT_BYTES' (packages/minecraft/mc-workbench/src/files.ts:7) has no JSDoc.
+  exported const 'hash' (packages/minecraft/mc-workbench/src/files.ts:9) has no JSDoc.
+  exported function 'projectRoot' (packages/minecraft/mc-workbench/src/files.ts:12) is missing @param cwd.
+  exported function 'projectRoot' (packages/minecraft/mc-workbench/src/files.ts:12) is missing @returns (return type: Promise<string>).
+  exported function 'projectPath' (packages/minecraft/mc-workbench/src/files.ts:20) is missing @param root.
+  exported function 'projectPath' (packages/minecraft/mc-workbench/src/files.ts:20) is missing @param path.
+  exported function 'projectPath' (packages/minecraft/mc-workbench/src/files.ts:20) is missing @param missing.
+  exported function 'projectPath' (packages/minecraft/mc-workbench/src/files.ts:20) is missing @returns (return type: Promise<string>).
+  exported function 'readText' (packages/minecraft/mc-workbench/src/files.ts:40) has no JSDoc.
+  exported function 'saveText' (packages/minecraft/mc-workbench/src/files.ts:57) is missing @param root.
+  exported function 'saveText' (packages/minecraft/mc-workbench/src/files.ts:57) is missing @param path.
+  exported function 'saveText' (packages/minecraft/mc-workbench/src/files.ts:57) is missing @param text.
+  exported function 'saveText' (packages/minecraft/mc-workbench/src/files.ts:57) is missing @param revision.
+  exported function 'saveText' (packages/minecraft/mc-workbench/src/files.ts:57) is missing @returns (return type: Promise<TextFile>).
+  exported function 'listFiles' (packages/minecraft/mc-workbench/src/files.ts:80) has no JSDoc.
+  exported function 'searchFiles' (packages/minecraft/mc-workbench/src/files.ts:94) has no JSDoc.
+  exported class property 'MinecraftWorkbench.runs' (packages/minecraft/mc-workbench/src/index.ts:34) has no JSDoc.
+  exported class property 'MinecraftWorkbench.dependencies' (packages/minecraft/mc-workbench/src/index.ts:35) has no JSDoc.
+  exported class property 'MinecraftWorkbench.sources' (packages/minecraft/mc-workbench/src/index.ts:36) has no JSDoc.
+  exported class property 'MinecraftWorkbench.handleRpc' (packages/minecraft/mc-workbench/src/index.ts:42) has no JSDoc.
+  exported class method 'MinecraftWorkbench.dispose' (packages/minecraft/mc-workbench/src/index.ts:189) has no JSDoc.
+  exported interface 'ProcessOptions' (packages/minecraft/mc-workbench/src/process.ts:7) has no JSDoc.
+  exported type 'ProcessRunner' (packages/minecraft/mc-workbench/src/process.ts:17) has no JSDoc.
+  exported function 'runProcess' (packages/minecraft/mc-workbench/src/process.ts:20) is missing @param ctx.
+  exported function 'runProcess' (packages/minecraft/mc-workbench/src/process.ts:20) is missing @param options.
+  exported function 'runProcess' (packages/minecraft/mc-workbench/src/process.ts:20) is missing @returns (return type: Promise<{ exitCode: number | null; text: string; truncated: boolean }>).
+  exported class method 'MinecraftRuns.inspect' (packages/minecraft/mc-workbench/src/runtime.ts:34) has no JSDoc.
+  exported class method 'MinecraftRuns.history' (packages/minecraft/mc-workbench/src/runtime.ts:87) has no JSDoc.
+  exported class method 'MinecraftRuns.start' (packages/minecraft/mc-workbench/src/runtime.ts:125) has no JSDoc.
+  exported class method 'MinecraftRuns.check' (packages/minecraft/mc-workbench/src/runtime.ts:177) is missing @param cwd.
+  exported class method 'MinecraftRuns.check' (packages/minecraft/mc-workbench/src/runtime.ts:177) is missing @param mode.
+  exported class method 'MinecraftRuns.check' (packages/minecraft/mc-workbench/src/runtime.ts:177) is missing @param signal.
+  exported class method 'MinecraftRuns.check' (packages/minecraft/mc-workbench/src/runtime.ts:177) is missing @param timeoutMs.
+  exported class method 'MinecraftRuns.check' (packages/minecraft/mc-workbench/src/runtime.ts:177) is missing @returns (return type: Promise<CheckResult>).
+  exported class method 'MinecraftRuns.stop' (packages/minecraft/mc-workbench/src/runtime.ts:229) has no JSDoc.
+  exported class method 'MinecraftRuns.logs' (packages/minecraft/mc-workbench/src/runtime.ts:239) has no JSDoc.
+  exported class method 'MinecraftRuns.nativeState' (packages/minecraft/mc-workbench/src/runtime.ts:262) has no JSDoc.
+  exported class method 'MinecraftRuns.acceptEula' (packages/minecraft/mc-workbench/src/runtime.ts:273) has no JSDoc.
+  exported class method 'MinecraftRuns.dispose' (packages/minecraft/mc-workbench/src/runtime.ts:283) has no JSDoc.
+  exported class 'MinecraftSources' (packages/minecraft/mc-workbench/src/sources.ts:22) has no JSDoc.
+  exported class method 'MinecraftSources.start' (packages/minecraft/mc-workbench/src/sources.ts:26) has no JSDoc.
+  exported class method 'MinecraftSources.status' (packages/minecraft/mc-workbench/src/sources.ts:140) has no JSDoc.
+  exported class method 'MinecraftSources.cancel' (packages/minecraft/mc-workbench/src/sources.ts:143) has no JSDoc.
+  exported class method 'MinecraftSources.files' (packages/minecraft/mc-workbench/src/sources.ts:148) has no JSDoc.
+  exported class method 'MinecraftSources.read' (packages/minecraft/mc-workbench/src/sources.ts:153) has no JSDoc.
+  exported class method 'MinecraftSources.search' (packages/minecraft/mc-workbench/src/sources.ts:158) has no JSDoc.
+  exported class method 'MinecraftSources.dispose' (packages/minecraft/mc-workbench/src/sources.ts:162) has no JSDoc.
+  exported type 'RunAction' (packages/minecraft/mc-workbench/src/types.ts:4) has no JSDoc.
+  exported type 'RunPhase' (packages/minecraft/mc-workbench/src/types.ts:5) has no JSDoc.
+  exported interface 'JavaEnvironment' (packages/minecraft/mc-workbench/src/types.ts:17) has no JSDoc.
+  exported interface 'ProjectFacts' (packages/minecraft/mc-workbench/src/types.ts:23) has no JSDoc.
+  exported interface 'RunSnapshot' (packages/minecraft/mc-workbench/src/types.ts:30) has no JSDoc.
+  exported interface 'LogChunk' (packages/minecraft/mc-workbench/src/types.ts:43) has no JSDoc.
+  exported interface 'FileEntry' (packages/minecraft/mc-workbench/src/types.ts:48) has no JSDoc.
+  exported interface 'TextFile' (packages/minecraft/mc-workbench/src/types.ts:53) has no JSDoc.
+  exported interface 'SearchHit' (packages/minecraft/mc-workbench/src/types.ts:59) has no JSDoc.
+  exported type 'DependencyRole' (packages/minecraft/mc-workbench/src/types.ts:64) has no JSDoc.
+  exported type 'DependencySource' (packages/minecraft/mc-workbench/src/types.ts:65) has no JSDoc.
+  exported interface 'Dependency' (packages/minecraft/mc-workbench/src/types.ts:69) has no JSDoc.
+  exported interface 'DependencyManifest' (packages/minecraft/mc-workbench/src/types.ts:85) has no JSDoc.
+  exported interface 'FileChange' (packages/minecraft/mc-workbench/src/types.ts:89) has no JSDoc.
+  exported interface 'DependencyPlan' (packages/minecraft/mc-workbench/src/types.ts:94) has no JSDoc.
+  exported interface 'ModSearchResult' (packages/minecraft/mc-workbench/src/types.ts:100) has no JSDoc.
+  exported interface 'ModVersion' (packages/minecraft/mc-workbench/src/types.ts:105) has no JSDoc.
+  exported interface 'SourceSnapshot' (packages/minecraft/mc-workbench/src/types.ts:110) has no JSDoc.
+  exported interface 'WorkbenchSnapshot' (packages/minecraft/mc-workbench/src/types.ts:117) has no JSDoc.
+  exported function 'defaultCatalogCachePath' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:19) is missing @returns (return type: string).
+  exported interface 'NeoForgeMdkRecipe' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:68) has no JSDoc.
+  exported function 'parseFabricGameVersions' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:101) is missing @param value.
+  exported function 'parseFabricGameVersions' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:101) is missing @returns (return type: string[]).
+  exported function 'parseFabricLoaderVersions' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:115) is missing @param value.
+  exported function 'parseFabricLoaderVersions' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:115) is missing @returns (return type: Array<{ loader: string; intermediary: string }>).
+  exported function 'parseFabricYarnVersions' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:128) is missing @param value.
+  exported function 'parseFabricYarnVersions' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:128) is missing @param minecraftVersion.
+  exported function 'parseFabricYarnVersions' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:128) is missing @returns (return type: string[]).
+  exported function 'parseFabricApiVersion' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:146) is missing @param xml.
+  exported function 'parseFabricApiVersion' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:146) is missing @param minecraftVersion.
+  exported function 'parseFabricApiVersion' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:146) is missing @returns (return type: string | undefined).
+  exported function 'parseNeoForgeMetadata' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:156) is missing @param xml.
+  exported function 'parseNeoForgeMetadata' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:156) is missing @returns (return type: Array<{ minecraftVersion: string; loaderVersion: string }>).
+  exported function 'parseNeoForgeDirectoryIndex' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:162) is missing @param html.
+  exported function 'parseNeoForgeDirectoryIndex' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:162) is missing @returns (return type: Array<{ minecraftVersion: string; loaderVersion: string }>).
+  exported function 'parseNeoForgeMdkRecipe' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:168) is missing @param buildGradle.
+  exported function 'parseNeoForgeMdkRecipe' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:168) is missing @param wrapperProperties.
+  exported function 'parseNeoForgeMdkRecipe' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:168) is missing @returns (return type: NeoForgeMdkRecipe | undefined).
+  exported function 'parseNeoForgeMdkRepositories' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:177) is missing @param value.
+  exported function 'parseNeoForgeMdkRepositories' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:177) is missing @returns (return type: string[]).
+  exported function 'parseNeoForgeMdkLoader' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:191) is missing @param properties.
+  exported function 'parseNeoForgeMdkLoader' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:191) is missing @param minecraftVersion.
+  exported function 'parseNeoForgeMdkLoader' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:191) is missing @returns (return type: string | undefined).
+  exported function 'fabricEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:224) is missing @param minecraftVersion.
+  exported function 'fabricEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:224) is missing @param loaderVersion.
+  exported function 'fabricEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:224) is missing @param intermediary.
+  exported function 'fabricEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:224) is missing @param yarn.
+  exported function 'fabricEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:224) is missing @param apiVersion.
+  exported function 'fabricEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:224) is missing @returns (return type: CatalogEntry).
+  exported function 'neoForgeEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:246) is missing @param minecraftVersion.
+  exported function 'neoForgeEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:246) is missing @param loaderVersion.
+  exported function 'neoForgeEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:246) is missing @param recipe.
+  exported function 'neoForgeEntry' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:246) is missing @returns (return type: CatalogEntry).
+  exported function 'normalizeCatalogEntries' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:271) is missing @param entries.
+  exported function 'normalizeCatalogEntries' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:271) is missing @returns (return type: CatalogEntry[]).
+  exported class method 'MinecraftCatalogResolver.load' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:309) is missing @param signal.
+  exported class method 'MinecraftCatalogResolver.load' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:309) is missing @returns (return type: Promise<CatalogSnapshot>).
+  exported function 'probeJava' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:629) is missing @param signal.
+  exported function 'probeJava' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:629) is missing @returns (return type: Promise<JavaProbe>).
+  exported function 'parseJavaMajor' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:703) is missing @param output.
+  exported function 'parseJavaMajor' (packages/minecraft/tool-mc-bootstrap/src/catalog.ts:703) is missing @returns (return type: number | undefined).
+  exported function 'createMinecraftBootstrap' (packages/minecraft/tool-mc-bootstrap/src/index.d.ts:34) is missing @param ctx.
+  exported function 'createMinecraftBootstrap' (packages/minecraft/tool-mc-bootstrap/src/index.d.ts:34) is missing @param options.
+  exported function 'createMinecraftBootstrap' (packages/minecraft/tool-mc-bootstrap/src/index.d.ts:34) is missing @returns (return type: MinecraftBootstrapService).
+  exported function 'createMinecraftBootstrap' (packages/minecraft/tool-mc-bootstrap/src/index.ts:51) is missing @param ctx.
+  exported function 'createMinecraftBootstrap' (packages/minecraft/tool-mc-bootstrap/src/index.ts:51) is missing @param options.
+  exported function 'createMinecraftBootstrap' (packages/minecraft/tool-mc-bootstrap/src/index.ts:51) is missing @returns (return type: MinecraftBootstrapService).
+  exported function 'applyBootstrapService' (packages/minecraft/tool-mc-bootstrap/src/service.d.ts:24) is missing @param ctx.
+  exported function 'applyBootstrapService' (packages/minecraft/tool-mc-bootstrap/src/service.d.ts:24) is missing @param options.
+  exported class method 'MinecraftBootstrapService.dispose' (packages/minecraft/tool-mc-bootstrap/src/service.d.ts:40) has no JSDoc.
+  exported function 'applyBootstrapService' (packages/minecraft/tool-mc-bootstrap/src/service.ts:88) is missing @param ctx.
+  exported function 'applyBootstrapService' (packages/minecraft/tool-mc-bootstrap/src/service.ts:88) is missing @param options.
+  exported class method 'MinecraftBootstrapService.dispose' (packages/minecraft/tool-mc-bootstrap/src/service.ts:175) has no JSDoc.
+  exported function 'projectFiles' (packages/minecraft/tool-mc-bootstrap/src/template.d.ts:4) is missing @param input.
+  exported function 'projectFiles' (packages/minecraft/tool-mc-bootstrap/src/template.d.ts:4) is missing @returns (return type: Record<string, string>).
+  exported function 'wrapperFiles' (packages/minecraft/tool-mc-bootstrap/src/template.d.ts:11) is missing @param gradleVersion.
+  exported function 'wrapperFiles' (packages/minecraft/tool-mc-bootstrap/src/template.d.ts:11) is missing @param checksum.
+  exported function 'wrapperFiles' (packages/minecraft/tool-mc-bootstrap/src/template.d.ts:11) is missing @returns (return type: Record<string, string>).
+  exported function 'projectFiles' (packages/minecraft/tool-mc-bootstrap/src/template.ts:6) is missing @param input.
+  exported function 'projectFiles' (packages/minecraft/tool-mc-bootstrap/src/template.ts:6) is missing @returns (return type: Record<string, string>).
+  exported function 'wrapperFiles' (packages/minecraft/tool-mc-bootstrap/src/template.ts:182) is missing @param gradleVersion.
+  exported function 'wrapperFiles' (packages/minecraft/tool-mc-bootstrap/src/template.ts:182) is missing @param checksum.
+  exported function 'wrapperFiles' (packages/minecraft/tool-mc-bootstrap/src/template.ts:182) is missing @returns (return type: Record<string, string>).
+  exported function 'jdkForMinecraft' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:81) is missing @param version.
+  exported function 'jdkForMinecraft' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:81) is missing @returns (return type: 17 | 21 | undefined).
+  exported function 'isSupportedMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:83) is missing @param version.
+  exported function 'isSupportedMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:83) is missing @returns (return type: boolean).
+  exported function 'isStableMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:85) is missing @param version.
+  exported function 'isStableMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:85) is missing @param stable.
+  exported function 'isStableMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:85) is missing @returns (return type: boolean).
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:87) is missing @param loader.
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:87) is missing @param minecraftVersion.
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:87) is missing @param loaderVersion.
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:87) is missing @returns (return type: string).
+  exported function 'isValidModId' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:89) is missing @param value.
+  exported function 'isValidModId' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:89) is missing @returns (return type: boolean).
+  exported function 'isValidPackageName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:91) is missing @param value.
+  exported function 'isValidPackageName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:91) is missing @returns (return type: boolean).
+  exported function 'isValidModName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:93) is missing @param value.
+  exported function 'isValidModName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:93) is missing @returns (return type: boolean).
+  exported function 'isValidDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:95) is missing @param value.
+  exported function 'isValidDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:95) is missing @returns (return type: boolean).
+  exported function 'deriveDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:97) is missing @param modName.
+  exported function 'deriveDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:97) is missing @param modId.
+  exported function 'deriveDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:97) is missing @returns (return type: string).
+  exported function 'recordPayload' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:99) is missing @param value.
+  exported function 'recordPayload' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:99) is missing @returns (return type: Record<string, unknown> | undefined).
+  exported function 'isSha256' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:101) is missing @param value.
+  exported function 'isSha256' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:101) is missing @returns (return type: value is string).
+  exported function 'isCatalogEntry' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:103) is missing @param value.
+  exported function 'isCatalogEntry' (packages/minecraft/tool-mc-bootstrap/src/types.d.ts:103) is missing @returns (return type: value is CatalogEntry).
+  exported function 'jdkForMinecraft' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:19) is missing @param version.
+  exported function 'jdkForMinecraft' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:19) is missing @returns (return type: 17 | 21 | undefined).
+  exported function 'isSupportedMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:35) is missing @param version.
+  exported function 'isSupportedMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:35) is missing @returns (return type: boolean).
+  exported function 'isStableMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:42) is missing @param version.
+  exported function 'isStableMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:42) is missing @param stable.
+  exported function 'isStableMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:42) is missing @returns (return type: boolean).
+  exported function 'isSupportedNeoForgeMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:53) is missing @param version.
+  exported function 'isSupportedNeoForgeMinecraftVersion' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:53) is missing @returns (return type: boolean).
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:59) is missing @param loader.
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:59) is missing @param minecraftVersion.
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:59) is missing @param loaderVersion.
+  exported function 'catalogEntryId' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:59) is missing @returns (return type: string).
+  exported function 'isValidModId' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:64) is missing @param value.
+  exported function 'isValidModId' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:64) is missing @returns (return type: boolean).
+  exported function 'isValidPackageName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:69) is missing @param value.
+  exported function 'isValidPackageName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:69) is missing @returns (return type: boolean).
+  exported function 'isValidModName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:78) is missing @param value.
+  exported function 'isValidModName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:78) is missing @returns (return type: boolean).
+  exported function 'isValidDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:84) is missing @param value.
+  exported function 'isValidDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:84) is missing @returns (return type: boolean).
+  exported function 'deriveDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:94) is missing @param modName.
+  exported function 'deriveDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:94) is missing @param modId.
+  exported function 'deriveDirectoryName' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:94) is missing @returns (return type: string).
+  exported function 'recordPayload' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:104) is missing @param value.
+  exported function 'recordPayload' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:104) is missing @returns (return type: Record<string, unknown> | undefined).
+  exported function 'isSha256' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:110) is missing @param value.
+  exported function 'isSha256' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:110) is missing @returns (return type: value is string).
+  exported function 'isCatalogEntry' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:115) is missing @param value.
+  exported function 'isCatalogEntry' (packages/minecraft/tool-mc-bootstrap/src/validation.ts:115) is missing @returns (return type: value is CatalogEntry).
+  exported function 'hasMinecraftReadiness' (packages/minecraft/tool-mc-project/src/gradle-tasks.ts:7) is missing @param mode.
+  exported function 'hasMinecraftReadiness' (packages/minecraft/tool-mc-project/src/gradle-tasks.ts:7) is missing @param text.
+  exported function 'hasMinecraftReadiness' (packages/minecraft/tool-mc-project/src/gradle-tasks.ts:7) is missing @returns (return type: boolean).
+  exported interface 'CheckResult' (packages/minecraft/tool-mc-project/src/index.ts:132) has no JSDoc.
+  exported function 'inspectMinecraftProject' (packages/minecraft/tool-mc-project/src/index.ts:2298) is missing @param ctx.
+  exported function 'inspectMinecraftProject' (packages/minecraft/tool-mc-project/src/index.ts:2298) is missing @param cwd.
+  exported function 'inspectMinecraftProject' (packages/minecraft/tool-mc-project/src/index.ts:2298) is missing @param signal.
+  exported function 'inspectMinecraftProject' (packages/minecraft/tool-mc-project/src/index.ts:2298) is missing @returns (return type: Promise<DetectionResult>).
+  exported function 'validateMinecraftProject' (packages/minecraft/tool-mc-project/src/index.ts:2303) is missing @param ctx.
+  exported function 'validateMinecraftProject' (packages/minecraft/tool-mc-project/src/index.ts:2303) is missing @param cwd.
+  exported function 'validateMinecraftProject' (packages/minecraft/tool-mc-project/src/index.ts:2303) is missing @param signal.
+  exported function 'validateMinecraftProject' (packages/minecraft/tool-mc-project/src/index.ts:2303) is missing @returns (return type: Promise<ResourceValidationResult>).
+  exported type 'Confidence' (packages/minecraft/tool-mc-project/src/types.ts:4) has no JSDoc.
+  exported type 'VersionClassification' (packages/minecraft/tool-mc-project/src/types.ts:5) has no JSDoc.
+  exported interface 'MinecraftVersionCandidate' (packages/minecraft/tool-mc-project/src/types.ts:7) has no JSDoc.
+  exported type 'MinecraftVersionResult' (packages/minecraft/tool-mc-project/src/types.ts:14) has no JSDoc.
+  exported interface 'MappingsCandidate' (packages/minecraft/tool-mc-project/src/types.ts:24) has no JSDoc.
+  exported type 'MappingsResult' (packages/minecraft/tool-mc-project/src/types.ts:31) has no JSDoc.
+  exported interface 'LoaderEvidence' (packages/minecraft/tool-mc-project/src/types.ts:36) has no JSDoc.
+  exported interface 'ModIdCandidate' (packages/minecraft/tool-mc-project/src/types.ts:41) has no JSDoc.
+[ELIFECYCLE] Command failed with exit code 1.
+  exported interface 'SourceSetInfo' (packages/minecraft/tool-mc-project/src/types.ts:47) has no JSDoc.
+  exported interface 'MixinConfig' (packages/minecraft/tool-mc-project/src/types.ts:54) has no JSDoc.
+  exported interface 'DatagenClue' (packages/minecraft/tool-mc-project/src/types.ts:59) has no JSDoc.
+  exported interface 'DetectionResult' (packages/minecraft/tool-mc-project/src/types.ts:65) has no JSDoc.
+  exported interface 'ResourceIssue' (packages/minecraft/tool-mc-project/src/types.ts:90) has no JSDoc.
+  exported interface 'ResourceValidationResult' (packages/minecraft/tool-mc-project/src/types.ts:98) has no JSDoc.
+  exported class property 'JsonlSessionPersistence.config' (packages/session/session-persistence-jsonl/src/index.d.ts:53) has no JSDoc.
+run-gates: start config catalog
+
+== FAILED translation pairing (21.45s) ==
+[ELIFECYCLE] Command failed with exit code 1.
+command: pnpm run verify-translation-pairing
+outcome: exit 1
+$ tsx scripts/verify-translation-pairing.ts
+verify-translation-pairing: bilingual pairing rules violated (see docs/i18n/README.md):
+  .agents/notes/implemented/mcmod/2026-09-13-mcmod-only-preset.md: in-scope documentation must merge bilingual (docs/i18n/README.md); add the counterpart and record the pair
+  .agents/notes/implemented/bug-fix/2026-09-14-desktop-clipboard-copy.zh.md: missing language switcher — no link to 2026-09-14-desktop-clipboard-copy.md
+  .agents/notes/implemented/bug-fix/2026-09-14-desktop-clipboard-copy.md ↔ .agents/notes/implemented/bug-fix/2026-09-14-desktop-clipboard-copy.zh.md: link target #1 diverges between the pair: nothing vs "dsh-translation-target:.agents/notes/implemented/bug-fix/2026-09-14-des…
+  docs/tool-catalog.md ↔ docs/tool-catalog.zh.md: code block #36 diverges between the pair: "```json\n{\n  \"type\": \"object\",\n  \"properties\": {\n    \"target\… vs "```json\n{\n  \"type\": \"object\",\n  \"properties\": {\n    \"target\…
+  packages/client/ui-sidebar/README.md: out of sync — content no longer matches the pair's last confirmed-consistent state in packages/client/ui-sidebar/README.i18n.yaml (bring the other side along, then re-record with --write)
+  packages/client/ui-sidebar/README.zh.md: out of sync — content no longer matches the pair's last confirmed-consistent state in packages/client/ui-sidebar/README.i18n.yaml (bring the other side along, then re-record with --write)
+run-gates: start persistence catalog
+
+== FAILED config catalog (2.42s) ==
+command: pnpm run verify-config-catalog
+outcome: exit 1
+$ tsx scripts/gen-config-catalog.ts --check
+gen-config-catalog: docs/config-catalog.md is stale. Run `pnpm run gen-config-catalog` and commit docs/config-catalog.md.
+[ELIFECYCLE] Command failed with exit code 1.
+run-gates: start public repository links
+run-gates: PASS persistence catalog (2.41s)
+run-gates: start doc refs
+run-gates: PASS doc refs (1.59s)
+run-gates: start package paths
+run-gates: PASS package paths (2.69s)
+run-gates: start config source ownership
+run-gates: PASS public repository links (5.78s)
+run-gates: start package README model experience
+run-gates: PASS tool catalog (11.61s)
+run-gates: start agent note classification
+run-gates: PASS config source ownership (0.80s)
+run-gates: start agent note format
+
+== FAILED agent note classification (0.81s) ==
+command: pnpm run verify-agent-note-classification
+outcome: exit 1
+$ tsx scripts/verify-agent-note-classification.ts
+verify-agent-note-classification: violations found:
+  structure: implemented/mcmod/2026-09-13-mcmod-only-preset.md — unknown class folder "mcmod" (allowed: feature, bug-fix, simplification, architecture, process, testing)
+[ELIFECYCLE] Command failed with exit code 1.
+run-gates: start archived agent notes
+
+== FAILED agent note format (1.13s) ==
+command: pnpm run verify-agent-note-format
+outcome: exit 1
+$ tsx scripts/verify-agent-note-format.ts
+verify-agent-note-format: violations found:
+  structure: implemented/mcmod/2026-09-13-mcmod-only-preset.md — unknown class folder "mcmod" (allowed: feature, bug-fix, simplification, architecture, process, testing)
+[ELIFECYCLE] Command failed with exit code 1.
+run-gates: start skill invocation metadata
+run-gates: PASS archived agent notes (1.09s)
+run-gates: start translation prompt
+run-gates: PASS skill invocation metadata (0.72s)
+run-gates: start doc budgets
+run-gates: PASS translation prompt (0.68s)
+run-gates: start documentation site checks
+run-gates: PASS doc budgets (0.68s)
+run-gates: start package README limitations
+
+== FAILED package README model experience (4.20s) ==
+command: pnpm run verify-package-readme-model-experience
+outcome: exit 1
+$ tsx scripts/verify-package-readme-model-experience.ts
+verify-package-readme-model-experience failed:
+  packages\client\ui-mcmod-workbench\README.md: must contain one or more complete model-context entries
+  packages\minecraft\mc-workbench\README.md: line 29: short Model Experience form requires an audited entry in SENTENCE_MODEL_EXPERIENCE
+[ELIFECYCLE] Command failed with exit code 1.
+run-gates: PASS doc-typecheck (75.79s)
+
+== FAILED package README limitations (4.38s) ==
+command: pnpm run verify-package-readme-limitations
+outcome: exit 1
+$ tsx scripts/verify-package-readme-limitations.ts
+verify-package-readme-limitations: violations found:
+  packages/client/ui-mcmod-workbench/README.md:23: the `## Known Limitations and Deferred Work` section has no top-level `- ` bullet — state the limitations, or whitelist the package if there are genuinely none
+  packages/minecraft/mc-workbench/README.md:35: the `## Known Limitations and Deferred Work` section has no top-level `- ` bullet — state the limitations, or whitelist the package if there are genuinely none
+[ELIFECYCLE] Command failed with exit code 1.
+run-gates: PASS documentation site checks (7.72s)
+
+run-gates: 18 passed, 10 failed, 0 skipped in 80.86s.
+run-gates: unsuccessful gates:
+  - FAILED doc graphs (11.24s, exit 1)
+    pnpm run verify-doc-graphs
+  - FAILED cordis catalog (12.12s, exit 1)
+    pnpm run verify-cordis-catalog
+  - FAILED translation pairing (21.45s, exit 1)
+    pnpm run verify-translation-pairing
+  - FAILED client catalog (3.92s, exit 1)
+    pnpm run verify-client-catalog
+  - FAILED export jsdoc (7.28s, exit 1)
+    pnpm run verify-export-jsdoc
+  - FAILED config catalog (2.42s, exit 1)
+    pnpm run verify-config-catalog
+  - FAILED package README model experience (4.20s, exit 1)
+    pnpm run verify-package-readme-model-experience
+  - FAILED agent note classification (0.81s, exit 1)
+    pnpm run verify-agent-note-classification
+  - FAILED agent note format (1.13s, exit 1)
+    pnpm run verify-agent-note-format
+  - FAILED package README limitations (4.38s, exit 1)
+    pnpm run verify-package-readme-limitations
+[ELIFECYCLE] Command failed with exit code 1.

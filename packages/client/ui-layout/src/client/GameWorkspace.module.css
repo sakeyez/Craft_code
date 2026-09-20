@@ -20,6 +20,6 @@
 .toolbarActions .annotateButton { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 8px; border-color: color-mix(in srgb, var(--dsw-alias-state-success-primary) 35%, transparent); background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 10%, var(--dsw-alias-bg-base)); }
 .toolbarActions .annotateButton:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 18%, var(--dsw-alias-bg-base)); }
 .annotateButton kbd { font: inherit; font-size: 11px; opacity: .7; white-space: nowrap; }
-.companionStatus { flex: none; padding: 0 12px 8px; color: var(--dsw-alias-label-secondary); font-size: 12px; overflow-wrap: anywhere; }
+.gameStatusMessage { flex: none; padding: 0 12px 8px; color: var(--dsw-alias-label-secondary); font-size: 12px; overflow-wrap: anywhere; }
 @media (max-width: 380px) { .toolbarActions { gap: 4px; } .annotateButton kbd { font-size: 10px; } }
 @media (prefers-reduced-motion: reduce) { .workspace button { transition: none; } }

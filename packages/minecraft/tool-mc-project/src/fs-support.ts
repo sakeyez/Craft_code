@@ -6,6 +6,9 @@ import { FsError } from '@deepseek-ai/dsh-fs'
 import type { FsDirEntry, FsTarget } from '@deepseek-ai/dsh-fs'
 import type { ToolExecution } from '@deepseek-ai/dsh-tools'
 
+/** Workspace and cancellation shared by tools and trusted host consumers. */
+export type ProjectExecution = Pick<ToolExecution, 'agent' | 'signal'> & { cwd?: string }
+
 const BINARY_SAMPLE_BYTES = 8_192
 const MISSING_ERROR_CODES = new Set(['FS_NOT_FOUND', 'ENOENT', 'ENOTDIR'])
 const ABORT_ERROR_CODES = new Set(['FS_ABORTED'])
@@ -39,8 +42,8 @@ export interface WalkedFile {
  * @param exec - Tool execution carrying the workspace and cancellation signal.
  * @returns Provider resolve options for the current session.
  */
-export function sessionResolveOptions(exec: ToolExecution): { cwd?: string; signal?: AbortSignal } {
-  const cwd = exec.agent?.session.header.cwd
+export function sessionResolveOptions(exec: ProjectExecution): { cwd?: string; signal?: AbortSignal } {
+  const cwd = exec.cwd ?? exec.agent?.session.header.cwd
   return {
     ...cwd === undefined ? {} : { cwd },
     signal: exec.signal,
@@ -110,7 +113,7 @@ function decodeBoundedText(bytes: Uint8Array, path: string): string {
  */
 export async function readBoundedText(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   target: FsTarget,
   config: Pick<FsScanConfig, 'maxFileBytes'>,
 ): Promise<string> {
@@ -127,7 +130,7 @@ export async function readBoundedText(
  */
 export async function optionalStat(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   path: string,
 ): Promise<{ target: FsTarget; type: FsDirEntry['type']; size?: number } | undefined> {
   try {
@@ -154,7 +157,7 @@ export async function optionalStat(
  */
 export async function readTextFile(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   path: string,
   target: FsTarget,
   size: number | undefined,
@@ -189,7 +192,7 @@ export async function readTextFile(
  */
 export async function readOptionalText(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   path: string,
   config: Pick<FsScanConfig, 'maxFileBytes'>,
   warnings: string[],
@@ -206,7 +209,7 @@ export async function readOptionalText(
  * @param path - Session-relative directory path.
  * @returns Directory entries, or an empty list for a missing directory.
  */
-export async function listOptionalDir(ctx: Context, exec: ToolExecution, path: string): Promise<FsDirEntry[]> {
+export async function listOptionalDir(ctx: Context, exec: ProjectExecution, path: string): Promise<FsDirEntry[]> {
   const stat = await optionalStat(ctx, exec, path)
   if (stat === undefined || stat.type !== 'directory') return []
   try {
@@ -230,7 +233,7 @@ export async function listOptionalDir(ctx: Context, exec: ToolExecution, path: s
  */
 export async function walkFiles(
   ctx: Context,
-  exec: ToolExecution,
+  exec: ProjectExecution,
   path: string,
   state: WalkState,
   config: FsScanConfig,

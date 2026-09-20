@@ -1,0 +1,51 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../vendor/cordis"
+    },
+    {
+      "path": "../tool-mc-project"
+    },
+    {
+      "path": "../../subprocess/subprocess"
+    },
+    {
+      "path": "../../fs/fs"
+    },
+    {
+      "path": "../../client/connection/tsconfig.host.json"
+    },
+    {
+      "path": "../../host/apiproxy"
+    },
+    {
+      "path": "../../runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../../workspace/workspace"
+    },
+    {
+      "path": "../../shell/shell"
+    },
+    {
+      "path": "../../settings/settings"
+    },
+    {
+      "path": "../../util/launch-environment"
+    },
+    {
+      "path": "../../core/tools"
+    },
+    {
+      "path": "../../credentials/credentials"
+    }
+  ]
+}

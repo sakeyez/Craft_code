@@ -132,6 +132,8 @@ describe('mcmod headless agent e2e', () => {
       },
       inspect: async (cwd) => {
         await assertFabricFixture(cwd)
+        const checkpoints = await readdir(join(cwd, '.dsh/checkpoints/records'))
+        expect(checkpoints.some(file => file.endsWith('.json'))).toBe(true)
         const rows = await sessionRows(cwd)
         calls = toolCallNames(rows)
         const validation = persistedToolValue(rows, 'mcmod-scripted-4')

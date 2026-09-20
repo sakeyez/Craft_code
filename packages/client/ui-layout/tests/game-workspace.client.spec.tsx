@@ -15,13 +15,11 @@ function mountWorkspace(options: {
   bindAnnotationShortcut?: GameWorkspaceProps['bindAnnotationShortcut']
   beginAnnotation?: GameWorkspaceProps['beginAnnotation']
   endAnnotation?: GameWorkspaceProps['endAnnotation']
-  reposition?: GameWorkspaceProps['reposition']
   annotations?: GameAnnotation[]
   annotate?: GameWorkspaceProps['annotate']
 } = {}) {
   const beginAnnotation = vi.fn<GameWorkspaceProps['beginAnnotation']>(options.beginAnnotation ?? (() => new Promise<void>(() => {})))
   const endAnnotation = vi.fn<GameWorkspaceProps['endAnnotation']>(options.endAnnotation ?? (async () => {}))
-  const reposition = vi.fn<GameWorkspaceProps['reposition']>(options.reposition ?? (async () => {}))
   const annotate = vi.fn<NonNullable<GameWorkspaceProps['annotate']>>(options.annotate ?? (async () => {}))
   const props = {
     cwd: 'C:\\Projects\\Example',
@@ -35,13 +33,11 @@ function mountWorkspace(options: {
     useInput: (() => undefined) as never,
     inputActions: {} as never,
     annotate,
-    reconnect: vi.fn(async () => ({ status: 'reconnecting' as const })),
     ...(options.bindAnnotationShortcut ? { bindAnnotationShortcut: options.bindAnnotationShortcut } : {}),
     beginAnnotation,
     endAnnotation,
-    reposition,
   } satisfies GameWorkspaceProps
-  return { ...render(<GameWorkspace {...props} />), props, beginAnnotation, endAnnotation, reposition, annotate }
+  return { ...render(<GameWorkspace {...props} />), props, beginAnnotation, endAnnotation, annotate }
 }
 
 beforeEach(() => {
@@ -56,7 +52,7 @@ beforeEach(() => {
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
-describe('GameWorkspace companion panel', () => {
+describe('GameWorkspace annotation controls', () => {
   const annotation: GameAnnotation = {
     id: 'annotation-a', sessionId: 'session' as never, label: 'A',
     shape: { type: 'point', geometry: { x: 0.5, y: 0.5 } }, description: 'Original description', createdAt: 1,
@@ -68,12 +64,12 @@ describe('GameWorkspace companion panel', () => {
     expect(view.queryByText('在游戏上标注，将问题带入对话。')).toBeNull()
   })
 
-  it('only offers reconnection after a connection failure', () => {
+  it('shows passive state without recovery controls', () => {
     const view = mountWorkspace()
     expect(view.queryByRole('button', { name: '重连' })).toBeNull()
     view.rerender(<GameWorkspace {...view.props} state={{ status: 'disconnected', error: 'Game closed' }} />)
-    fireEvent.click(view.getByRole('button', { name: '重连' }))
-    expect(view.props.reconnect).toHaveBeenCalledWith(view.props.cwd)
+    expect(view.getByText('Game closed')).toBeTruthy()
+    expect(view.queryByRole('button', { name: '重连' })).toBeNull()
   })
 
   it('routes native shortcuts through the button transaction and disposes the subscription', async () => {
@@ -89,20 +85,11 @@ describe('GameWorkspace companion panel', () => {
     expect(dispose).toHaveBeenCalledOnce()
   })
 
-  it('renders an external-window companion status without a black game surface', async () => {
+  it('renders external-window status without a black game surface', async () => {
     const view = mountWorkspace()
     expect(view.getByText('已连接')).toBeTruthy()
-    expect(view.getByRole('button', { name: '重新定位面板' })).toBeTruthy()
-  })
-
-  it('repositions the selected project and clears a failed attempt on retry', async () => {
-    let attempt = 0
-    const view = mountWorkspace({ reposition: async () => { if (attempt++ === 0) throw new Error('position failed') } })
-    fireEvent.click(view.getByRole('button', { name: '重新定位面板' }))
-    expect(await view.findByText('position failed')).toBeTruthy()
-    fireEvent.click(view.getByRole('button', { name: '重新定位面板' }))
-    await waitFor(() => { expect(view.queryByText('position failed')).toBeNull() })
-    expect(view.reposition).toHaveBeenCalledWith('C:\\Projects\\Example')
+    expect(view.queryByRole('button', { name: '重新定位面板' })).toBeNull()
+    expect(view.queryByRole('button', { name: '重连' })).toBeNull()
   })
 
   it('opens one overlay transaction and disables historical mutations without a sidebar image', async () => {

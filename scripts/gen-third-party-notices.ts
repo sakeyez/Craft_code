@@ -690,7 +690,7 @@ export function render(): string {
 
 # Third-Party Notices
 
-DeepSeek Harness is licensed under [MIT](LICENSE). It depends on the third-party software listed below. Each project remains under its own license; nothing in this file changes those terms.
+CraftCode is licensed under [AGPL-3.0-only](LICENSE) and retains the upstream [DeepSeek Harness MIT notice](LICENSES/DeepSeek-Harness-MIT.txt). It depends on the third-party software listed below. Each project remains under its own license; nothing in this file changes those terms.
 
 This file lists **direct** dependencies declared by the workspace and the explicitly disclosed official Claude Code platform payload closure. It is generated from the workspace manifests by \`scripts/gen-third-party-notices.ts\`: a pre-commit hook regenerates it whenever a staged file changes one of its inputs, and \`scripts/gen-third-party-notices.spec.ts\` asserts in the test lane that the committed bytes match. Deleting a manifest runs no hook, so that case is caught by the assertion instead. Run \`pnpm run verify-third-party-notices\` for the standalone check.
 
@@ -738,7 +738,7 @@ ${BUILD_TIME_TOOLS.map(tool => `| [\`${tool.name}\`](${tool.repo}) | ${tool.lice
 
 ## First-party native packages
 
-\`@deepseek-ai/node-addon-landlock-run\` (and its platform packages) is built and released from this repository under BSD 3-Clause. It is listed here for completeness; it is first-party, not third-party.
+\`@deepseek-ai/node-addon-landlock-run\` (and its platform packages) is distributed with CraftCode under AGPL-3.0-only. The original [BSD 3-Clause notice](LICENSES/Landlock-Run-BSD-3-Clause.txt) is retained in each package license. It is listed here for completeness; it is first-party, not third-party.
 `
 }
 

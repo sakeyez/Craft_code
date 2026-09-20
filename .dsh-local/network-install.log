@@ -1,0 +1,19 @@
+native/landlock-run/packages/linux-arm64 | [WARN] Unsupported platform: wanted: {"cpu":["arm64"],"os":["linux"],"libc":["any"]} (current: {"os":"win32","cpu":"x64","libc":"unknown"})
+native/landlock-run/packages/linux-x64   | [WARN] Unsupported platform: wanted: {"cpu":["x64"],"os":["linux"],"libc":["any"]} (current: {"os":"win32","cpu":"x64","libc":"unknown"})
+✓ Lockfile passes supply-chain policies (verified 20h ago)
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Progress: resolved 115, reused 0, downloaded 0, added 0
+Progress: resolved 116, reused 0, downloaded 0, added 0
+Progress: resolved 256, reused 0, downloaded 0, added 0
+Progress: resolved 547, reused 0, downloaded 0, added 0
+Progress: resolved 925, reused 0, downloaded 0, added 0
+Progress: resolved 926, reused 0, downloaded 0, added 0
+Progress: resolved 1216, reused 0, downloaded 0, added 0
+[WARN] 4 deprecated subdependencies found: glob@10.5.0, glob@11.1.0, node-domexception@1.0.0, tsconfck@3.1.6
+Progress: resolved 1216, reused 0, downloaded 0, added 0, done
+. postinstall$ node scripts/install-lefthook.mjs
+. postinstall: sync hooks: ✔️(pre-push, pre-commit, pre-merge-commit)
+. postinstall: (node:30908) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+. postinstall: (Use `node --trace-deprecation ...` to show where the warning was created)
+. postinstall: Done
+Done in 14s using pnpm v11.19.0

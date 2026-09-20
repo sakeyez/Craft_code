@@ -75,6 +75,6 @@ pnpm dsh desktop
 
 ## 许可证
 
-[MIT](LICENSE)
+[AGPL-3.0-only](LICENSE)。CraftCode 保留上游 [DeepSeek Harness MIT 声明](LICENSES/DeepSeek-Harness-MIT.txt)。用户生成的模组自行选择许可证。
 
 第三方依赖及其许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

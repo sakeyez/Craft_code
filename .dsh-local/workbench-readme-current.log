@@ -1,0 +1,5 @@
+$ tsx scripts/verify-package-readme-model-experience.ts
+verify-package-readme-model-experience failed:
+  packages\client\ui-mcmod-workbench\README.md: structured Model Experience must ground at least one entry with inline code, a nested `markdown` block, or an anchored tool-catalog link
+  packages\minecraft\mc-workbench\README.md: structured Model Experience must ground at least one entry with inline code, a nested `markdown` block, or an anchored tool-catalog link
+[ELIFECYCLE] Command failed with exit code 1.

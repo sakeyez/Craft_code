@@ -1,0 +1,174 @@
+$ vitest run packages/client packages/host
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.8 E:/.sake/Desktop/craftcode
+
+ ❯ |thread-safe| packages/client/ui-theme/tests/client-styles.client.spec.ts (3 tests | 1 failed) 45ms
+     × keeps the new-session button flat in its resting and pressed states 5ms
+Error: renderSlot('root') before any 'root' registration (boot order)
+    at RootOutlet (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/src/client/scoped-slots.tsx:867:11)
+    at renderWithHooks (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: renderSlot('root') before any 'root' registration (boot order)
+    at RootOutlet (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/src/client/scoped-slots.tsx:867:11)
+    at renderWithHooks (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: entry boom
+    at component (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/tests/scoped-slots.client.spec.tsx:336:48)
+    at renderWithHooks (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: entry boom
+    at component (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/tests/scoped-slots.client.spec.tsx:336:48)
+    at renderWithHooks (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: entry A boom
+    at component (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/tests/scoped-slots.client.spec.tsx:395:32)
+    at renderWithHooks (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: entry A boom
+    at component (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/tests/scoped-slots.client.spec.tsx:395:32)
+    at renderWithHooks (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: inject boom
+    at inject (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/tests/scoped-slots.client.spec.tsx:935:29)
+    at runInject (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/src/client/scoped-slots.tsx:110:27)
+    at cachedRootInject (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/src/client/scoped-slots.tsx:179:13)
+    at RootEntry (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/src/client/scoped-slots.tsx:614:20)
+    at renderWithHooks (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+Error: inject boom
+    at inject (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/tests/scoped-slots.client.spec.tsx:935:29)
+    at runInject (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/src/client/scoped-slots.tsx:110:27)
+    at cachedRootInject (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/src/client/scoped-slots.tsx:179:13)
+    at RootEntry (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/src/client/scoped-slots.tsx:614:20)
+    at renderWithHooks (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+ ❯ |thread-safe| packages/client/ui-theme/tests/scrollbar-styles.client.spec.ts (21 tests | 1 failed) 205ms
+     × every sheet that scrolls on an elevated surface rebinds 12ms
+Error: slot machinery rendered outside the installed renderer tree
+    at useHost (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/src/client/session-provider.tsx:27:20)
+    at SessionProvider (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/src/client/session-provider.tsx:151:16)
+    at renderWithHooks (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+Error: slot machinery rendered outside the installed renderer tree
+    at useHost (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/src/client/session-provider.tsx:27:20)
+    at SessionProvider (E:/.sake/Desktop/craftcode/packages/client/ui-renderer/src/client/session-provider.tsx:151:16)
+    at renderWithHooks (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (E:\.sake\Desktop\craftcode\node_modules\.pnpm\react-dom@18.3.1_react@18.3.1\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (E:\.sake\Desktop\craftcode\node_modules\.pnpm\jsdom@29.1.1\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |thread-safe| packages/client/ui-theme/tests/client-styles.client.spec.ts > ui-theme client styles > keeps the new-session button flat in its resting and pressed states
+AssertionError: expected '\n  border-radius: 10px !important;\n…' to match /border-radius:\s*2px\s*!important/
+
+- Expected:
+/border-radius:\s*2px\s*!important/
+
++ Received:
+"
+  border-radius: 10px !important;
+  box-shadow: none;
+"
+
+ ❯ packages/client/ui-theme/tests/client-styles.client.spec.ts:47:21
+     45|     const pressed = minecraftCss.match(/\[class\*=(["']?)_newSession\1…
+     46|
+     47|     expect(resting).toMatch(/border-radius:\s*2px\s*!important/)
+       |                     ^
+     48|     expect(resting).toMatch(/box-shadow:\s*none/)
+     49|     expect(pressed).toMatch(/transform:\s*translate\(1px,\s*1px\)/)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |thread-safe| packages/client/ui-theme/tests/scrollbar-styles.client.spec.ts > elevated surface rebinds > every sheet that scrolls on an elevated surface rebinds
+AssertionError: E:\.sake\Desktop\craftcode\packages\client\ui-mcmod-workbench\src\client\Workbench.module.css scrolls on an elevated surface without rebinding: expected [ '--dsw-alias-bg-layer-2' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "--dsw-alias-bg-layer-2",
++ ]
+
+ ❯ packages/client/ui-theme/tests/scrollbar-styles.client.spec.ts:591:98
+    589|     for (const [file, surfaces] of sheetSurfaces) {
+    590|       if (!surfaces.scrolls || surfaces.rebindsElevation) continue
+    591|       expect([...surfaces.elevated], `${file} scrolls on an elevated s…
+       |                                                                                                  ^
+    592|     }
+    593|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 291 passed (293)
+      Tests  2 failed | 4052 passed | 1 skipped (4055)
+   Start at  02:33:08
+   Duration  59.45s (transform 54.05s, setup 38.96s, import 329.09s, tests 142.71s, environment 240.66s)
+
+[ELIFECYCLE] Command failed with exit code 1.

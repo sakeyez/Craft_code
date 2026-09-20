@@ -1,0 +1,9 @@
+packages/minecraft/mc-workbench/src/network.ts:54:58: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/network.ts:227:47: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/network.ts:229:26: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/network.ts:230:42: error typescript(no-non-null-assertion): Forbidden non-null assertion.
+packages/minecraft/mc-workbench/src/network.ts:101:1: error @stylistic(max-len): This line has a length of 148. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/network.ts:116:1: error @stylistic(max-len): This line has a length of 213. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/network.ts:252:1: error @stylistic(max-len): This line has a length of 276. Maximum allowed is 140.
+packages/client/ui-mcmod-workbench/src/client/NetworkSettings.tsx:23:71: error typescript(use-unknown-in-catch-callback-variable): Prefer the safe `: unknown` for a `catch` callback variable.
+packages/minecraft/mc-workbench/src/network.ts:219:9: error typescript(use-unknown-in-catch-callback-variable): Prefer the safe `: unknown` for a `then` rejection callback variable.

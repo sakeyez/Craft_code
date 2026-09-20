@@ -1,0 +1,4 @@
+$ tsx scripts/verify-translation-pairing.ts "--write" "packages/client/ui-mcmod-workbench/README.md" "packages/minecraft/mc-workbench/README.md"
+verify-translation-pairing: recorded packages/client/ui-mcmod-workbench/README.i18n.yaml
+verify-translation-pairing: recorded packages/minecraft/mc-workbench/README.i18n.yaml
+verify-translation-pairing: 2 record(s) written; run the check to validate the pairs.

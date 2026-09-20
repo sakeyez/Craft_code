@@ -1,0 +1,46 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.8 E:/.sake/Desktop/craftcode
+
+ ❯ apps/desktop/renderer/tests/mcmod-workbench.e2e.ts (3 tests | 2 failed) 67557ms
+     × keeps project navigation in the menu row with accessible window controls 30144ms
+     × retains logs, edits through local Monaco and rejects an external save conflict 31114ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/desktop/renderer/tests/mcmod-workbench.e2e.ts > Minecraft workbench assembled browser > keeps project navigation in the menu row with accessible window controls
+TimeoutError: locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: '新会话', exact: true })
+
+ ❯ apps/desktop/renderer/tests/mcmod-workbench.e2e.ts:101:68
+     99|       await page.getByRole('tab', { name: '游戏测试', exact: true }).click…
+    100|       await page.getByRole('heading', { name: '游戏测试', exact: true }).w…
+    101|       await page.getByRole('button', { name: '新会话', exact: true }).cli…
+       |                                                                    ^
+    102|     }
+    103|     await page.setViewportSize({ width: 1440, height: 1000 })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  apps/desktop/renderer/tests/mcmod-workbench.e2e.ts > Minecraft workbench assembled browser > retains logs, edits through local Monaco and rejects an external save conflict
+TimeoutError: locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: '新会话', exact: true })
+
+ ❯ apps/desktop/renderer/tests/mcmod-workbench.e2e.ts:123:68
+    121|       await page.keyboard.press('Control+End')
+    122|       await page.keyboard.type('// draft')
+    123|       await page.getByRole('button', { name: '新会话', exact: true }).cli…
+       |                                                                    ^
+    124|       await page.getByRole('tab', { name: '代码', exact: true }).click()
+    125|       await page.getByRole('button', { name: '保存', exact: true }).clic…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  2 failed | 2 passed (4)
+   Start at  00:05:56
+   Duration  76.53s (transform 996ms, setup 0ms, import 4.76s, tests 71.45s, environment 0ms)
+

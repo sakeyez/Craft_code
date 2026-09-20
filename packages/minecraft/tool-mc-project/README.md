@@ -6,6 +6,9 @@ Model-facing Minecraft project tools. The package registers `detect_mc_project`,
 
 `detect_mc_project` and `validate_mc_resources` read the current session workspace through `ctx.fs`. They extract evidence; they do not evaluate Gradle, execute shell commands, download dependencies, or emulate Minecraft resource loading. `run_mc_check` first reuses detection, then executes the selected Gradle commands through `ctx.shell`, so the mounted shell, subprocess, sandbox, timeout, and output-retention policies remain authoritative.
 
+
+The mounted Minecraft workbench adds exact-classpath `query_mc_api` evidence and automatic project checkpoints before modifying tools. `run_mc_check` accepts `testMode: development | artifact` (default development); artifact runtime checks require the workbench, preserve shell policy and runtime approval, and never accept a server EULA automatically. See the [workbench contract](../mc-workbench/README.md).
+
 ## Tool
 
 | Tool | Purpose |
@@ -49,7 +52,7 @@ Prefix-stable for the life of the mounted composition. Result content is per-cal
 
 #### What the model sees
 
-The model sees the [`run_mc_check`](../../../docs/tool-catalog.md#deepseek-aidsh-tool-mc-project) tool schema only when this package is mounted in a composition that already provides `ctx.shell`. The tool accepts `target` (`build`, `test`, `datagen`, `resources`, `runtime`, `startup`, or `all`), `runtimeMode` (`client` or `server`) for `runtime` and `startup`, and optional per-command `timeoutMs`. Its canonical result contains `commands`, `exitCode`, `steps`, `failedStep`, and `suggestedNextAction`; each step carries command identity when applicable, status, exit data, stdout/stderr summaries, and sandbox facts from the shell result. Datagen and runtime tasks use declared candidates first and a bounded `tasks --all --console=plain` probe otherwise. `resources` runs static `validate_mc_resources` before Gradle `processResources`; `startup` runs the complete preflight, then accepts a bounded client/server timeout only when a recognized readiness marker was observed; `runtime` remains the direct approved launch primitive; `all` stops at the first failed step.
+The model sees the [`run_mc_check`](../../../docs/tool-catalog.md#deepseek-aidsh-tool-mc-project) tool schema only when this package is mounted in a composition that already provides `ctx.shell`. The tool accepts `target` (`build`, `test`, `datagen`, `resources`, `runtime`, `startup`, or `all`), `runtimeMode` (`client` or `server`) for `runtime` and `startup`, and optional per-command `timeoutMs`. Its canonical result contains `commands`, `exitCode`, `steps`, `failedStep`, and `suggestedNextAction`; each step carries command identity when applicable, status, exit data, stdout/stderr summaries, and sandbox facts from the shell result. Datagen and runtime tasks use declared candidates first and a bounded `tasks --all --console=plain` probe otherwise. `resources` runs static `validate_mc_resources` before Gradle `processResources`; `startup` runs the complete preflight, then accepts a bounded client/server timeout only when a recognized readiness marker was observed; `runtime` executes only the approved project run task and its dependencies; `all` stops at the first failed step.
 
 #### Token effect
 
@@ -81,3 +84,5 @@ Prefix-stable for the life of the mounted composition. Result content is per-cal
 - **Root-project commands only** - `run_mc_check` refuses settings that declare subprojects or included builds because it cannot infer qualified task paths. Maven builds and custom launchers are unsupported.
 - **Shell execution is composition-owned** - `run_mc_check` is absent without `ctx.shell`, and sandbox denials or timeout limits are reported from the mounted executor rather than bypassed.
 - **Resource validation is static** - `validate_mc_resources` checks only workspace files under detected or conventional resource roots, including metadata parse errors, JSON root/value types, bounded PNG structure and CRCs, local model parents, both versioned data-folder spellings, and `assets/<namespace>/items` definitions. Missing vanilla, dependency, generated, or runtime-provided assets are ignored unless the reference targets the current mod namespace. Unknown, range-only, or conflicting versions produce warnings instead of an assumed item-definition or data-folder format.
+
+When the Minecraft workbench is mounted, approved runtime/startup requests use its retained lifecycle through the existing shell policy; only explicit startup checks add preflight. Results identify the retained log; background output is not inserted automatically. The type-only `./types` export exposes serializable detection facts without host service declarations. [Runtime contract](../mc-workbench/README.md).

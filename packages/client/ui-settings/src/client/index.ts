@@ -47,6 +47,21 @@ export const inject = ['connection', 'remote']
  * @param ctx - client root context.
  */
 export function apply(ctx: ClientContext): void {
+  const navigationListeners = new Set<() => void>()
+  let navigation: { open: boolean; activeId?: string } = { open: false }
+  const publish = (next: typeof navigation): void => {
+    navigation = next
+    for (const listener of navigationListeners) listener()
+  }
+  ctx.provide('settingsNavigation', {
+    openSection: (id?: string) => { publish({ open: true, ...(id ? { activeId: id } : {}) }) },
+    close: () => { publish({ open: false }) },
+    getSnapshot: () => navigation,
+    subscribe: (listener: () => void) => {
+      navigationListeners.add(listener)
+      return () => { navigationListeners.delete(listener) }
+    },
+  })
   const schema = new SettingsSchemaService(ctx)
   const connection = ctx.get('connection') as ConnectionHandle
   const mirror = new SettingsDescribeMirror(
@@ -66,4 +81,23 @@ export function apply(ctx: ClientContext): void {
     return () => { for (const dispose of disposers) dispose() }
   }, 'ui-settings: describe mirror invalidations')
   new SettingsScopeBinder(ctx, { mirror, schema })
+}
+
+/** Settings navigation requests stay in the client and never enter session history. */
+export interface SettingsNavigation {
+  /** Open a registered settings section. */
+  openSection(id?: string): void
+  /** Close the settings panel. */
+  close(): void
+  /** Stable snapshot until a navigation request changes it. */
+  getSnapshot(): { open: boolean; activeId?: string }
+  /** Observe explicit requests; disposal removes the listener. */
+  subscribe(listener: () => void): () => void
+}
+
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    /** Client-local settings panel navigation. */
+    settingsNavigation: SettingsNavigation
+  }
 }

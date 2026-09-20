@@ -1,0 +1,6 @@
+packages/minecraft/mc-workbench/src/contracts.ts:111:1: error @stylistic(max-len): This line has a length of 145. Maximum allowed is 140.
+packages/minecraft/mc-workbench/src/contracts.ts:115:1: error @stylistic(max-len): This line has a length of 267. Maximum allowed is 140.
+packages/client/ui-mcmod-bootstrap/src/client/BootstrapOverlay.tsx:60:1: error @stylistic(max-len): This line has a length of 151. Maximum allowed is 140.
+packages/client/ui-mcmod-bootstrap/src/client/BootstrapOverlay.tsx:74:1: error @stylistic(max-len): This line has a length of 141. Maximum allowed is 140.
+packages/minecraft/mc-workbench/tests/dependencies.spec.ts:48:11: error typescript(no-unsafe-assignment): Unsafe assignment of an any value.
+packages/minecraft/mc-workbench/tests/dependencies.spec.ts:49:21: error typescript(no-unsafe-member-access): Unsafe member access .depends on an `any` value.

@@ -1,0 +1,3 @@
+packages/minecraft/tool-mc-bootstrap/src/service.ts:43:1: error @stylistic(max-len): This line has a length of 177. Maximum allowed is 140.
+packages/minecraft/tool-mc-bootstrap/src/service.ts:251:1: error @stylistic(max-len): This line has a length of 264. Maximum allowed is 140.
+packages/minecraft/tool-mc-bootstrap/src/service.ts:251:128: error typescript(require-await): Function has no 'await' expression.

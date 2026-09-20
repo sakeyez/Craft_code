@@ -1,0 +1,2 @@
+$ tsx scripts/gen-client-catalog.ts
+gen-client-catalog: wrote packages/extensions/cordis-client-runner/src/client/slot-catalog.ts.

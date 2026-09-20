@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { parseGradleTaskNames, runtimeTaskCandidates } from '../src/gradle-tasks.ts'
+import { hasMinecraftReadiness, parseGradleTaskNames, runtimeTaskCandidates } from '../src/gradle-tasks.ts'
 
 describe('Gradle runtime task discovery', () => {
+  it('requires world readiness and accepts loader logger prefixes', () => {
+    expect(hasMinecraftReadiness('server', '[12:00:00] [Server thread/INFO] [minecraft/DedicatedServer]: Done (4.51s)! For help, type "help"')).toBe(true)
+    expect(hasMinecraftReadiness('client', '[Render thread/INFO]: Setting user: Player')).toBe(false)
+    expect(hasMinecraftReadiness('client', '[Render thread/INFO]: Loaded 14 advancements')).toBe(false)
+    expect(hasMinecraftReadiness('client', '[Server thread/INFO] [minecraft/MinecraftServer]: Dev joined the game')).toBe(true)
+    expect(hasMinecraftReadiness('server', '[main/INFO]: Starting minecraft server')).toBe(false)
+  })
   it('parses unique plain task rows in lexical order', () => {
     expect(parseGradleTaskNames([
       'Build tasks',

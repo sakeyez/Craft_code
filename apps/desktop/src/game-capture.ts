@@ -9,13 +9,12 @@ export type GameCaptureStatus =
   | 'connected'
   | 'failed'
   | 'disconnected'
-  | 'reconnecting'
   | 'unsupported'
 
 /** Renderer-safe state for one project-owned external game window. */
 export type GameCaptureState =
   | { status: 'idle' }
-  | { status: 'starting' | 'reconnecting'; gameName?: string }
+  | { status: 'starting'; gameName?: string }
   | { status: 'connected'; gameName?: string; surfaceKind: 'external-window' }
   | { status: 'failed' | 'disconnected' | 'unsupported'; gameName?: string; error: string }
 
@@ -38,10 +37,7 @@ export interface GameCaptureProvider {
   annotationShortcutHeld?(): Promise<boolean>
   isAnnotationForeground?(cwd: string): Promise<boolean>
   start(cwd: string, rootPid: number): Promise<GameCaptureState>
-  reconnect(cwd: string): Promise<GameCaptureState>
   select(cwd: string | undefined): Promise<void>
-  /** Arrange the selected game's ordinary window and companion; reject on failure. */
-  reposition(cwd: string): Promise<void>
   stop(cwd: string): Promise<void>
   annotationTarget(cwd: string): Promise<AnnotationTarget>
   beginAnnotation(cwd: string): Promise<GameCaptureSnapshot>
@@ -69,14 +65,7 @@ export class UnsupportedGameCaptureProvider implements GameCaptureProvider {
     return Promise.resolve(state)
   }
 
-  reconnect(cwd: string): Promise<GameCaptureState> {
-    const state: GameCaptureState = { status: 'unsupported', error: '当前平台不支持内嵌游戏窗口。' }
-    this.publish?.({ cwd, state })
-    return Promise.resolve(state)
-  }
-
   select(_cwd: string | undefined): Promise<void> { return Promise.resolve() }
-  reposition(_cwd: string): Promise<void> { return Promise.resolve() }
   stop(cwd: string): Promise<void> {
     this.publish?.({ cwd, state: { status: 'idle' } })
     return Promise.resolve()

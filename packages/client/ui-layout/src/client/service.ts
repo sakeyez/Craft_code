@@ -24,6 +24,8 @@ export type PanelActions = BoundActions<ReturnType<typeof createLayoutStore>>
  * only).
  */
 export interface ILayout {
+  /** Select a project workbench page when the composition provides one. */
+  setWorkbenchView?(cwd: string, view: 'conversation' | 'code' | 'dependencies' | 'test'): void
   /** Toggle the sidebar panel (closed ⟷ contract default width). */
   toggleSidebar(): void
   /** Open the details panel (no-op when already open). */
@@ -36,17 +38,16 @@ export interface ILayout {
   bindAnnotationShortcut(request: GameAnnotationRequest, listener: (error?: string) => void): () => void
   /** Attach the desktop-only privileged operations and return their disposer. */
   attachGameSurfaceBridge(bridge: GameSurfaceBridge): () => void
-  reconnectGameSurface(cwd: string): Promise<GameSurfaceState>
   beginGameAnnotation(
     request: GameAnnotationRequest,
     commit: (drafts: GameAnnotationDraft[], snapshot?: GameAnnotationSnapshot) => Promise<void>,
   ): Promise<void>
   endGameAnnotation(operationId: string): Promise<void>
-  repositionGameCompanion(cwd: string): Promise<void>
 }
 
 /** Cross-plugin panel-action face (ctx.layout). */
 export class LayoutController implements ILayout {
+  setWorkbenchView(cwd: string, view: 'conversation' | 'code' | 'dependencies' | 'test'): void { this.#require().setWorkbenchView(cwd, view) }
   #panels: PanelActions | undefined
   #gameBridge: GameSurfaceBridge | undefined
   readonly #pendingGameStates = new Map<string, GameSurfaceState>()
@@ -94,13 +95,11 @@ export class LayoutController implements ILayout {
     return () => { if (this.#gameBridge === bridge) this.#gameBridge = undefined }
   }
 
-  reconnectGameSurface(cwd: string): Promise<GameSurfaceState> { return this.#requireGameBridge().reconnect(cwd) }
   beginGameAnnotation(
     request: GameAnnotationRequest,
     commit: (drafts: GameAnnotationDraft[], snapshot?: GameAnnotationSnapshot) => Promise<void>,
   ): Promise<void> { return this.#requireGameBridge().beginAnnotation(request, commit) }
   endGameAnnotation(operationId: string): Promise<void> { return this.#requireGameBridge().endAnnotation(operationId) }
-  repositionGameCompanion(cwd: string): Promise<void> { return this.#requireGameBridge().reposition(cwd) }
 
   #requireGameBridge(): GameSurfaceBridge {
     if (this.#gameBridge === undefined) throw new Error('layout: desktop game bridge not attached')

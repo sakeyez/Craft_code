@@ -12,7 +12,7 @@ afterEach(async () => {
   for (const dispose of disposers.splice(0).reverse()) await dispose()
 })
 
-async function actionFor(session: Pick<ISession, 'annotate'> | undefined) {
+async function actionFor(session: Pick<ISession, 'annotate'> | undefined, current: SessionId = 'game-session' as SessionId) {
   const ctx = new Context()
   const slotsFiber = ctx.plugin(SlotRegistry)
   await slotsFiber.await()
@@ -21,7 +21,7 @@ async function actionFor(session: Pick<ISession, 'annotate'> | undefined) {
     getTheme: () => ({ active: { colorScheme: 'light', tokens: {} } }),
   } as never)
   const binding = vi.fn(() => session === undefined ? undefined : { session })
-  ctx.provide('sessions', { binding } as never)
+  ctx.provide('sessions', { binding, list: { getSnapshot: () => ({ current }) } } as never)
   const fiber = ctx.plugin({ inject: [...inject], apply })
   await fiber.await()
   disposers.push(async () => { await fiber.dispose() })
@@ -30,7 +30,7 @@ async function actionFor(session: Pick<ISession, 'annotate'> | undefined) {
   expect(game).toBeDefined()
   const injectGame = game!.inject as unknown as (sessionId: SessionId | undefined) => GameWorkspaceInjected
   const sessionId = 'game-session' as SessionId
-  return { injectGame, sessionId, binding }
+  return { injectGame, sessionId, binding, layout: ctx.get('layout') as import('../src/client/service.ts').LayoutController }
 }
 
 describe('registered game annotation action', () => {
@@ -55,5 +55,31 @@ describe('registered game annotation action', () => {
   it('offers no save action without a selected session', async () => {
     const { injectGame } = await actionFor(undefined)
     expect(injectGame(undefined).annotate).toBeUndefined()
+  })
+
+  it('resolves the session again when annotation completion is submitted', async () => {
+    const first = { getSnapshot: () => ({ annotations: [] }), annotate: vi.fn<NonNullable<ISession['annotate']>>().mockResolvedValue({ ok: true, value: { accepted: true, seq: 1 } }) }
+    const second = { getSnapshot: () => ({ annotations: [] }), annotate: vi.fn<NonNullable<ISession['annotate']>>().mockResolvedValue({ ok: true, value: { accepted: true, seq: 2 } }) }
+    let current = 'game-session' as SessionId
+    const ctx = new Context()
+    const slotsFiber = ctx.plugin(SlotRegistry)
+    await slotsFiber.await()
+    disposers.push(async () => { await slotsFiber.dispose() })
+    ctx.provide('theme', { getTheme: () => ({ active: { colorScheme: 'light', tokens: {} } }) } as never)
+    ctx.provide('sessions', { binding: (id: SessionId) => id === 'game-session' ? { session: first } : { session: second }, list: { getSnapshot: () => ({ current }) } } as never)
+    const fiber = ctx.plugin({ inject: [...inject], apply })
+    await fiber.await()
+    disposers.push(async () => { await fiber.dispose() })
+    const slots = ctx.get('slots') as SlotRegistry
+    const game = slots.entries('game')[0]!
+    const injected = (game.inject as unknown as (sessionId: SessionId) => GameWorkspaceInjected)('game-session' as SessionId)
+    const layout = ctx.get('layout') as import('../src/client/service.ts').LayoutController
+    layout.attachGameSurfaceBridge({
+      beginAnnotation: async (_request, commit) => { current = 'other-session' as SessionId; await commit([], undefined) },
+      endAnnotation: async () => {},
+    })
+    await injected.beginAnnotation({ operationId: 'operation', cwd: 'C:\\project', sessionId: 'game-session', labels: [] })
+    expect(first.annotate).not.toHaveBeenCalled()
+    expect(second.annotate).toHaveBeenCalledWith([], undefined)
   })
 })

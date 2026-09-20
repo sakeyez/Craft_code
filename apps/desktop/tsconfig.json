@@ -12,7 +12,7 @@
       "path": "../../packages/subprocess/subprocess"
     },
     {
-      "path": "../../packages/minecraft/tool-mc-project"
+      "path": "../../packages/minecraft/mc-workbench"
     }
   ]
 }

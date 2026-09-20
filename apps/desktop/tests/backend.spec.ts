@@ -1,10 +1,25 @@
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { backendArguments, readyUrlFromLine, startBackend } from '../src/backend.ts'
 
 const fixture = fileURLToPath(new URL('./fixtures/backend.mjs', import.meta.url))
 
 describe('desktop backend supervisor', () => {
+  it('restricts proxy resolution to valid private HTTPS requests', async () => {
+    const resolveProxy = vi.fn(() => Promise.resolve('PROXY 127.0.0.1:7890'))
+    const backend = await startBackend({
+      nodeExecutable: process.execPath, cliEntry: fixture, entryMode: 'compiled', cwd: process.cwd(),
+      env: { ...process.env, DSH_DESKTOP_FIXTURE_MODE: 'ready' }, resolveProxy,
+      startTimeoutMs: 2000, stopTimeoutMs: 2000,
+    })
+    try {
+      for (const url of ['file:///private', 'http://example.com', 'https://user:secret@example.com', 'invalid'])
+        backend.child.emit('message', { type: 'dsh/network-proxy', id: 'invalid', url })
+      expect(resolveProxy).not.toHaveBeenCalled()
+      backend.child.emit('message', { type: 'dsh/network-proxy', id: 'valid', url: 'https://meta.fabricmc.net/' })
+      expect(resolveProxy).toHaveBeenCalledExactlyOnceWith('https://meta.fabricmc.net/')
+    } finally { await backend.stop() }
+  })
   it('builds the private desktop invocation without a shell', () => {
     expect(backendArguments({ cliEntry: 'cli.js', entryMode: 'source' })).toEqual([
       '--import', 'tsx/esm', 'cli.js', 'desktop', '--port', '0',

@@ -33,10 +33,10 @@
     "dev": "pnpm run build && electron .",
     "icon:generate": "node scripts/generate-icon.mjs"
   },
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "dependencies": {
     "@deepseek-ai/dsh-subprocess": "workspace:^",
-    "@deepseek-ai/dsh-tool-mc-project": "workspace:^",
+    "@deepseek-ai/dsh-mc-workbench": "workspace:^",
     "koffi": "^3.1.0"
   },
   "devDependencies": {

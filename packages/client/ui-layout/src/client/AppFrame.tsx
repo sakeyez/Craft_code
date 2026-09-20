@@ -21,7 +21,7 @@ import { gameProjectKey } from './game.ts'
 /** Full composed props: runtime share + child-slot render share + store share. */
 export type AppFrameProps =
   & PropsRuntime<'root'>
-  & PropsRenderSlots<'shell.topbar' | 'sidebar' | 'conversation' | 'game' | 'details' | 'shell.overlay'>
+  & PropsRenderSlots<'shell.topbar' | 'shell.window-controls' | 'sidebar' | 'conversation' | 'game' | 'details' | 'shell.overlay' | 'workbench.nav' | 'workbench.panel'>
   & PropsStore<ReturnType<typeof createLayoutStore>>
 
 /** Center column grid item (session-body building block). */
@@ -104,8 +104,8 @@ export function AppFrame({
   const bodyRef = useRef<HTMLDivElement | null>(null)
   const [viewport, setViewport] = useState(() => window.innerWidth)
   const gameState = currentProject.cwd === undefined ? { status: 'idle' as const } : panels.gameByCwd[gameProjectKey(currentProject.cwd)] ?? { status: 'idle' as const }
-  const gameFocus = gameState.status === 'connected'
 
+  const workbenchView = currentProject.cwd ? panels.workbenchByCwd[gameProjectKey(currentProject.cwd)] ?? 'conversation' : 'conversation'
   const lastSession = useRef(detailsSession)
   useLayoutEffect(() => {
     if (detailsSession === undefined) return
@@ -175,12 +175,12 @@ export function AppFrame({
       className={css.frame}
       data-sidebar-collapsed={sidebarCollapsed || undefined}
       data-details-collapsed={cols.details === 0 || undefined}
-      data-game-focus={gameFocus || undefined}
-      data-game-mode={gameFocus || undefined}
       data-dragging={dragging || undefined}
     >
       <div className={css.topbar} data-shell-topbar>
         {renderSlot('shell.topbar', {})}
+        {currentProject.cwd && renderSlot('workbench.nav', { cwd: currentProject.cwd, view: workbenchView })}
+        {renderSlot('shell.window-controls', {})}
       </div>
       <div
         ref={bodyRef}
@@ -207,7 +207,8 @@ export function AppFrame({
               empty while no session is current. */}
           <CenterColumn>
             {gameState.status !== 'idle' && renderSlot('game', { ...(currentProject.cwd === undefined ? {} : { cwd: currentProject.cwd }), state: gameState })}
-            {renderSlot('conversation', {})}
+            <div className={css.workbenchPage} hidden={workbenchView !== 'conversation'}>{renderSlot('conversation', {})}</div>
+            {currentProject.cwd && <div className={css.workbenchPage} hidden={workbenchView === 'conversation'}>{renderSlot('workbench.panel', { cwd: currentProject.cwd, view: workbenchView })}</div>}
           </CenterColumn>
           <DetailsColumn>{renderSlot('details', {})}</DetailsColumn>
         </>

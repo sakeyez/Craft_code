@@ -1,0 +1,48 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.8 E:/.sake/Desktop/craftcode
+
+ ❯ packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts (4 tests | 2 failed | 2 skipped) 86161ms
+     × builds the highest stable Fabric 1.21.x with the host wrapper 20525ms
+     × builds the highest stable NeoForge 1.21.x with the host wrapper 20519ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts > real host Minecraft bootstrap builds > builds the highest stable Fabric 1.21.x with the host wrapper
+Error: fabric bootstrap failed: wrapper-download Gradle Wrapper 下载失败: Error: Connection timed out
+Minecraft bootstrap 62359444-7ab2-40e8-8244-38b42d4c305c
+
+ ❯ assertBuild packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts:75:13
+     73|     const snapshot = await waitFor(service, started.operationId)
+     74|     if (snapshot.status !== 'ready' || snapshot.projectPath === undefi…
+     75|       throw new Error(`${entry.loader} bootstrap failed: ${snapshot.fa…
+       |             ^
+     76|     }
+     77|     const project = snapshot.projectPath
+ ❯ withRequiredJava packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts:111:16
+ ❯ packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts:148:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts > real host Minecraft bootstrap builds > builds the highest stable NeoForge 1.21.x with the host wrapper
+Error: neoforge bootstrap failed: wrapper-download Gradle Wrapper 下载失败: Error: Connection timed out
+Minecraft bootstrap a97a135c-5c30-4ed4-9757-3cae3f435b0d
+
+ ❯ assertBuild packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts:75:13
+     73|     const snapshot = await waitFor(service, started.operationId)
+     74|     if (snapshot.status !== 'ready' || snapshot.projectPath === undefi…
+     75|       throw new Error(`${entry.loader} bootstrap failed: ${snapshot.fa…
+       |             ^
+     76|     }
+     77|     const project = snapshot.projectPath
+ ❯ withRequiredJava packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts:111:16
+ ❯ packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts:160:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 2 skipped (4)
+   Start at  00:12:14
+   Duration  87.73s (transform 1.02s, setup 363ms, import 1.03s, tests 86.16s, environment 0ms)
+

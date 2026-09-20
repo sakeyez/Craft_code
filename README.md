@@ -54,6 +54,6 @@ For agents, follow [AGENTS.md](AGENTS.md).
 
 ## License
 
-[MIT](LICENSE)
+[AGPL-3.0-only](LICENSE). CraftCode retains the upstream [DeepSeek Harness MIT notice](LICENSES/DeepSeek-Harness-MIT.txt). User-generated mods choose their own license.
 
 Third-party dependencies and their licenses are disclosed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

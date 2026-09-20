@@ -27,7 +27,10 @@
       "default": "./lib/gradle-tasks.js"
     },
     "./src/*": "./src/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./types": {
+      "types": "./lib/types/types.d.ts"
+    }
   },
   "files": [
     "lib/index.js",
@@ -35,7 +38,7 @@
     "lib/gradle-tasks.js",
     "lib/types/**/*.d.ts"
   ],
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "dependencies": {
     "@deepseek-ai/schemastery": "workspace:^",
     "semver": "^7.8.4",

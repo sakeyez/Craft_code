@@ -42,10 +42,12 @@ describe('dsh-mcmod bundle', () => {
 
     expect(manifest.dsh?.bundle?.patch).toBe('./cordis.patch.yml')
     const rows = loadPatch().flatMap(patch => patch.insert ?? [])
-    expect(rows.map(row => row.id)).toEqual(['lsp', 'lsp-stdio'])
+    expect(rows.map(row => row.id)).toEqual(['lsp', 'lsp-stdio', 'mc-workbench', 'mc-bootstrap', 'ui-mcmod-bootstrap', 'ui-mcmod-workbench'])
     expect(manifest.dependencies).toMatchObject({
+      '@deepseek-ai/dsh-client-ui-mcmod-bootstrap': 'workspace:^',
       '@deepseek-ai/dsh-lsp': 'workspace:^',
       '@deepseek-ai/dsh-lsp-stdio': 'workspace:^',
+      '@deepseek-ai/dsh-tool-mc-bootstrap': 'workspace:^',
     })
   })
 
@@ -68,6 +70,12 @@ describe('dsh-mcmod bundle', () => {
           },
         },
       },
+    })
+    expect(lspRows.find(row => row.id === 'mc-bootstrap')).toMatchObject({
+      name: '@deepseek-ai/dsh-tool-mc-bootstrap',
+    })
+    expect(lspRows.find(row => row.id === 'ui-mcmod-bootstrap')).toMatchObject({
+      name: '@deepseek-ai/dsh-client-ui-mcmod-bootstrap',
     })
   })
 

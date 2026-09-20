@@ -53,6 +53,17 @@ async function feedList(b: Bench, rows: FeedRow[]): Promise<void> {
 }
 
 describe('list store projection', () => {
+  it('announces every explicit navigation including the currently selected session', async () => {
+    const b = bench()
+    await feedList(b, [{ id: 'first', cwd: '/project-a' }, { id: 'second', cwd: '/project-b' }])
+    const navigation = vi.fn()
+    const off = b.ctx.on('sessions/navigate', navigation)
+    b.svc.open(sid('first'))
+    b.svc.open(sid('first'))
+    b.svc.open(sid('second'))
+    expect(navigation.mock.calls.map(call => call[0])).toEqual(['first', 'first', 'second'])
+    off()
+  })
   it('projects durable titles separately from cwd/id display fallbacks and parent links', async () => {
     const b = bench()
     b.svc.handleMuxEnvelope({

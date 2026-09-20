@@ -54,6 +54,9 @@ export { REGION_BEGIN, REGION_END }
  * errors, so the partition can never silently drift from the service API.
  */
 export const SERVICE_PAGE: Record<string, string> = {
+  minecraftBootstrap: 'minecraft.md',
+  minecraftRuntime: 'minecraft.md',
+  minecraftWorkbench: 'minecraft.md',
   agentLoop: 'core.md',
   agentDefaultModel: 'core.md',
   agentPresets: 'core.md',
@@ -134,6 +137,7 @@ export const SERVICE_PAGE: Record<string, string> = {
  * to a model as `cordis_runtime_inspect what:"client"`).
  */
 export const SERVICE_WALK_EXEMPTIONS: Record<string, string> = {
+  mcmodBootstrap: 'client-side project creation controller — packages/client/ui-mcmod-bootstrap/README.md owns the API',
   agent: 'not a service: the DX accessor field on Agent.ctx (root accessor defaulting to undefined) — docs/subsystems/core.md owns the Agent handle',
   appExit: 'not a service: launcher-provided bounded process-exit callback — packages/boot/cmdline/README.md owns the launcher contract',
   cmdlineArgs: 'not a service: launcher-provided immutable app argument accessor — packages/boot/cmdline/README.md owns the launcher contract',
@@ -145,6 +149,7 @@ export const SERVICE_WALK_EXEMPTIONS: Record<string, string> = {
   uiRenderer: 'client-side interface-typed browser service — packages/client/ui-renderer/README.md owns the API',
   settingsSchema: 'client-side schema introspection service — packages/client/ui-settings/README.md owns the API',
   settingsScope: 'client-side settings-namespace transport service — packages/client/ui-settings/README.md owns the API',
+  settingsNavigation: 'client-side settings panel navigation — packages/client/ui-settings/README.md owns the API',
   chatFileMentions: 'client-side slot-contract accessor (ChatFileMentions) — packages/client/ui-conversation/README.md owns the API',
   commandUi: 'client-side interface-typed browser service — packages/client/ui-commands/README.md owns the API',
   conversation: 'client-side interface-typed browser service — packages/client/ui-conversation/README.md owns the API',
@@ -171,6 +176,7 @@ export const SERVICE_WALK_EXEMPTIONS: Record<string, string> = {
  * {@link EVENT_WALK_EXEMPTIONS} names each one with its documentation owner.
  */
 export const EVENT_SCOPE_PAGE: Record<string, string> = {
+  'minecraft-bootstrap': 'minecraft.md',
   'agent': 'core.md',
   'agent-loop': 'core.md',
   'agent-preset': 'core.md',
@@ -205,6 +211,7 @@ export const EVENT_SCOPE_PAGE: Record<string, string> = {
  * exemption cannot mask another declaration in that scope.
  */
 export const EVENT_WALK_EXEMPTIONS: Record<string, string> = {
+  'sessions/navigate': 'client-face explicit session navigation — packages/client/runtime/README.md owns the API',
   'command/executed': 'client-face local command acknowledgment — packages/client/ui-commands/README.md owns the API',
   'connection/reset': 'client-face transport signal — packages/client/runtime/README.md owns the API',
   'locale/change': 'client-face locale switch signal — packages/client/locale/README.md owns the API',
@@ -557,6 +564,13 @@ export const FOUNDATION_TYPE_NAMES: ReadonlySet<string> = new Set([
 
 /** Project types deliberately documented outside the subsystems catalog. */
 export const TYPE_LINK_EXEMPTIONS: Readonly<Record<string, string>> = {
+  CatalogSnapshot: 'Minecraft release catalog contract — packages/minecraft/tool-mc-bootstrap/README.md',
+  BootstrapStartRequest: 'Minecraft creation input — packages/minecraft/tool-mc-bootstrap/README.md',
+  StartRpcResponse: 'Minecraft creation operation identity — packages/minecraft/tool-mc-bootstrap/README.md',
+  OperationSnapshot: 'Minecraft creation progress — packages/minecraft/tool-mc-bootstrap/README.md',
+  CheckResult: 'Focused Minecraft check outcome — packages/minecraft/tool-mc-project/README.md',
+  RuntimeMode: 'Minecraft client/server selection — packages/minecraft/tool-mc-project/README.md',
+  ApiQueryResult: 'Exact classpath API evidence — packages/minecraft/mc-workbench/README.md',
   z: 'schemastery schema constructor is owned by vendor/schemastery (vendored upstream)',
   BeginCommandRequest: 'event-local request contract is owned by packages/client/ui-input-trigger/src/types.ts',
   InsertReferenceRequest: 'event-local request contract is owned by packages/client/ui-input-trigger/src/types.ts',

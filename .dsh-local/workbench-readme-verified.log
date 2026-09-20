@@ -1,0 +1,2 @@
+$ tsx scripts/verify-package-readme-model-experience.ts
+verify-package-readme-model-experience: 236 README(s) checked (4 audited omissions, 105 structured, 199 model-context entries, 326 KV-cache fields, 16 fenced system-prompt entries, 28 catalog-linked tool-schema entries, 69 explained none, 58 indirect, 50 verbatim markdown blocks), all conform.

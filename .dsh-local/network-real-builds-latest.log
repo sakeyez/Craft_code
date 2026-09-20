@@ -1,0 +1,129 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.8 E:/.sake/Desktop/craftcode
+
+ ❯ packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts (4 tests | 2 failed | 2 skipped) 130946ms
+     × builds the highest stable Fabric 1.21.x with the host wrapper 77557ms
+     × builds the highest stable NeoForge 1.21.x with the host wrapper 46950ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts > real host Minecraft bootstrap builds > builds the highest stable Fabric 1.21.x with the host wrapper
+Error: fabric bootstrap failed: build-failed Gradle build failed with exit code 1
+Minecraft bootstrap 959c4031-d7b5-42f6-a4ad-eda61da93f34
+Gradle Wrapper downloaded from the official Gradle source tree.
+Resolving dependencies with mirror-first repositories; official fallback is enabled.
+Picked up JAVA_TOOL_OPTIONS: "-Djava.net.useSystemProxies=false" "-Dhttp.proxyHost=" "-Dhttps.proxyHost=" "-DsocksProxyHost="
+Fetching distribution.
+Downloading https://mirrors.cloud.tencent.com/gradle/gradle-9.5.1-bin.zip
+.............10%.............20%..............30%.............40%.............50%..............60%.............70%..............80%.............90%.............100%
+
+Welcome to Gradle 9.5.1!
+
+Here are the highlights of this release:
+ - Task provenance in reports and failure messages
+ - Type-safe accessors for precompiled Kotlin Settings plugins
+
+For more details see https://docs.gradle.org/9.5.1/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.5.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :
+Fabric Loom: 1.17.20
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+A problem occurred configuring root project 'real_fabric'.
+> Failed to setup Minecraft, net.fabricmc.loom.util.download.DownloadException: Failed to download
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 1m 16s
+
+ ❯ assertBuild packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts:75:13
+     73|     const snapshot = await waitFor(service, started.operationId)
+
+     74|     if (snapshot.status !== 'ready' || snapshot.projectPath === undefi…
+     75|       throw new Error(`${entry.loader} bootstrap failed: ${snapshot.fa…
+       |             ^
+     76|     }
+     77|     const project = snapshot.projectPath
+ Test Files  1 failed (1)
+      Tests  2 failed | 2 skipped (4)
+   Start at  00:21:16
+   Duration  132.35s (transform 914ms, setup 334ms, import 912ms, tests 130.95s, environment 0ms)
+
+ ❯ withRequiredJava packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts:111:16
+ ❯ packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts:148:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts > real host Minecraft bootstrap builds > builds the highest stable NeoForge 1.21.x with the host wrapper
+Error: neoforge bootstrap failed: build-failed Gradle build failed with exit code 1
+Minecraft bootstrap 140c5c2b-1d92-40e4-8493-32b7c56a7f28
+Gradle Wrapper downloaded from the official Gradle source tree.
+Resolving dependencies with mirror-first repositories; official fallback is enabled.
+Picked up JAVA_TOOL_OPTIONS: "-Djava.net.useSystemProxies=false" "-Dhttp.proxyHost=" "-Dhttps.proxyHost=" "-DsocksProxyHost="
+Downloading https://mirrors.cloud.tencent.com/gradle/gradle-9.2.1-bin.zip
+............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%.............100%
+
+Welcome to Gradle 9.2.1!
+
+Here are the highlights of this release:
+ - Windows ARM support
+ - Improved publishing APIs
+ - Better guidance for dependency verification failures
+
+For more details see https://docs.gradle.org/9.2.1/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.2.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+FAILURE: Build failed with an exception.
+
+* Where:
+Build file 'C:\Users\sake\AppData\Local\Temp\dsh-mc-bootstrap-neoforge-m4Zt9k\neoforge-real-1_21_1.dsh-staging-140c5c2b-1d92-40e4-8493-32b7c56a7f28\build.gradle' line: 4
+
+* What went wrong:
+Plugin [id: 'net.neoforged.gradle.userdev', version: '7.1.38'] was not found in any of the following sources:
+
+- Gradle Core Plugins (plugin is not in 'org.gradle' namespace)
+- Included Builds (No included builds contain this plugin)
+- Plugin Repositories (could not resolve plugin artifact 'net.neoforged.gradle.userdev:net.neoforged.gradle.userdev.gradle.plugin:7.1.38')
+  Searched in the following repositories:
+    maven(https://maven.aliyun.com/repository/public)
+    maven2(https://bmclapi2.bangbang93.com/maven)
+    maven3(https://mirrors.cloud.tencent.com/repository/gradle-plugin)
+    maven4(https://maven.aliyun.com/repository/gradle-plugin)
+    maven5(https://maven.aliyun.com/repository/public)
+    maven6(https://maven.aliyun.com/repository/central)
+    maven7(https://maven.neoforged.net/releases)
+    MavenRepo
+    Gradle Central Plugin Repository
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to generate a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 45s
+
+ ❯ assertBuild packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts:75:13
+     73|     const snapshot = await waitFor(service, started.operationId)
+     74|     if (snapshot.status !== 'ready' || snapshot.projectPath === undefi…
+     75|       throw new Error(`${entry.loader} bootstrap failed: ${snapshot.fa…
+       |             ^
+     76|     }
+     77|     const project = snapshot.projectPath
+ ❯ withRequiredJava packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts:111:16
+ ❯ packages/minecraft/tool-mc-bootstrap/tests/real-build.e2e.ts:160:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+

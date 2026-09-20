@@ -1,7 +1,21 @@
 /** Pure Gradle task parsing shared by model tools and desktop launch controls. */
 
-/** Minecraft runtime side used to select conventional Gradle launch tasks. */
+/**
+ * Minecraft runtime side used to select conventional Gradle launch tasks.
+ */
 export type RuntimeMode = 'client' | 'server'
+
+/**
+ * World-load evidence; account, audio, texture and window initialization do not prove readiness.
+ * @param mode - Requested runtime side or comparison mode.
+ * @param text - Actual UTF-8 content to write or inspect.
+ * @returns World-load evidence; account, audio, texture and window initialization do not prove readiness.
+ */
+export function hasMinecraftReadiness(mode: RuntimeMode, text: string): boolean {
+  return mode === 'server'
+    ? /(?:^|\[Server thread\/INFO\].*)Done \([\d.]+s\)! For help/mu.test(text)
+    : /(?:\[Render thread\/INFO\].*\[System\] \[CHAT\]|\[Server thread\/INFO\]).*joined the game/u.test(text)
+}
 
 /**
  * Parse task names from complete plain `gradle tasks --all` output.

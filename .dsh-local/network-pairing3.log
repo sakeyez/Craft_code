@@ -1,0 +1,21 @@
+$ tsx scripts/verify-translation-pairing.ts "--write" "docs/module-graph.md" ".agents/notes/implemented/feature/2026-09-16-minecraft-workbench.md" ".agents/notes/implemented/feature/2026-09-14-minecraft-host-bootstrap.md"
+verify-translation-pairing: recorded .agents/notes/implemented/feature/2026-09-14-minecraft-host-bootstrap.i18n.yaml
+verify-translation-pairing: recorded .agents/notes/implemented/feature/2026-09-16-minecraft-workbench.i18n.yaml
+node:fs:2422
+    return binding.writeFileUtf8(
+                   ^
+
+Error: UNKNOWN: unknown error, open 'E:\.sake\Desktop\craftcode\docs\module-graph.i18n.yaml'
+    at writeFileSync (node:fs:2422:20)
+    at <anonymous> (E:\.sake\Desktop\craftcode\scripts\verify-translation-pairing.ts:174:5)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:643:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -4094,
+  code: 'UNKNOWN',
+  syscall: 'open',
+  path: 'E:\\.sake\\Desktop\\craftcode\\docs\\module-graph.i18n.yaml'
+}
+
+Node.js v24.18.0
+[ELIFECYCLE] Command failed with exit code 1.

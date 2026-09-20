@@ -1,0 +1,760 @@
+diff --git a/apps/desktop/src/menu.ts b/apps/desktop/src/menu.ts
+index afbcc082ad..b587caf1c8 100644
+--- a/apps/desktop/src/menu.ts
++++ b/apps/desktop/src/menu.ts
+@@ -2,19 +2,17 @@ import type { MenuItemConstructorOptions } from 'electron'
+ 
+ export const DESKTOP_MENU_ACTIONS = [
+   'project:new', 'project:export-jar', 'project:toggle-game', 'project:settings',
+-  'editor:find-current', 'editor:find-project',
+   'git:status', 'git:diff', 'git:log', 'git:branch', 'git:commit', 'git:push', 'git:pull',
+   'help:docs', 'help:sponsor',
+ ] as const
+ 
+ export type DesktopMenuAction = typeof DESKTOP_MENU_ACTIONS[number]
+ 
+-export const DESKTOP_MENU_IDS = ['project', 'editor', 'git', 'help'] as const
++export const DESKTOP_MENU_IDS = ['project', 'git', 'help'] as const
+ export type DesktopMenuId = typeof DESKTOP_MENU_IDS[number]
+ 
+ export const DESKTOP_MENU_ITEM_IDS: Readonly<Record<DesktopMenuId, string>> = Object.freeze({
+   project: 'desktop-menu-project',
+-  editor: 'desktop-menu-editor',
+   git: 'desktop-menu-git',
+   help: 'desktop-menu-help',
+ })
+@@ -101,21 +99,6 @@ export function desktopMenuTemplate(
+         sendItem('项目设置', 'project:settings'),
+       ],
+     },
+-    {
+-      id: DESKTOP_MENU_ITEM_IDS.editor,
+-      label: '编辑',
+-      submenu: [
+-        { role: 'undo', label: '撤销', accelerator: 'Ctrl+Z' },
+-        { role: 'redo', label: '重做', accelerator: 'Ctrl+Y' },
+-        { type: 'separator' },
+-        { role: 'cut', label: '剪切' },
+-        { role: 'copy', label: '复制' },
+-        { role: 'paste', label: '粘贴' },
+-        { type: 'separator' },
+-        sendItem('查找当前对话', 'editor:find-current', 'Ctrl+F'),
+-        sendItem('查找项目对话', 'editor:find-project', 'Ctrl+Shift+F'),
+-      ],
+-    },
+     {
+       id: DESKTOP_MENU_ITEM_IDS.git,
+       label: 'Git',
+diff --git a/apps/desktop/tests/menu.spec.ts b/apps/desktop/tests/menu.spec.ts
+index 0e0c1921cd..440a359562 100644
+--- a/apps/desktop/tests/menu.spec.ts
++++ b/apps/desktop/tests/menu.spec.ts
+@@ -13,19 +13,18 @@ import {
+ import type { DesktopMenuAction } from '../src/menu.ts'
+ 
+ describe('desktop application menu', () => {
+-  it('has exactly the four product menus and fixed actions', () => {
++  it('has exactly the three product menus and fixed actions', () => {
+     const send = vi.fn<(action: DesktopMenuAction) => void>()
+     const external = vi.fn()
+     const template = desktopMenuTemplate(send, external)
+-    expect(template.map(item => item.label)).toEqual(['项目', '编辑', 'Git', '帮助'])
++    expect(template.map(item => item.label)).toEqual(['项目', 'Git', '帮助'])
+     expect(template.map(item => item.id)).toEqual([
+       DESKTOP_MENU_ITEM_IDS.project,
+-      DESKTOP_MENU_ITEM_IDS.editor,
+       DESKTOP_MENU_ITEM_IDS.git,
+       DESKTOP_MENU_ITEM_IDS.help,
+     ])
+-    expect(DESKTOP_MENU_ACTIONS).toHaveLength(15)
+-    const help = template[3]?.submenu as Array<{ click?: () => void }> | undefined
++    expect(DESKTOP_MENU_ACTIONS).toHaveLength(13)
++    const help = template[2]?.submenu as Array<{ click?: () => void }> | undefined
+     help?.[0]?.click?.()
+     expect(external).toHaveBeenCalledWith(HELP_URLS.docs)
+   })
+diff --git a/packages/client/ui-desktop-menu/src/client/DesktopMenuBar.module.css b/packages/client/ui-desktop-menu/src/client/DesktopMenuBar.module.css
+index a7d0ebea7b..913cdd5265 100644
+--- a/packages/client/ui-desktop-menu/src/client/DesktopMenuBar.module.css
++++ b/packages/client/ui-desktop-menu/src/client/DesktopMenuBar.module.css
+@@ -1,10 +1,9 @@
+ .menuBar {
+   display: flex;
+   align-items: center;
+-  width: 100%;
+-  height: 40px;
++  flex: 0 0 auto;
++  height: 38px;
+   box-sizing: border-box;
+-  border-bottom: 2px solid var(--dsw-alias-border-l2);
+   background: var(--dsw-alias-bg-layer-2);
+   color: var(--dsw-alias-label-primary);
+   user-select: none;
+@@ -14,7 +13,7 @@
+ .menuItems {
+   display: flex;
+   align-items: center;
+-  flex: 1 1 auto;
++  flex: 0 0 auto;
+   min-width: 0;
+   height: 38px;
+   padding: 0 4px;
+@@ -96,3 +95,11 @@
+   background: var(--dsw-alias-interactive-bg-hover-danger);
+   color: var(--dsw-alias-label-error);
+ }
++
++.windowChrome {
++  display: flex;
++  justify-content: flex-end;
++  align-self: stretch;
++  flex: 1 0 132px;
++  -webkit-app-region: drag;
++}
+diff --git a/packages/client/ui-desktop-menu/src/client/DesktopMenuBar.tsx b/packages/client/ui-desktop-menu/src/client/DesktopMenuBar.tsx
+index 36580f4294..bf09b8a79b 100644
+--- a/packages/client/ui-desktop-menu/src/client/DesktopMenuBar.tsx
++++ b/packages/client/ui-desktop-menu/src/client/DesktopMenuBar.tsx
+@@ -1,7 +1,7 @@
+ import { useCallback, useEffect, useRef, useState } from 'react'
+ import type { KeyboardEvent } from 'react'
+ import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+-import type { DesktopMenuBarInjected, DesktopMenuId } from './contract.ts'
++import type { DesktopMenuBarInjected, DesktopMenuId, DesktopWindowControlsInjected } from './contract.ts'
+ import css from './DesktopMenuBar.module.css'
+ 
+ type DesktopMenuBarProps = PropsRuntime<'shell.topbar'> & InjectFace<DesktopMenuBarInjected>
+@@ -24,33 +24,17 @@ function CloseIcon() {
+ 
+ const MENUS: readonly { id: DesktopMenuId; label: string }[] = [
+   { id: 'project', label: '项目' },
+-  { id: 'editor', label: '编辑' },
+   { id: 'git', label: 'Git' },
+   { id: 'help', label: '帮助' },
+ ]
+ 
+ /** Theme-aware top-level controls backed by Electron's native submenus. */
+-export function DesktopMenuBar({ useSessions, openMenu, windowControls }: DesktopMenuBarProps) {
++export function DesktopMenuBar({ useSessions, openMenu }: DesktopMenuBarProps) {
+   const sessions = useSessions(value => value)
+   const cwd = sessions.current === undefined ? undefined : sessions.byId[sessions.current]?.cwd
+   const buttons = useRef<Array<HTMLButtonElement | null>>([])
+   const [focusIndex, setFocusIndex] = useState(0)
+   const [expanded, setExpanded] = useState<DesktopMenuId>()
+-  const [maximized, setMaximized] = useState(false)
+-
+-  useEffect(() => {
+-    if (windowControls === undefined) return
+-    let active = true
+-    void windowControls.isMaximized().then((value) => {
+-      if (active) setMaximized(value)
+-    }).catch(() => {})
+-    const dispose = windowControls.onMaximizedChange(setMaximized)
+-    return () => {
+-      active = false
+-      dispose()
+-    }
+-  }, [windowControls])
+-
+   const moveFocus = useCallback((index: number): void => {
+     const next = (index + MENUS.length) % MENUS.length
+     setFocusIndex(next)
+@@ -103,19 +87,10 @@ export function DesktopMenuBar({ useSessions, openMenu, windowControls }: Deskto
+     }
+   }, [moveFocus, showMenu])
+ 
+-  const invokeWindowControl = useCallback((action: () => Promise<void>): void => {
+-    void action().catch(() => {})
+-  }, [])
+-
+   return (
+     <nav
+       className={css.menuBar}
+       aria-label="应用菜单"
+-      onDoubleClick={(event) => {
+-        if (event.target === event.currentTarget && windowControls !== undefined) {
+-          invokeWindowControl(windowControls.toggleMaximize)
+-        }
+-      }}
+     >
+       <div className={css.menuItems} role="menubar">
+         {MENUS.map((menu, index) => (
+@@ -136,37 +111,66 @@ export function DesktopMenuBar({ useSessions, openMenu, windowControls }: Deskto
+           </button>
+         ))}
+       </div>
+-      {windowControls !== undefined && (
+-        <div className={css.windowControls} aria-label="窗口控制">
+-          <button
+-            type="button"
+-            className={css.windowButton}
+-            aria-label="最小化窗口"
+-            data-window-control="minimize"
+-            onClick={() => { invokeWindowControl(windowControls.minimize) }}
+-          >
+-            <MinimizeIcon />
+-          </button>
+-          <button
+-            type="button"
+-            className={css.windowButton}
+-            aria-label={maximized ? '还原窗口' : '最大化窗口'}
+-            data-window-control="maximize"
+-            onClick={() => { invokeWindowControl(windowControls.toggleMaximize) }}
+-          >
+-            {maximized ? <RestoreIcon /> : <MaximizeIcon />}
+-          </button>
+-          <button
+-            type="button"
+-            className={`${css.windowButton} ${css.closeButton}`}
+-            aria-label="关闭窗口"
+-            data-window-control="close"
+-            onClick={() => { invokeWindowControl(windowControls.close) }}
+-          >
+-            <CloseIcon />
+-          </button>
+-        </div>
+-      )}
+     </nav>
+   )
+ }
++
++/** Host window actions and the remaining draggable title-bar space. */
++export function DesktopWindowControls({ windowControls }: PropsRuntime<'shell.window-controls'> & InjectFace<DesktopWindowControlsInjected>) {
++  const [maximized, setMaximized] = useState(false)
++
++  useEffect(() => {
++    let active = true
++    void windowControls.isMaximized().then((value) => {
++      if (active) setMaximized(value)
++    }).catch(() => {})
++    const dispose = windowControls.onMaximizedChange(setMaximized)
++    return () => {
++      active = false
++      dispose()
++    }
++  }, [windowControls])
++
++  const invokeWindowControl = useCallback((action: () => Promise<void>): void => {
++    void action().catch(() => {})
++  }, [])
++
++  return (
++    <div
++      className={css.windowChrome}
++      onDoubleClick={(event) => {
++        if (event.target === event.currentTarget) invokeWindowControl(windowControls.toggleMaximize)
++      }}
++    >
++      <div className={css.windowControls} aria-label="窗口控制">
++        <button
++          type="button"
++          className={css.windowButton}
++          aria-label="最小化窗口"
++          data-window-control="minimize"
++          onClick={() => { invokeWindowControl(windowControls.minimize) }}
++        >
++          <MinimizeIcon />
++        </button>
++        <button
++          type="button"
++          className={css.windowButton}
++          aria-label={maximized ? '还原窗口' : '最大化窗口'}
++          data-window-control="maximize"
++          onClick={() => { invokeWindowControl(windowControls.toggleMaximize) }}
++        >
++          {maximized ? <RestoreIcon /> : <MaximizeIcon />}
++        </button>
++        <button
++          type="button"
++          className={`${css.windowButton} ${css.closeButton}`}
++          aria-label="关闭窗口"
++          data-window-control="close"
++          onClick={() => { invokeWindowControl(windowControls.close) }}
++        >
++          <CloseIcon />
++        </button>
++      </div>
++    </div>
++  )
++}
+diff --git a/packages/client/ui-desktop-menu/src/client/DesktopMenuSurface.tsx b/packages/client/ui-desktop-menu/src/client/DesktopMenuSurface.tsx
+index 5fb075e83a..38b99f8537 100644
+--- a/packages/client/ui-desktop-menu/src/client/DesktopMenuSurface.tsx
++++ b/packages/client/ui-desktop-menu/src/client/DesktopMenuSurface.tsx
+@@ -7,7 +7,6 @@ import {
+   IconChevronDownOutline14,
+   IconChevronUpOutline14,
+   IconCloseOutline16,
+-  IconSearchOutline16,
+   Input,
+   Modal,
+   StateDot,
+@@ -23,11 +22,10 @@ import css from './DesktopMenuSurface.module.css'
+ 
+ type DesktopMenuSurfaceProps = PropsRuntime<'shell.overlay'> & InjectFace<DesktopMenuInjected>
+ 
+-type TextPurpose = 'find-current' | 'find-project' | 'commit'
+ type BranchMode = 'list' | 'switch' | 'create'
+ type DialogState =
+   | { kind: 'settings'; value: DesktopSettings }
+-  | { kind: 'text'; purpose: TextPurpose; value: string }
++  | { kind: 'commit'; value: string }
+   | { kind: 'confirm'; command: 'git-push' | 'git-pull' }
+   | { kind: 'branch'; mode: BranchMode; value: string }
+   | { kind: 'dirty-switch'; branch: string }
+@@ -120,23 +118,6 @@ function CommandNotice({ notice, onClose }: { notice: Notice; onClose: () => voi
+   )
+ }
+ 
+-const textDialogCopy: Record<TextPurpose, {
+-  title: string
+-  label: string
+-  placeholder: string
+-  action: string
+-}> = {
+-  'find-current': {
+-    title: '查找当前对话', label: '查找内容', placeholder: '输入要查找的文字', action: '查找',
+-  },
+-  'find-project': {
+-    title: '查找项目对话', label: '查找内容', placeholder: '搜索当前项目中的历史对话', action: '搜索',
+-  },
+-  'commit': {
+-    title: '提交更改', label: 'Commit message', placeholder: '说明本次更改', action: '提交',
+-  },
+-}
+-
+ /** Desktop menu dialogs and feedback; all external capabilities arrive through slot props. */
+ export function DesktopMenuSurface({
+   useSessions,
+@@ -145,7 +126,6 @@ export function DesktopMenuSurface({
+   invoke,
+   setActiveProject,
+   createProject,
+-  searchProject,
+ }: DesktopMenuSurfaceProps) {
+   const menuEvent = useDesktopMenu(value => value)
+   const gameEvent = useDesktopGame(value => value)
+@@ -154,7 +134,6 @@ export function DesktopMenuSurface({
+   const [dialog, setDialog] = useState<DialogState>()
+   const [notice, setNotice] = useState<Notice>()
+   const [busyCount, setBusyCount] = useState(0)
+-  const [lastQuery, setLastQuery] = useState('')
+   const noticeSequence = useRef(0)
+   const handledMenuSequence = useRef(0)
+   const handledGameSequence = useRef(0)
+@@ -232,14 +211,8 @@ export function DesktopMenuSurface({
+           if (value.ok && value.settings !== undefined) setDialog({ kind: 'settings', value: value.settings })
+         })
+         return
+-      case 'editor:find-current':
+-        setDialog({ kind: 'text', purpose: 'find-current', value: lastQuery })
+-        return
+-      case 'editor:find-project':
+-        setDialog({ kind: 'text', purpose: 'find-project', value: '' })
+-        return
+       case 'git:commit':
+-        setDialog({ kind: 'text', purpose: 'commit', value: '' })
++        setDialog({ kind: 'commit', value: '' })
+         return
+       case 'git:push':
+       case 'git:pull':
+@@ -267,7 +240,7 @@ export function DesktopMenuSurface({
+       case 'help:sponsor':
+         return
+     }
+-  }, [createNewProject, execute, lastQuery])
++  }, [createNewProject, execute])
+ 
+   useEffect(() => {
+     if (menuEvent.action === undefined || menuEvent.sequence === handledMenuSequence.current) return
+@@ -291,45 +264,11 @@ export function DesktopMenuSurface({
+     return () => { clearTimeout(timer) }
+   }, [notice])
+ 
+-  const submitTextDialog = async (state: Extract<DialogState, { kind: 'text' }>): Promise<void> => {
++  const submitCommit = async (state: Extract<DialogState, { kind: 'commit' }>): Promise<void> => {
+     const value = state.value.trim()
+     if (value === '') return
+     setDialog(undefined)
+-    if (state.purpose === 'find-current') {
+-      setLastQuery(value)
+-      const found = window.find?.(value) ?? false
+-      publish('complete', {
+-        ok: found,
+-        title: '查找当前对话',
+-        message: found ? '已定位匹配内容。' : '当前对话没有匹配内容。',
+-      })
+-      return
+-    }
+-    if (state.purpose === 'commit') {
+-      await execute({ kind: 'git-commit', message: value }, { title: '提交更改', pending: true })
+-      return
+-    }
+-    if (cwd === undefined) {
+-      publish('complete', errorResult('查找项目对话', '请先打开一个项目工作区。'))
+-      return
+-    }
+-    const controller = new AbortController()
+-    const pendingId = publish('running', { ok: true, title: '查找项目对话', message: '正在搜索，请稍候…' })
+-    setBusyCount(count => count + 1)
+-    try {
+-      const items = await searchProject(value, cwd, controller.signal)
+-      publish('complete', {
+-        ok: true,
+-        title: '查找项目对话',
+-        message: items.length === 0 ? '项目对话没有匹配内容。' : `找到 ${String(items.length)} 条匹配内容。`,
+-        ...(items.length === 0 ? {} : { stdout: items.map(item => `${item.sessionId}: ${item.snippet}`).join('\n') }),
+-      })
+-    } catch (error) {
+-      publish('complete', errorResult('查找项目对话', error instanceof Error ? error.message : String(error)))
+-    } finally {
+-      setNotice(current => current?.id === pendingId ? undefined : current)
+-      setBusyCount(count => Math.max(0, count - 1))
+-    }
++    await execute({ kind: 'git-commit', message: value }, { title: '提交更改', pending: true })
+   }
+ 
+   const submitBranch = async (state: Extract<DialogState, { kind: 'branch' }>): Promise<void> => {
+@@ -362,7 +301,6 @@ export function DesktopMenuSurface({
+     )
+   }
+ 
+-  const textCopy = dialog?.kind === 'text' ? textDialogCopy[dialog.purpose] : undefined
+   const branchAction = dialog?.kind === 'branch'
+     ? dialog.mode === 'list' ? '查看分支' : dialog.mode === 'switch' ? '切换分支' : '新建并切换'
+     : ''
+@@ -434,12 +372,12 @@ export function DesktopMenuSurface({
+         </Modal>
+       )}
+ 
+-      {dialog?.kind === 'text' && textCopy !== undefined && (
++      {dialog?.kind === 'commit' && (
+         <Modal
+           open
+           onClose={() => { if (!busy) setDialog(undefined) }}
+-          title={textCopy.title}
+-          closeLabel={`关闭${textCopy.title}`}
++          title="提交更改"
++          closeLabel="关闭提交更改"
+           className={css.compactDialog ?? ''}
+           footer={(
+             <>
+@@ -453,7 +391,7 @@ export function DesktopMenuSurface({
+                 type="submit"
+                 form="desktop-text-dialog"
+               >
+-                {textCopy.action}
++                提交
+               </Button>
+             </>
+           )}
+@@ -461,16 +399,15 @@ export function DesktopMenuSurface({
+           <form
+             id="desktop-text-dialog"
+             className={css.formStack}
+-            onSubmit={(event: FormEvent) => { event.preventDefault(); void submitTextDialog(dialog) }}
++            onSubmit={(event: FormEvent) => { event.preventDefault(); void submitCommit(dialog) }}
+           >
+             <label className={css.field}>
+-              <span>{textCopy.label}</span>
++              <span>Commit message</span>
+               <Input
+                 className={css.textInput ?? ''}
+-                {...dialog.purpose.startsWith('find') ? { icon: <IconSearchOutline16 /> } : {}}
+                 autoFocus
+                 value={dialog.value}
+-                placeholder={textCopy.placeholder}
++                placeholder="说明本次更改"
+                 disabled={busy}
+                 onChange={(event) => { setDialog({ ...dialog, value: event.currentTarget.value }) }}
+               />
+diff --git a/packages/client/ui-desktop-menu/src/client/contract.ts b/packages/client/ui-desktop-menu/src/client/contract.ts
+index 34e3a7e3e3..534083cab0 100644
+--- a/packages/client/ui-desktop-menu/src/client/contract.ts
++++ b/packages/client/ui-desktop-menu/src/client/contract.ts
+@@ -4,12 +4,11 @@ import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
+ /** Native menu actions admitted by the sandboxed desktop preload bridge. */
+ export type DesktopAction =
+   | 'project:new' | 'project:export-jar' | 'project:toggle-game' | 'project:settings'
+-  | 'editor:find-current' | 'editor:find-project'
+   | 'git:status' | 'git:diff' | 'git:log' | 'git:branch' | 'git:commit' | 'git:push' | 'git:pull'
+   | 'help:docs' | 'help:sponsor'
+ 
+ /** Closed set of top-level application menus available to the Web menu bar. */
+-export type DesktopMenuId = 'project' | 'editor' | 'git' | 'help'
++export type DesktopMenuId = 'project' | 'git' | 'help'
+ 
+ /** Renderer-relative popup position in device-independent CSS pixels. */
+ export interface DesktopMenuAnchor {
+@@ -66,11 +65,10 @@ export interface DesktopBridge {
+     cwd: string
+     state:
+       | { status: 'idle' }
+-      | { status: 'starting' | 'reconnecting'; gameName?: string }
++      | { status: 'starting'; gameName?: string }
+       | { status: 'connected'; gameName?: string; surfaceKind: 'external-window' }
+       | { status: 'failed' | 'disconnected' | 'unsupported'; gameName?: string; error: string }
+   }) => void) => () => void
+-  reconnectGameSurface?: (cwd: string) => Promise<unknown>
+   /** Bind the active conversation; dispose releases only this subscription. */
+   bindGameAnnotationShortcut?: (request: GameAnnotationRequest, listener: (error?: string) => void) => () => void
+   beginGameAnnotation?: (
+@@ -78,7 +76,6 @@ export interface DesktopBridge {
+     commit: (drafts: GameAnnotationDraft[], snapshot?: GameAnnotationSnapshot) => Promise<void>,
+   ) => Promise<void>
+   endGameAnnotation?: (operationId: string) => Promise<void>
+-  repositionGameCompanion?: (cwd: string) => Promise<void>
+ }
+ 
+ /** Observable renderer event derived from a native menu action. */
+@@ -98,12 +95,6 @@ export interface DesktopGameEvent extends Partial<DesktopGameProcessEvent> {
+   sequence: number
+ }
+ 
+-/** One project-wide conversation search match. */
+-export interface ProjectSearchItem {
+-  sessionId: string
+-  snippet: string
+-}
+-
+ /** Host capabilities injected into the desktop menu overlay component. */
+ export interface DesktopMenuInjected {
+   hooks: {
+@@ -113,13 +104,16 @@ export interface DesktopMenuInjected {
+   invoke: (request: DesktopCommandRequest) => Promise<DesktopCommandResult>
+   setActiveProject: (cwd?: string) => Promise<void>
+   createProject: () => Promise<string | null>
+-  searchProject: (query: string, cwd: string, signal: AbortSignal) => Promise<ProjectSearchItem[]>
+ }
+ 
+ /** Capability injected only into the desktop top menu bar. */
+ export interface DesktopMenuBarInjected {
+   openMenu: (menu: DesktopMenuId, anchor: DesktopMenuAnchor, cwd?: string) => Promise<void>
+-  windowControls?: {
++}
++
++/** Window controls and draggable space at the trailing edge of the title bar. */
++export interface DesktopWindowControlsInjected {
++  windowControls: {
+     minimize: () => Promise<void>
+     toggleMaximize: () => Promise<void>
+     close: () => Promise<void>
+@@ -131,6 +125,5 @@ export interface DesktopMenuBarInjected {
+ declare global {
+   interface Window {
+     craftCodeDesktop?: DesktopBridge
+-    find?(text: string): boolean
+   }
+ }
+diff --git a/packages/client/ui-desktop-menu/src/client/index.ts b/packages/client/ui-desktop-menu/src/client/index.ts
+index 7abeb2f0d6..ba9a2eb094 100644
+--- a/packages/client/ui-desktop-menu/src/client/index.ts
++++ b/packages/client/ui-desktop-menu/src/client/index.ts
+@@ -3,10 +3,10 @@
+ import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+ import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
+ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
+-import { DesktopMenuBar } from './DesktopMenuBar.tsx'
++import { DesktopMenuBar, DesktopWindowControls } from './DesktopMenuBar.tsx'
+ import { DesktopMenuSurface } from './DesktopMenuSurface.tsx'
+ import type {
+-  DesktopGameEvent, DesktopMenuBarInjected, DesktopMenuEvent, DesktopMenuInjected, ProjectSearchItem,
++  DesktopGameEvent, DesktopMenuBarInjected, DesktopMenuEvent, DesktopMenuInjected, DesktopWindowControlsInjected,
+ } from './contract.ts'
+ 
+ /** Required services for the overlay registration and project/session actions. */
+@@ -53,16 +53,11 @@ export function apply(ctx: ClientContext): void {
+   }
+   ctx.effect(() => ctx.layout.attachGameSurfaceBridge({
+     bindAnnotationShortcut: (request, listener) => bridge.bindGameAnnotationShortcut?.(request, listener) ?? (() => {}),
+-    reconnect: async (cwd) => {
+-      if (bridge.reconnectGameSurface === undefined) throw new Error('桌面端未提供游戏重连能力。')
+-      return await bridge.reconnectGameSurface(cwd) as never
+-    },
+     beginAnnotation: async (request, commit) => {
+       if (bridge.beginGameAnnotation === undefined) throw new Error('桌面端未提供游戏截图能力。')
+       return bridge.beginGameAnnotation(request, commit)
+     },
+     endAnnotation: async (operationId) => { await bridge.endGameAnnotation?.(operationId) },
+-    reposition: async (cwd) => { await bridge.repositionGameCompanion?.(cwd) },
+   }), 'ui-desktop-menu: game surface bridge')
+ 
+   const injected = (): DesktopMenuInjected => ({
+@@ -76,17 +71,13 @@ export function apply(ctx: ClientContext): void {
+       ctx.workspaces.startSession(workspace.workspaceId)
+       return workspace.path
+     },
+-    searchProject: async (query, cwd, signal): Promise<ProjectSearchItem[]> => {
+-      const response = await ctx.sessions.search(query, signal)
+-      if (!response.ok) throw new Error(response.error.message)
+-      const sessions = ctx.sessions.list.getSnapshot().byId
+-      return response.value.items.filter(item => sessions[item.sessionId]?.cwd === cwd)
+-    },
+   })
+ 
+   if (bridge.menuPresentation === 'web') {
+     const menuInjected = (): DesktopMenuBarInjected => ({
+       openMenu: (menu, anchor, cwd) => bridge.openMenu(menu, anchor, cwd),
++    })
++    const controlsInjected = (): DesktopWindowControlsInjected => ({
+       windowControls: {
+         minimize: () => bridge.minimizeWindow(),
+         toggleMaximize: () => bridge.toggleMaximizeWindow(),
+@@ -99,6 +90,10 @@ export function apply(ctx: ClientContext): void {
+       name: 'shell.topbar',
+       inject: menuInjected,
+     }, DesktopMenuBar))
++    ctx.slots.inject('shell.window-controls', () => ctx.slots.register({
++      name: 'shell.window-controls',
++      inject: controlsInjected,
++    }, DesktopWindowControls))
+   }
+ 
+   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+diff --git a/packages/client/ui-desktop-menu/tests/desktop-menu-bar.client.spec.tsx b/packages/client/ui-desktop-menu/tests/desktop-menu-bar.client.spec.tsx
+index 56aff3c936..46f6fcb225 100644
+--- a/packages/client/ui-desktop-menu/tests/desktop-menu-bar.client.spec.tsx
++++ b/packages/client/ui-desktop-menu/tests/desktop-menu-bar.client.spec.tsx
+@@ -1,7 +1,7 @@
+ // @vitest-environment jsdom
+ import { act, cleanup, fireEvent, render } from '@testing-library/react'
+ import { afterEach, describe, expect, it, vi } from 'vitest'
+-import { DesktopMenuBar } from '../src/client/DesktopMenuBar.tsx'
++import { DesktopMenuBar, DesktopWindowControls } from '../src/client/DesktopMenuBar.tsx'
+ 
+ const runtimeProps = {
+   useSessions: (<S,>(selector: (value: { current: string; byId: Record<string, { cwd: string }> }) => S) =>
+@@ -18,11 +18,11 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
+ afterEach(cleanup)
+ 
+ describe('DesktopMenuBar', () => {
+-  it('renders the four product menus with one roving tab stop', () => {
++  it('renders the three product menus with one roving tab stop', () => {
+     const view = render(<DesktopMenuBar {...runtimeProps} openMenu={vi.fn(async () => {})} />)
+     const items = view.getAllByRole('menuitem')
+-    expect(items.map(item => item.textContent)).toEqual(['项目', '编辑', 'Git', '帮助'])
+-    expect(items.map(item => item.getAttribute('tabindex'))).toEqual(['0', '-1', '-1', '-1'])
++    expect(items.map(item => item.textContent)).toEqual(['项目', 'Git', '帮助'])
++    expect(items.map(item => item.getAttribute('tabindex'))).toEqual(['0', '-1', '-1'])
+   })
+ 
+   it('opens below the clicked button and restores focus after the native menu closes', async () => {
+@@ -45,13 +45,13 @@ describe('DesktopMenuBar', () => {
+     const openMenu = vi.fn(async () => {})
+     const view = render(<DesktopMenuBar {...runtimeProps} openMenu={openMenu} />)
+     const project = view.getByRole('menuitem', { name: '项目' })
+-    const editor = view.getByRole('menuitem', { name: '编辑' })
++    const git = view.getByRole('menuitem', { name: 'Git' })
+     project.focus()
+     fireEvent.keyDown(project, { key: 'ArrowRight' })
+-    expect(document.activeElement).toBe(editor)
+-    expect(editor.getAttribute('tabindex')).toBe('0')
+-    fireEvent.keyDown(editor, { key: 'ArrowDown' })
+-    expect(openMenu).toHaveBeenCalledWith('editor', expect.objectContaining({ y: 0 }), '/project')
++    expect(document.activeElement).toBe(git)
++    expect(git.getAttribute('tabindex')).toBe('0')
++    fireEvent.keyDown(git, { key: 'ArrowDown' })
++    expect(openMenu).toHaveBeenCalledWith('git', expect.objectContaining({ y: 0 }), '/project')
+   })
+ 
+   it('renders compact window controls and forwards their actions', async () => {
+@@ -67,9 +67,8 @@ describe('DesktopMenuBar', () => {
+       }),
+     }
+     const view = render(
+-      <DesktopMenuBar
++      <DesktopWindowControls
+         {...runtimeProps}
+-        openMenu={vi.fn(async () => {})}
+         windowControls={controls}
+       />,
+     )
+diff --git a/packages/client/ui-desktop-menu/tests/desktop-menu-surface.client.spec.tsx b/packages/client/ui-desktop-menu/tests/desktop-menu-surface.client.spec.tsx
+index 201648de18..5682fdcfde 100644
+--- a/packages/client/ui-desktop-menu/tests/desktop-menu-surface.client.spec.tsx
++++ b/packages/client/ui-desktop-menu/tests/desktop-menu-surface.client.spec.tsx
+@@ -23,7 +23,6 @@ class Source<T> {
+ 
+ function bench(options: {
+   invoke?: (request: DesktopCommandRequest) => Promise<DesktopCommandResult>
+-  searchProject?: (query: string, cwd: string, signal: AbortSignal) => Promise<{ sessionId: string; snippet: string }[]>
+ } = {}) {
+   const source = new Source<DesktopMenuEvent>({ sequence: 0 })
+   const gameSource = new Source<DesktopGameEvent>({ sequence: 0 })
+@@ -32,7 +31,6 @@ function bench(options: {
+   const invoke = vi.fn(options.invoke ?? (async () => ({ ok: true, title: 'command', message: '完成' })))
+   const createProject = vi.fn(async () => '/projects/new')
+   const setActiveProject = vi.fn(async () => {})
+-  const searchProject = vi.fn(options.searchProject ?? (async () => []))
+   const useDesktopMenu = <S,>(selector: (value: DesktopMenuEvent) => S): S =>
+     useSyncExternalStore(source.subscribe, () => selector(source.getSnapshot()))
+   const useDesktopGame = <S,>(selector: (value: DesktopGameEvent) => S): S =>
+@@ -51,7 +49,6 @@ function bench(options: {
+       invoke={invoke}
+       setActiveProject={setActiveProject}
+       createProject={createProject}
+-      searchProject={searchProject}
+     />,
+   )
+   return {
+@@ -59,7 +56,6 @@ function bench(options: {
+     invoke,
+     createProject,
+     setActiveProject,
+-    searchProject,
+     emit(action: DesktopAction) {
+       act(() => { source.set({ sequence: ++sequence, action }) })
+     },
+@@ -148,17 +144,8 @@ describe('DesktopMenuSurface', () => {
+     await waitFor(() => { expect(b.queryByRole('dialog', { name: '项目设置' })).toBeNull() })
+   })
+ 
+-  it('uses controlled search and commit dialogs instead of browser prompts', async () => {
+-    const find = vi.fn(() => true)
+-    window.find = find
++  it('uses a controlled commit dialog', async () => {
+     const b = bench()
+-    b.emit('editor:find-current')
+-    const search = await b.findByLabelText('查找内容')
+-    fireEvent.change(search, { target: { value: '方块注册' } })
+-    fireEvent.submit(search.closest('form')!)
+-    expect(find).toHaveBeenCalledWith('方块注册')
+-    expect(await b.findByText('已定位匹配内容。')).toBeTruthy()
+-
+     b.emit('git:commit')
+     const message = await b.findByLabelText('Commit message')
+     fireEvent.change(message, { target: { value: 'fix: export jar' } })
+@@ -170,20 +157,6 @@ describe('DesktopMenuSurface', () => {
+     })
+   })
+ 
+-  it('renders project search matches as expandable command output', async () => {
+-    const b = bench({
+-      searchProject: async () => [{ sessionId: 's-1', snippet: '匹配的注册代码' }],
+-    })
+-    b.emit('editor:find-project')
+-    const input = await b.findByLabelText('查找内容')
+-    fireEvent.change(input, { target: { value: 'register' } })
+-    fireEvent.submit(input.closest('form')!)
+-    expect(await b.findByText('找到 1 条匹配内容。')).toBeTruthy()
+-    fireEvent.click(b.getByRole('button', { name: '查看详情' }))
+-    expect(b.getByText(/s-1: 匹配的注册代码/u)).toBeTruthy()
+-    expect(b.searchProject).toHaveBeenCalledWith('register', '/projects/example', expect.any(AbortSignal))
+-  })
+-
+   it('offers explicit branch modes and confirms a dirty switch', async () => {
+     const b = bench({
+       invoke: async request => request.kind === 'git-status'
+diff --git a/packages/client/ui-desktop-menu/tests/plugin.client.spec.ts b/packages/client/ui-desktop-menu/tests/plugin.client.spec.ts
+index d3cf91fa5e..05e97e348b 100644
+--- a/packages/client/ui-desktop-menu/tests/plugin.client.spec.ts
++++ b/packages/client/ui-desktop-menu/tests/plugin.client.spec.ts
+@@ -51,7 +51,7 @@ describe('ui-desktop-menu plugin', () => {
+       layout,
+     }
+     apply(ctx as never)
+-    expect(registrations.map(value => value.name)).toEqual(['shell.topbar', 'shell.overlay'])
++    expect(registrations.map(value => value.name)).toEqual(['shell.topbar', 'shell.window-controls', 'shell.overlay'])
+     const options = registrations.find(value => value.name === 'shell.overlay')
+     expect(options).toMatchObject({ id: 'desktop-menu', order: 20 })
+     const face = options?.inject?.()

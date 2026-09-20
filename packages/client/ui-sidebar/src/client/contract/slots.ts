@@ -1,7 +1,7 @@
 /**
  * Sidebar slot contract: the registrant-side props composition for the
  * layout-owned `sidebar` slot, plus the holes this shell declares. The shell
- * owns column geometry (fold state machine, brand row, New Session);
+ * owns column geometry (fold state machine, brand row, primary-action fallback);
  * everything between the section header and the list bottom is the
  * `sidebar.workspaces` registrant's (ui-workspace), and the foot is the
  * `sidebar.settings` registrant's (ui-settings), followed by optional footer
@@ -44,6 +44,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      * package's 'sidebar' entry; each action receives only the column state.
      */
     'sidebar.footer.action': { kind: 'list'; scope: 'root'; owner: SidebarFooterActionOwnerProps }
+    /** Primary project action rendered above the workspace browser. */
+    'sidebar.primary.action': { kind: 'single'; scope: 'root'; owner: SidebarPrimaryActionOwnerProps }
   }
 }
 
@@ -85,10 +87,15 @@ export interface SidebarFooterActionOwnerProps {
   wide: boolean
 }
 
+/** Owner share of the primary action above the workspace browser. */
+export interface SidebarPrimaryActionOwnerProps {
+  /** Whether the sidebar renders wide content (false = 56px rail). */
+  wide: boolean
+}
+
 /**
  * Registrant-private injected share (arrives via the register inject
- * factory). The shell keeps only its own controls: starting a Session from
- * the New Session button and toggling the column.
+ * factory). The shell keeps only its fallback Session action and column toggle.
  */
 export type SidebarRootInjected = {
   /**
@@ -114,5 +121,6 @@ export type SidebarRootComponentProps =
     | 'sidebar.workspaces'
     | 'sidebar.settings'
     | 'sidebar.footer.action'
+    | 'sidebar.primary.action'
   >
   & SidebarRootInjected & PropsLocale<'sidebar'>

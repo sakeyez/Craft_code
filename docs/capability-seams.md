@@ -7,6 +7,14 @@ A service can be a core spine service, a swappable capability seam, or a bundle/
 
 ```mermaid
 flowchart LR
+  pkg_tool_mc_bootstrap["tool-mc-bootstrap"]
+  svc_minecraftBootstrap["ctx.minecraftBootstrap<br/>Minecraft project creation"]
+  pkg_ui_mcmod_bootstrap["ui-mcmod-bootstrap"]
+  pkg_tool_mc_project["tool-mc-project"]
+  svc_minecraftRuntime["ctx.minecraftRuntime<br/>Approved Minecraft runtime checks"]
+  pkg_mc_workbench["mc-workbench"]
+  svc_minecraftWorkbench["ctx.minecraftWorkbench<br/>Minecraft workbench"]
+  pkg_ui_mcmod_workbench["ui-mcmod-workbench"]
   pkg_attachment["attachment"]
   svc_attachments["ctx.attachments<br/>Durable binary attachment storage"]
   pkg_attachment_local["attachment-local"]
@@ -245,6 +253,7 @@ flowchart LR
   pkg_llm_replay --> svc_llm
   pkg_lsp --> svc_lsp
   pkg_lsp_local --> svc_lsp
+  pkg_mc_workbench --> svc_minecraftWorkbench
   pkg_message_feedback --> svc_messageFeedback
   pkg_modules --> svc_clientModules
   pkg_permission_presets --> svc_permissionPresets
@@ -294,6 +303,8 @@ flowchart LR
   pkg_terminal --> svc_terminals
   pkg_terminal_bash --> svc_terminals
   pkg_token_meter --> svc_tokenMeter
+  pkg_tool_mc_bootstrap --> svc_minecraftBootstrap
+  pkg_tool_mc_project --> svc_minecraftRuntime
   pkg_tools --> svc_tools
   pkg_typert_registry --> svc_typert
   pkg_user_questions --> svc_userQuestions
@@ -342,6 +353,9 @@ flowchart LR
   svc_llm --> pkg_agent_loop
   svc_llm --> pkg_compaction_basic
   svc_lsp --> pkg_tool_lsp
+  svc_minecraftBootstrap --> pkg_ui_mcmod_bootstrap
+  svc_minecraftRuntime --> pkg_tool_mc_project
+  svc_minecraftWorkbench --> pkg_ui_mcmod_workbench
   svc_sandbox --> pkg_bash_sandbox
   svc_sandbox --> pkg_terminal_bash
   svc_sandboxPolicy --> pkg_bash_sandbox
@@ -425,6 +439,9 @@ flowchart LR
 
 | ctx key | Role | Owner | Implementations | Direct consumers | Companion plugins | Note |
 | --- | --- | --- | --- | --- | --- | --- |
+| `ctx.minecraftBootstrap` | `core` | [`tool-mc-bootstrap`](../packages/minecraft/tool-mc-bootstrap) | - | `ui-mcmod-bootstrap` | - | Owns release catalogs, project staging and first-build publication. |
+| `ctx.minecraftRuntime` | `core` | [`tool-mc-project`](../packages/minecraft/tool-mc-project) | - | [`tool-mc-project`](../packages/minecraft/tool-mc-project) | - | The workbench provides retained development runs through the mounted shell policy. |
+| `ctx.minecraftWorkbench` | `core` | [`mc-workbench`](../packages/minecraft/mc-workbench) | - | `ui-mcmod-workbench` | - | Owns project runs, dependency transactions and read-only source operations. |
 | `ctx.attachments` | `seam` | [`attachment`](../packages/attachment/attachment) | [`attachment-local`](../packages/attachment/attachment-local) | `host-runtime`, [`llm-pi-ai`](../packages/llm/llm-pi-ai) | - | The host commits accepted images before session events; provider adapters resolve authorized durable references into provider-native content. |
 | `ctx.llm` | `seam` | [`llm`](../packages/llm/llm) | [`llm-deepseek`](../packages/llm/llm-deepseek), [`llm-pi-ai`](../packages/llm/llm-pi-ai), [`llm-replay`](../packages/test-support/llm-replay) | [`agent-loop`](../packages/core/agent-loop), [`compaction-basic`](../packages/compaction/compaction-basic) | - | Adapters register provider implementations; the loop and compaction call the provider-neutral stream service. |
 | `ctx.tokenMeter` | `core` | [`token-meter`](../packages/llm/token-meter) | - | [`compaction-basic`](../packages/compaction/compaction-basic) | - | Owns isolated per-session replay folds; pressure consumers share immutable revisioned measurements. |

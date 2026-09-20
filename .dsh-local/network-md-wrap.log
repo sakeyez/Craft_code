@@ -1,0 +1,2 @@
+$ tsx scripts/verify-md-wrap.ts
+verify-md-wrap: 2064 file(s) checked, no hard-wrapped prose paragraphs.

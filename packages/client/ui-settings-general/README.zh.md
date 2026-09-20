@@ -10,6 +10,8 @@
 
 宿主端在用户设置 seam 中注册 `ui-onboarding`。`ui-settings-models` 提供的欢迎步骤通过既有公开 settings 边界读写其中的 `welcomeNoticeVersion`；外壳本身仍不持有产品策略。
 
+设置面板可见性与当前区域通过框架绑定的 useNavigation hook 读取 settingsNavigation 服务。功能入口可直接打开自己的设置区域；关闭面板会清除选择，不改变会话。
+
 ## 模型体验
 
 无。该插件渲染浏览器设置 UI；这里没有任何内容进入模型请求。

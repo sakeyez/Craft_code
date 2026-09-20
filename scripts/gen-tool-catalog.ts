@@ -24,6 +24,8 @@ import * as BashEnvPlugin from '@deepseek-ai/dsh-shell-env'
 import { PwshLocalExecutor } from '@deepseek-ai/dsh-pwsh-local'
 import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
 import LocalFileSystem from '@deepseek-ai/dsh-fs-local'
+import * as MinecraftWorkbench from '../packages/minecraft/mc-workbench/src/index.ts'
+import * as MinecraftWorkbenchTools from '../packages/minecraft/mc-workbench/src/tools.ts'
 import { AttachmentStore } from '@deepseek-ai/dsh-attachment'
 import type { ImageAttachmentLimits, ImageAttachmentRef, SaveImageAttachment, StoredImageAttachment } from '@deepseek-ai/dsh-attachment'
 import UserQuestionService from '@deepseek-ai/dsh-user-questions'
@@ -56,7 +58,6 @@ import * as ToolSchedule from '@deepseek-ai/dsh-schedule'
 import Lsp from '@deepseek-ai/dsh-lsp'
 import * as ToolLsp from '@deepseek-ai/dsh-tool-lsp'
 import * as ToolMcProject from '@deepseek-ai/dsh-tool-mc-project'
-import * as ToolMcBootstrap from '@deepseek-ai/dsh-tool-mc-bootstrap'
 import * as ToolSkill from '@deepseek-ai/dsh-tool-skill'
 import * as ToolSessionQuery from '@deepseek-ai/dsh-tool-session-query'
 import * as ToolTasks from '@deepseek-ai/dsh-tool-jobs'
@@ -410,20 +411,6 @@ const TOOL_PACKAGES: ToolPackage[] = [
       'The lsp tool keeps provider selection and language-server subprocesses behind ctx.lsp, so its model-visible schema stays stable across providers. Requires a registered provider (e.g. `@deepseek-ai/dsh-lsp-stdio`) at runtime; without one, a query returns the structured `LSP_UNAVAILABLE` error rather than changing the schema.',
   },
   {
-    pkg: '@deepseek-ai/dsh-tool-mc-bootstrap',
-    dir: 'tool-mc-bootstrap',
-    source: 'packages/minecraft/tool-mc-bootstrap/src/index.ts',
-    requires: ['ctx.tools', 'ctx.fs', 'ctx.shell'],
-    writes: ['tool/call', 'tool/result'],
-    async mount(ctx) {
-      await ctx.plugin(LocalSubprocessRuntime)
-      await ctx.plugin(LocalBashExecutor)
-      await ctx.plugin(LocalFileSystem)
-      await ctx.plugin(ToolMcBootstrap)
-    },
-    note: 'bootstrap_mc_project creates a complete minimal supported project only in an empty workspace directory, writes through ctx.fs, and reports environment readiness without claiming Gradle or gameplay verification.',
-  },
-  {
     pkg: '@deepseek-ai/dsh-tool-mc-project',
     dir: 'tool-mc-project',
     source: 'packages/minecraft/tool-mc-project/src/index.ts',
@@ -437,6 +424,20 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'Minecraft project detection and resource validation read the current workspace through ctx.fs. run_mc_check is registered only when ctx.shell exists; it selects Gradle commands from detected project facts and executes them through the shell executor rather than spawning directly.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-mc-workbench/tools',
+    dir: 'mc-workbench',
+    source: 'packages/minecraft/mc-workbench/src/tools.ts',
+    requires: ['ctx.tools', 'ctx.minecraftWorkbench'],
+    writes: ['tool/call', 'tool/result'],
+    async mount(ctx) {
+      await ctx.plugin(LocalFileSystem)
+      await ctx.plugin(LocalSubprocessRuntime)
+      await ctx.plugin(MinecraftWorkbench)
+      await ctx.plugin(MinecraftWorkbenchTools)
+    },
+    note: 'Queries use the exact verified project classpath; external mappings remain unverified. The Minecraft consumer creates one checkpoint before the first modifying or shell tool in each turn.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-ralph',
@@ -654,9 +655,13 @@ interface CatalogPackage {
 /** The whole catalog: one entry per booted tool package, in manifest order. */
 export type ToolCatalog = CatalogPackage[]
 
+/** Tool-shaped package directories whose runtime is host-only and has no model schema. */
+const NON_MODEL_TOOL_DIRECTORIES = new Set(['tool-mc-bootstrap'])
+
 /**
- * Assert the boot manifest covers every shipped tool package on disk (a
- * `tool-*` leaf under `packages/`).
+ * Assert the boot manifest covers every model-facing tool package on disk (a
+ * `tool-*` leaf under `packages/`). Host-only packages are listed in the
+ * explicit exclusion set below and are intentionally absent from this catalog.
  * Booting has no source declaration to enumerate, so this glob restores the
  * "a new tool cannot be silently undocumented" guarantee: an unlisted package
  * fails the generator (and the freshness gate) until it is added to
@@ -665,7 +670,10 @@ export type ToolCatalog = CatalogPackage[]
  * `scanRoot` defaults to the repo root; a test may point it at a fixture tree.
  */
 export function assertManifestComplete(packages: ToolPackage[] = TOOL_PACKAGES, scanRoot: string = root): void {
-  const onDisk = globSync('packages/*/tool-*', { cwd: scanRoot }).map(p => basename(p)).sort()
+  const onDisk = globSync('packages/*/tool-*', { cwd: scanRoot })
+    .map(p => basename(p))
+    .filter(dir => !NON_MODEL_TOOL_DIRECTORIES.has(dir))
+    .sort()
   const listed = new Set(packages.map(p => p.dir))
   const missing = onDisk.filter(dir => !listed.has(dir))
   if (missing.length > 0) {
@@ -777,7 +785,7 @@ export function render(catalog: ToolCatalog): string {
     '',
     'Every model-facing tool a shipped plugin contributes to `ctx.tools`: the `name`, `description`, and JSON-Schema `parameters` the model receives via the system-prompt assembly. It complements the [subsystem pages](subsystems/core.md) (the types plus each page\'s generated Cordis API region) — this page is the *tools* the agent is offered.',
     '',
-    'This file is GENERATED and verified fresh by `pnpm run verify-tool-catalog` (part of `doc-sync`) — do not edit it by hand. Unlike the cordis catalog (a pure source-AST pass), this generator BOOTS each tool plugin on a real context and reads `ctx.tools.schemas()`, because a tool schema is not statically knowable (runtime-spread enums, concatenated descriptions, config-driven names, raw-JSON-Schema MCP tools). A completeness guard globs `packages/*/tool-*` and fails if any package is missing from the generator\'s boot manifest, so a new tool cannot be silently undocumented. See [the tool-schema-catalog Agent Note](../.agents/notes/implemented/process/2026-07-02-tool-schema-catalog.md).',
+    'This file is GENERATED and verified fresh by `pnpm run verify-tool-catalog` (part of `doc-sync`) — do not edit it by hand. Unlike the cordis catalog (a pure source-AST pass), this generator BOOTS each model-facing tool plugin on a real context and reads `ctx.tools.schemas()`, because a tool schema is not statically knowable (runtime-spread enums, concatenated descriptions, config-driven names, raw-JSON-Schema MCP tools). A completeness guard globs `packages/*/tool-*` and fails if any model-facing package is missing from the generator\'s boot manifest; explicitly listed host-only packages are excluded, so a new tool cannot be silently undocumented. See [the tool-schema-catalog Agent Note](../.agents/notes/implemented/process/2026-07-02-tool-schema-catalog.md).',
     '',
     'Scope: shipped product tools under `packages/*/tool-*`, each booted with its DEFAULT config, except where a Config field is REQUIRED with no default — there the generator must choose, and the per-package note records which branch this page shows. The registered tool NAME can be a load-time config (e.g. `tool-subagent`\'s `toolName`), so a deployment may expose a package under a different or additional name — a per-package note records those shipped aliases where they exist. The `examples/` demo tools (e.g. `echo`) are excluded, matching the cordis catalog\'s packages-only scope.',
     '',

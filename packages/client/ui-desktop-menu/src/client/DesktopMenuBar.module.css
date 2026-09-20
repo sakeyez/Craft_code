@@ -1,10 +1,9 @@
 .menuBar {
   display: flex;
   align-items: center;
-  width: 100%;
-  height: 40px;
+  flex: 0 0 auto;
+  height: 38px;
   box-sizing: border-box;
-  border-bottom: 2px solid var(--dsw-alias-border-l2);
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
   user-select: none;
@@ -14,7 +13,7 @@
 .menuItems {
   display: flex;
   align-items: center;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
   height: 38px;
   padding: 0 4px;
@@ -95,4 +94,12 @@
 .closeButton:active {
   background: var(--dsw-alias-interactive-bg-hover-danger);
   color: var(--dsw-alias-label-error);
+}
+
+.windowChrome {
+  display: flex;
+  justify-content: flex-end;
+  align-self: stretch;
+  flex: 1 0 132px;
+  -webkit-app-region: drag;
 }

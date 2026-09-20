@@ -371,6 +371,7 @@ export class SessionRuntime implements ISessions {
    */
   open(id: SessionId): void {
     this.manager.select(id)
+    this.rootCtx.emit('sessions/navigate', id)
   }
 
   /**
@@ -379,6 +380,7 @@ export class SessionRuntime implements ISessions {
    */
   openSubagent(address: SubagentAddress): void {
     this.manager.selectSubagent(address)
+    this.rootCtx.emit('sessions/navigate', address.childSessionId)
   }
 
   /**

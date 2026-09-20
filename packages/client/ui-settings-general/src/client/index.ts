@@ -53,7 +53,7 @@ const NS = 'settings'
  * ui-settings' apply, whose activation order relative to this one is NOT
  * constrained; registrations depend on their slots through `slots.inject()`.
  */
-export const inject = ['slots', 'locale', 'connection', 'settingsScope']
+export const inject = ['slots', 'locale', 'connection', 'settingsScope', 'settingsNavigation']
 
 /**
  * Register the `settings` dictionaries, the chrome content, and the General
@@ -91,7 +91,10 @@ export function apply(ctx: ClientContext): void {
   let onboardingVersion = -1
   let onboardingSteps: readonly SettingsOnboardingStep[] = []
   const shellInjected = (): SettingsRootInjected => ({
+    openSection: (id) =>{  ctx.settingsNavigation.openSection(id) },
+    closeSection: () =>{  ctx.settingsNavigation.close() },
     hooks: {
+      navigation: ctx.settingsNavigation,
       sections: {
         getSnapshot: () => {
           const version = ctx.slots.getVersion('settings.section')

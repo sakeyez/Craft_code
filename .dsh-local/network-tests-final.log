@@ -1,0 +1,18 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.8 E:/.sake/Desktop/craftcode
+
+noise before readiness
+dsh desktop: http://127.0.0.1:43123
+noise before readiness
+dsh desktop: http://127.0.0.1:43123
+shutdown requested
+fixture exited before readiness
+
+ Test Files  78 passed (78)
+      Tests  945 passed (945)
+   Start at  00:17:08
+   Duration  14.42s (transform 36.89s, setup 17.18s, import 80.21s, tests 38.15s, environment 30.91s)
+

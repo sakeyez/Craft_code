@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-09-20-independent-minecraft-development.md
+2026-09-20-independent-minecraft-development.md: 36e6e143436dba1a6390ed759626543d37686518
+2026-09-20-independent-minecraft-development.zh.md: 1d842a290e2426b6fb99bc82a5d09ead2dfeba1f

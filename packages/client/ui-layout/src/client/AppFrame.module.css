@@ -8,7 +8,17 @@
 }
 
 .topbar {
+  display: flex;
+  align-items: center;
   min-width: 0;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+}
+
+.topbar:has(> *) {
+  min-height: 40px;
+  box-sizing: border-box;
+  border-bottom: 2px solid var(--dsw-alias-border-l2);
 }
 
 .body {
@@ -140,32 +150,6 @@
   pointer-events: auto;
 }
 
-/* Minecraft focus mode keeps the conversation mounted while removing the
-   project chrome around it. The game connection state owns this attribute. */
-.frame[data-game-focus] .topbar,
-.frame[data-game-focus] .sidebarCol,
-.frame[data-game-focus] .detailsCol,
-.frame[data-game-focus] .handle {
-  display: none;
-}
-
-.frame[data-game-focus] {
-  grid-template-rows: minmax(0, 1fr);
-}
-
-.frame[data-game-focus] .body {
-  transition: none;
-  grid-template-columns: 0 minmax(0, 1fr) 0 !important;
-}
-
-/* Removing the sidebar from flow must not move the conversation into its
-   zero-width track. Game controls and the composer share this column. */
-.frame[data-game-focus] .centerCol {
-  grid-column: 2;
-  grid-row: 1;
-  min-height: 0;
-}
-
 .sidebarCol {
   border-right: 2px solid var(--dsw-alias-border-l2);
 }
@@ -181,3 +165,6 @@
   border-width: 2px;
   background: var(--dsw-alias-bg-layer-2);
 }
+
+.workbenchPage { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.workbenchPage[hidden] { display: none; }

@@ -36,8 +36,7 @@ export function isGameCaptureState(value: unknown): value is GameCaptureState {
   const named = value.gameName === undefined || typeof value.gameName === 'string'
   switch (value.status) {
     case 'idle': return hasOnly(value, ['status'])
-    case 'starting':
-    case 'reconnecting': return named && hasOnly(value, ['status', 'gameName'])
+    case 'starting': return named && hasOnly(value, ['status', 'gameName'])
     case 'connected': return named && value.surfaceKind === 'external-window'
       && hasOnly(value, ['status', 'gameName', 'surfaceKind'])
     case 'failed':

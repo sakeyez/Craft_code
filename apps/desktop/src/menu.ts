@@ -2,19 +2,18 @@ import type { MenuItemConstructorOptions } from 'electron'
 
 export const DESKTOP_MENU_ACTIONS = [
   'project:new', 'project:export-jar', 'project:toggle-game', 'project:settings',
-  'editor:find-current', 'editor:find-project',
+  'project:checkpoints', 'help:about',
   'git:status', 'git:diff', 'git:log', 'git:branch', 'git:commit', 'git:push', 'git:pull',
   'help:docs', 'help:sponsor',
 ] as const
 
 export type DesktopMenuAction = typeof DESKTOP_MENU_ACTIONS[number]
 
-export const DESKTOP_MENU_IDS = ['project', 'editor', 'git', 'help'] as const
+export const DESKTOP_MENU_IDS = ['project', 'git', 'help'] as const
 export type DesktopMenuId = typeof DESKTOP_MENU_IDS[number]
 
 export const DESKTOP_MENU_ITEM_IDS: Readonly<Record<DesktopMenuId, string>> = Object.freeze({
   project: 'desktop-menu-project',
-  editor: 'desktop-menu-editor',
   git: 'desktop-menu-git',
   help: 'desktop-menu-help',
 })
@@ -95,25 +94,11 @@ export function desktopMenuTemplate(
       label: '项目',
       submenu: [
         sendItem('新建', 'project:new', 'Ctrl+N'),
-        sendItem('导出 JAR', 'project:export-jar'),
+        sendItem('导出模组', 'project:export-jar'),
+        sendItem('恢复点', 'project:checkpoints'),
         { id: DESKTOP_GAME_MENU_ITEM_ID, ...sendItem('启动游戏', 'project:toggle-game') },
         { type: 'separator' },
         sendItem('项目设置', 'project:settings'),
-      ],
-    },
-    {
-      id: DESKTOP_MENU_ITEM_IDS.editor,
-      label: '编辑',
-      submenu: [
-        { role: 'undo', label: '撤销', accelerator: 'Ctrl+Z' },
-        { role: 'redo', label: '重做', accelerator: 'Ctrl+Y' },
-        { type: 'separator' },
-        { role: 'cut', label: '剪切' },
-        { role: 'copy', label: '复制' },
-        { role: 'paste', label: '粘贴' },
-        { type: 'separator' },
-        sendItem('查找当前对话', 'editor:find-current', 'Ctrl+F'),
-        sendItem('查找项目对话', 'editor:find-project', 'Ctrl+Shift+F'),
       ],
     },
     {
@@ -135,6 +120,7 @@ export function desktopMenuTemplate(
       label: '帮助',
       submenu: [
         { label: '文档', click: () => { openExternal(HELP_URLS.docs) } },
+        sendItem('关于 CraftCode', 'help:about'),
         { label: '赞助作者', click: () => { openExternal(HELP_URLS.sponsor) } },
       ],
     },

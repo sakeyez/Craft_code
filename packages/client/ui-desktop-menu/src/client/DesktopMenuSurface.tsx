@@ -7,7 +7,6 @@ import {
   IconChevronDownOutline14,
   IconChevronUpOutline14,
   IconCloseOutline16,
-  IconSearchOutline16,
   Input,
   Modal,
   StateDot,
@@ -23,11 +22,10 @@ import css from './DesktopMenuSurface.module.css'
 
 type DesktopMenuSurfaceProps = PropsRuntime<'shell.overlay'> & InjectFace<DesktopMenuInjected>
 
-type TextPurpose = 'find-current' | 'find-project' | 'commit'
 type BranchMode = 'list' | 'switch' | 'create'
 type DialogState =
   | { kind: 'settings'; value: DesktopSettings }
-  | { kind: 'text'; purpose: TextPurpose; value: string }
+  | { kind: 'commit'; value: string }
   | { kind: 'confirm'; command: 'git-push' | 'git-pull' }
   | { kind: 'branch'; mode: BranchMode; value: string }
   | { kind: 'dirty-switch'; branch: string }
@@ -120,23 +118,6 @@ function CommandNotice({ notice, onClose }: { notice: Notice; onClose: () => voi
   )
 }
 
-const textDialogCopy: Record<TextPurpose, {
-  title: string
-  label: string
-  placeholder: string
-  action: string
-}> = {
-  'find-current': {
-    title: '查找当前对话', label: '查找内容', placeholder: '输入要查找的文字', action: '查找',
-  },
-  'find-project': {
-    title: '查找项目对话', label: '查找内容', placeholder: '搜索当前项目中的历史对话', action: '搜索',
-  },
-  'commit': {
-    title: '提交更改', label: 'Commit message', placeholder: '说明本次更改', action: '提交',
-  },
-}
-
 /** Desktop menu dialogs and feedback; all external capabilities arrive through slot props. */
 export function DesktopMenuSurface({
   useSessions,
@@ -145,7 +126,6 @@ export function DesktopMenuSurface({
   invoke,
   setActiveProject,
   createProject,
-  searchProject,
 }: DesktopMenuSurfaceProps) {
   const menuEvent = useDesktopMenu(value => value)
   const gameEvent = useDesktopGame(value => value)
@@ -154,7 +134,6 @@ export function DesktopMenuSurface({
   const [dialog, setDialog] = useState<DialogState>()
   const [notice, setNotice] = useState<Notice>()
   const [busyCount, setBusyCount] = useState(0)
-  const [lastQuery, setLastQuery] = useState('')
   const noticeSequence = useRef(0)
   const handledMenuSequence = useRef(0)
   const handledGameSequence = useRef(0)
@@ -232,14 +211,8 @@ export function DesktopMenuSurface({
           if (value.ok && value.settings !== undefined) setDialog({ kind: 'settings', value: value.settings })
         })
         return
-      case 'editor:find-current':
-        setDialog({ kind: 'text', purpose: 'find-current', value: lastQuery })
-        return
-      case 'editor:find-project':
-        setDialog({ kind: 'text', purpose: 'find-project', value: '' })
-        return
       case 'git:commit':
-        setDialog({ kind: 'text', purpose: 'commit', value: '' })
+        setDialog({ kind: 'commit', value: '' })
         return
       case 'git:push':
       case 'git:pull':
@@ -265,9 +238,11 @@ export function DesktopMenuSurface({
         return
       case 'help:docs':
       case 'help:sponsor':
+      case 'help:about':
+      case 'project:checkpoints':
         return
     }
-  }, [createNewProject, execute, lastQuery])
+  }, [createNewProject, execute])
 
   useEffect(() => {
     if (menuEvent.action === undefined || menuEvent.sequence === handledMenuSequence.current) return
@@ -291,45 +266,11 @@ export function DesktopMenuSurface({
     return () => { clearTimeout(timer) }
   }, [notice])
 
-  const submitTextDialog = async (state: Extract<DialogState, { kind: 'text' }>): Promise<void> => {
+  const submitCommit = async (state: Extract<DialogState, { kind: 'commit' }>): Promise<void> => {
     const value = state.value.trim()
     if (value === '') return
     setDialog(undefined)
-    if (state.purpose === 'find-current') {
-      setLastQuery(value)
-      const found = window.find?.(value) ?? false
-      publish('complete', {
-        ok: found,
-        title: '查找当前对话',
-        message: found ? '已定位匹配内容。' : '当前对话没有匹配内容。',
-      })
-      return
-    }
-    if (state.purpose === 'commit') {
-      await execute({ kind: 'git-commit', message: value }, { title: '提交更改', pending: true })
-      return
-    }
-    if (cwd === undefined) {
-      publish('complete', errorResult('查找项目对话', '请先打开一个项目工作区。'))
-      return
-    }
-    const controller = new AbortController()
-    const pendingId = publish('running', { ok: true, title: '查找项目对话', message: '正在搜索，请稍候…' })
-    setBusyCount(count => count + 1)
-    try {
-      const items = await searchProject(value, cwd, controller.signal)
-      publish('complete', {
-        ok: true,
-        title: '查找项目对话',
-        message: items.length === 0 ? '项目对话没有匹配内容。' : `找到 ${String(items.length)} 条匹配内容。`,
-        ...(items.length === 0 ? {} : { stdout: items.map(item => `${item.sessionId}: ${item.snippet}`).join('\n') }),
-      })
-    } catch (error) {
-      publish('complete', errorResult('查找项目对话', error instanceof Error ? error.message : String(error)))
-    } finally {
-      setNotice(current => current?.id === pendingId ? undefined : current)
-      setBusyCount(count => Math.max(0, count - 1))
-    }
+    await execute({ kind: 'git-commit', message: value }, { title: '提交更改', pending: true })
   }
 
   const submitBranch = async (state: Extract<DialogState, { kind: 'branch' }>): Promise<void> => {
@@ -362,7 +303,6 @@ export function DesktopMenuSurface({
     )
   }
 
-  const textCopy = dialog?.kind === 'text' ? textDialogCopy[dialog.purpose] : undefined
   const branchAction = dialog?.kind === 'branch'
     ? dialog.mode === 'list' ? '查看分支' : dialog.mode === 'switch' ? '切换分支' : '新建并切换'
     : ''
@@ -434,12 +374,12 @@ export function DesktopMenuSurface({
         </Modal>
       )}
 
-      {dialog?.kind === 'text' && textCopy !== undefined && (
+      {dialog?.kind === 'commit' && (
         <Modal
           open
           onClose={() => { if (!busy) setDialog(undefined) }}
-          title={textCopy.title}
-          closeLabel={`关闭${textCopy.title}`}
+          title="提交更改"
+          closeLabel="关闭提交更改"
           className={css.compactDialog ?? ''}
           footer={(
             <>
@@ -453,7 +393,7 @@ export function DesktopMenuSurface({
                 type="submit"
                 form="desktop-text-dialog"
               >
-                {textCopy.action}
+                提交
               </Button>
             </>
           )}
@@ -461,16 +401,15 @@ export function DesktopMenuSurface({
           <form
             id="desktop-text-dialog"
             className={css.formStack}
-            onSubmit={(event: FormEvent) => { event.preventDefault(); void submitTextDialog(dialog) }}
+            onSubmit={(event: FormEvent) => { event.preventDefault(); void submitCommit(dialog) }}
           >
             <label className={css.field}>
-              <span>{textCopy.label}</span>
+              <span>Commit message</span>
               <Input
                 className={css.textInput ?? ''}
-                {...dialog.purpose.startsWith('find') ? { icon: <IconSearchOutline16 /> } : {}}
                 autoFocus
                 value={dialog.value}
-                placeholder={textCopy.placeholder}
+                placeholder="说明本次更改"
                 disabled={busy}
                 onChange={(event) => { setDialog({ ...dialog, value: event.currentTarget.value }) }}
               />

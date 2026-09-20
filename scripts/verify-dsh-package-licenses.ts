@@ -1,19 +1,19 @@
 /**
- * Enforce the MIT license declaration for repository-owned DSH npm packages.
+ * Enforce AGPL-3.0-only declarations for CraftCode's first-party npm and Python packages.
  * @module scripts/verify-dsh-package-licenses
  */
 
-import { globSync, readFileSync } from 'node:fs'
+import { existsSync, globSync, readFileSync } from 'node:fs'
 import { resolve, sep } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..')
-const DSH_PACKAGE_NAME = /^@deepseek-ai\/dsh(?:-|$)/
+const DSH_PACKAGE_NAME = /^@deepseek-ai\/(?:dsh|node-addon-landlock-run)(?:-|$)/
 
-/** Result of checking every DSH package reachable through the root workspace list. */
+/** Result of checking first-party workspaces and Python distributions. */
 export interface DshPackageLicenseReport {
-  /** Number of DSH package manifests checked. */
+  /** Number of first-party package manifests checked. */
   packageCount: number
-  /** Repository-relative diagnostics for non-MIT declarations. */
+  /** Repository-relative diagnostics for non-AGPL declarations. */
   failures: string[]
 }
 
@@ -50,9 +50,9 @@ function printable(value: unknown): string {
 }
 
 /**
- * Check every DSH npm package declared by the repository workspace.
+ * Check first-party npm workspaces and Python distribution declarations.
  * @param root - absolute repository root containing the workspace package.json.
- * @returns the checked package count and every non-MIT declaration.
+ * @returns the checked package count and every non-AGPL declaration.
  */
 export function inspectDshPackageLicenses(root: string): DshPackageLicenseReport {
   let packageCount = 0
@@ -64,26 +64,32 @@ export function inspectDshPackageLicenses(root: string): DshPackageLicenseReport
     if (typeof name !== 'string' || !DSH_PACKAGE_NAME.test(name)) continue
 
     packageCount++
-    if (manifest.license !== 'MIT') {
+    if (manifest.license !== 'AGPL-3.0-only') {
       const normalizedFile = file.split(sep).join('/')
       failures.push(
-        `${normalizedFile}: ${name} must declare "license": "MIT"; found ${printable(manifest.license)}.`,
+        `${normalizedFile}: ${name} must declare "license": "AGPL-3.0-only"; found ${printable(manifest.license)}.`,
       )
     }
   }
 
+  for (const file of ['python/sdk/pyproject.toml', 'python/sdk-runtime/pyproject.toml']) {
+    if (!existsSync(resolve(root, file))) continue
+    packageCount++
+    if (!/^license = "AGPL-3\.0-only"$/mu.test(readFileSync(resolve(root, file), 'utf8')))
+      failures.push(`${file}: first-party Python package must declare AGPL-3.0-only.`)
+  }
   return { packageCount, failures }
 }
 
 if (process.argv[1] && import.meta.filename === resolve(process.argv[1])) {
   const report = inspectDshPackageLicenses(ROOT)
   if (report.failures.length > 0) {
-    process.stderr.write('verify-dsh-package-licenses: non-MIT DSH package declarations found:\n')
+    process.stderr.write('verify-dsh-package-licenses: non-AGPL DSH package declarations found:\n')
     for (const failure of report.failures) process.stderr.write(`  ${failure}\n`)
     process.exitCode = 1
   } else {
     process.stdout.write(
-      `verify-dsh-package-licenses: ${String(report.packageCount)} DSH package(s) checked; all declare MIT.\n`,
+      `verify-dsh-package-licenses: ${String(report.packageCount)} first-party package(s) checked; all declare AGPL-3.0-only.\n`,
     )
   }
 }

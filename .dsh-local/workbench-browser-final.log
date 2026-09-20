@@ -1,0 +1,40 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.8 E:/.sake/Desktop/craftcode
+
+ ❯ apps/desktop/renderer/tests/mcmod-workbench.e2e.ts (2 tests | 1 failed) 6121ms
+     × previews dependency changes and browses associated sources as read-only 534ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/desktop/renderer/tests/mcmod-workbench.e2e.ts > Minecraft workbench assembled browser > previews dependency changes and browses associated sources as read-only
+Error: locator.uncheck: Clicking the checkbox did not change its state
+Call log:
+  - waiting for getByLabel('测试时安装', { exact: true })
+    - locator resolved to <input checked type="checkbox"/>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - performing click action
+    - click action done
+    - waiting for scheduled navigations to finish
+    - navigations have finished
+
+ ❯ apps/desktop/renderer/tests/mcmod-workbench.e2e.ts:129:53
+    127|     await page.getByLabel('Fixture Mod 的关系').waitFor()
+    128|     expect(await readFile(join(cwd, '.dsh/dependencies.gradle'), 'utf8…
+    129|     await page.getByLabel('测试时安装', { exact: true }).uncheck()
+       |                                                     ^
+    130|     await page.getByRole('button', { name: '应用变更' }).click()
+    131|     await expect.poll(() => readFile(join(cwd, '.dsh/dependencies.grad…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 2 passed (3)
+   Start at  02:43:22
+   Duration  12.13s (transform 857ms, setup 0ms, import 2.23s, tests 9.55s, environment 0ms)
+

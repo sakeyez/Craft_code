@@ -51,7 +51,7 @@ describe('ui-desktop-menu plugin', () => {
       layout,
     }
     apply(ctx as never)
-    expect(registrations.map(value => value.name)).toEqual(['shell.topbar', 'shell.overlay'])
+    expect(registrations.map(value => value.name)).toEqual(['shell.topbar', 'shell.window-controls', 'shell.overlay'])
     const options = registrations.find(value => value.name === 'shell.overlay')
     expect(options).toMatchObject({ id: 'desktop-menu', order: 20 })
     const face = options?.inject?.()

@@ -5,7 +5,7 @@
 
 Every model-facing tool a shipped plugin contributes to `ctx.tools`: the `name`, `description`, and JSON-Schema `parameters` the model receives via the system-prompt assembly. It complements the [subsystem pages](subsystems/core.md) (the types plus each page's generated Cordis API region) — this page is the *tools* the agent is offered.
 
-This file is GENERATED and verified fresh by `pnpm run verify-tool-catalog` (part of `doc-sync`) — do not edit it by hand. Unlike the cordis catalog (a pure source-AST pass), this generator BOOTS each tool plugin on a real context and reads `ctx.tools.schemas()`, because a tool schema is not statically knowable (runtime-spread enums, concatenated descriptions, config-driven names, raw-JSON-Schema MCP tools). A completeness guard globs `packages/*/tool-*` and fails if any package is missing from the generator's boot manifest, so a new tool cannot be silently undocumented. See [the tool-schema-catalog Agent Note](../.agents/notes/implemented/process/2026-07-02-tool-schema-catalog.md).
+This file is GENERATED and verified fresh by `pnpm run verify-tool-catalog` (part of `doc-sync`) — do not edit it by hand. Unlike the cordis catalog (a pure source-AST pass), this generator BOOTS each model-facing tool plugin on a real context and reads `ctx.tools.schemas()`, because a tool schema is not statically knowable (runtime-spread enums, concatenated descriptions, config-driven names, raw-JSON-Schema MCP tools). A completeness guard globs `packages/*/tool-*` and fails if any model-facing package is missing from the generator's boot manifest; explicitly listed host-only packages are excluded, so a new tool cannot be silently undocumented. See [the tool-schema-catalog Agent Note](../.agents/notes/implemented/process/2026-07-02-tool-schema-catalog.md).
 
 Scope: shipped product tools under `packages/*/tool-*`, each booted with its DEFAULT config, except where a Config field is REQUIRED with no default — there the generator must choose, and the per-package note records which branch this page shows. The registered tool NAME can be a load-time config (e.g. `tool-subagent`'s `toolName`), so a deployment may expose a package under a different or additional name — a per-package note records those shipped aliases where they exist. The `examples/` demo tools (e.g. `echo`) are excluded, matching the cordis catalog's packages-only scope.
 
@@ -30,8 +30,8 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-goal` | `create_goal`, `get_goal`, `update_goal` | `ctx.tools`, `ctx.agents`, `ctx.goals`, `ctx.systemPrompt`, `a calling Agent in an authorized open turn` | `tool/call`, `goal/change for mutations`, `tool/result` | - | create, edit, pause, and resume require direct-human root authority; complete and blocked also accept the exact current goal round. The default blocked lower bound is three admitted rounds. |
 | `@deepseek-ai/dsh-schedule` | `schedule_create`, `schedule_delete`, `schedule_list` | `ctx.tools`, `ctx.sessions`, `Session persistence`, `a future live root Agent` | `tool/call`, `schedule/change create or delete`, `tool/result` | - | Registered only inside live root Agent scopes created after the opt-in Schedule plugin loads. Version 1 accepts after_seconds, explicit absolute at, and bounded fixed-rate every_seconds, and discloses session-local delivery; management reads and mutations require the shared Session persistence barrier. |
 | `@deepseek-ai/dsh-tool-lsp` | `lsp` | `ctx.tools`, `ctx.lsp`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | The lsp tool keeps provider selection and language-server subprocesses behind ctx.lsp, so its model-visible schema stays stable across providers. Requires a registered provider (e.g. `@deepseek-ai/dsh-lsp-stdio`) at runtime; without one, a query returns the structured `LSP_UNAVAILABLE` error rather than changing the schema. |
-| `@deepseek-ai/dsh-tool-mc-bootstrap` | `bootstrap_mc_project` | `ctx.tools`, `ctx.fs`, `ctx.shell` | `tool/call`, `tool/result` | - | bootstrap_mc_project creates a complete minimal supported project only in an empty workspace directory, writes through ctx.fs, and reports environment readiness without claiming Gradle or gameplay verification. |
 | `@deepseek-ai/dsh-tool-mc-project` | `detect_mc_project`, `run_mc_check`, `validate_mc_resources` | `ctx.tools`, `ctx.fs`, `ctx.shell for run_mc_check` | `tool/call`, `tool/result` | - | Minecraft project detection and resource validation read the current workspace through ctx.fs. run_mc_check is registered only when ctx.shell exists; it selects Gradle commands from detected project facts and executes them through the shell executor rather than spawning directly. |
+| `@deepseek-ai/dsh-mc-workbench/tools` | `query_mc_api` | `ctx.tools`, `ctx.minecraftWorkbench` | `tool/call`, `tool/result` | - | Queries use the exact verified project classpath; external mappings remain unverified. The Minecraft consumer creates one checkpoint before the first modifying or shell tool in each turn. |
 | `@deepseek-ai/dsh-tool-ralph` | `ralph` | `ctx.tools`, `ctx.workflowEngine`, `ctx.subagents`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents every fresh round)` | `tool/call`, `tool/result`, `workflow and child session events during execution` | - | A fixed foreground workflow starts one fresh structured child per round; the model selects only the immutable objective and an optional round cap. |
 | `@deepseek-ai/dsh-tool-skill` | `skill` | `ctx.tools`, `ctx.agents`, `ctx.skills` | `tool/call`, `tool/result`, `user/message replacement catalogs via agent.inject()` | - | - |
 | `@deepseek-ai/dsh-tool-session-query` | `session_event_read`, `session_event_search`, `session_event_trace`, `session_search`, `session_trace` | `ctx.tools`, `ctx.systemPrompt`, `ctx.sessionQuery`, `a calling Agent for workspace authority` | `tool/call`, `tool/result` | - | The five read-only tools hide provider cursors and authorize every result from the immutable calling agent session. The package is opt-in; compositions that need enforced deadlines or bounded inline output also mount the generic timeout or spill policies. |
@@ -1208,58 +1208,6 @@ Source: [`packages/lsp/tool-lsp/src/index.ts`](../packages/lsp/tool-lsp/src/inde
 
 The lsp tool keeps provider selection and language-server subprocesses behind ctx.lsp, so its model-visible schema stays stable across providers. Requires a registered provider (e.g. `@deepseek-ai/dsh-lsp-stdio`) at runtime; without one, a query returns the structured `LSP_UNAVAILABLE` error rather than changing the schema.
 
-<a id="deepseek-aidsh-tool-mc-bootstrap"></a>
-
-## `@deepseek-ai/dsh-tool-mc-bootstrap`
-
-### `bootstrap_mc_project`
-
-Create a complete minimal Fabric or NeoForge Minecraft Java mod project from a pinned template. Writes only inside the session workspace, refuses non-empty targets and unsupported versions, and reports Java readiness; it does not claim gameplay or a Gradle build until run_mc_check executes one.
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "loader": {
-      "type": "string",
-      "enum": [
-        "fabric",
-        "neoforge"
-      ]
-    },
-    "minecraftVersion": {
-      "type": "string"
-    },
-    "modName": {
-      "type": "string"
-    },
-    "modId": {
-      "type": "string"
-    },
-    "packageName": {
-      "type": "string"
-    },
-    "targetDirectory": {
-      "type": "string"
-    },
-    "enableDatagen": {
-      "type": "boolean"
-    }
-  },
-  "required": [
-    "loader",
-    "minecraftVersion",
-    "modName",
-    "modId",
-    "packageName"
-  ]
-}
-```
-
-Source: [`packages/minecraft/tool-mc-bootstrap/src/index.ts`](../packages/minecraft/tool-mc-bootstrap/src/index.ts)
-
-bootstrap_mc_project creates a complete minimal supported project only in an empty workspace directory, writes through ctx.fs, and reports environment readiness without claiming Gradle or gameplay verification.
-
 <a id="deepseek-aidsh-tool-mc-project"></a>
 
 ## `@deepseek-ai/dsh-tool-mc-project`
@@ -1287,7 +1235,7 @@ Run Minecraft validation for the current workspace. The tool detects the project
   "properties": {
     "target": {
       "type": "string",
-      "description": "Check to run. resources performs static Minecraft resource validation before Gradle processResources. runtime launches a client or dedicated server after approval. startup runs the complete preflight and then a bounded readiness probe; it blocks launch on any failed or unverified phase. all stops at the first failed step.",
+      "description": "Check to run. resources performs static Minecraft resource validation before Gradle processResources. runtime executes the project client/server Gradle task after approval, without extra preflight tasks. startup runs the complete preflight and then a bounded readiness probe; it blocks launch on any failed or unverified phase. all stops at the first failed step.",
       "enum": [
         "build",
         "test",
@@ -1304,6 +1252,14 @@ Run Minecraft validation for the current workspace. The tool detects the project
       "enum": [
         "client",
         "server"
+      ]
+    },
+    "testMode": {
+      "type": "string",
+      "description": "Runtime mode. Defaults to the project Gradle runtime task using the shared local environment and caches. It adds no assistant preflight tasks and retains the mounted shell policy; process start does not prove gameplay. artifact builds and validates the published JAR, then installs an isolated exact-version local test instance. Requires the Minecraft workbench and separate server EULA acceptance.",
+      "enum": [
+        "development",
+        "artifact"
       ]
     },
     "timeoutMs": {
@@ -1333,6 +1289,41 @@ Validate the current Minecraft mod workspace resources with deterministic static
 Source: [`packages/minecraft/tool-mc-project/src/index.ts`](../packages/minecraft/tool-mc-project/src/index.ts)
 
 Minecraft project detection and resource validation read the current workspace through ctx.fs. run_mc_check is registered only when ctx.shell exists; it selects Gradle commands from detected project facts and executes them through the shell executor rather than spawning directly.
+
+<a id="deepseek-aidsh-mc-workbenchtools"></a>
+
+## `@deepseek-ai/dsh-mc-workbench/tools`
+
+### `query_mc_api`
+
+Query a fully qualified Java class and its public method descriptors from the current project’s exact, hash-verified build classpath. Reports Minecraft version, mapping namespace, source and cache status. Build the project first. External mappings.dev evidence is optional and remains unverified; names are never converted across versions or mappings.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "symbol": {
+      "type": "string",
+      "description": "Fully qualified class name in the current project namespace."
+    },
+    "version": {
+      "type": "string",
+      "description": "Optional exact Minecraft version; a mismatch with the project is rejected."
+    },
+    "external": {
+      "type": "boolean",
+      "description": "Allow mappings.dev fallback when no class is found locally. Defaults to false."
+    }
+  },
+  "required": [
+    "symbol"
+  ]
+}
+```
+
+Source: [`packages/minecraft/mc-workbench/src/tools.ts`](../packages/minecraft/mc-workbench/src/tools.ts)
+
+Queries use the exact verified project classpath; external mappings remain unverified. The Minecraft consumer creates one checkpoint before the first modifying or shell tool in each turn.
 
 <a id="deepseek-aidsh-tool-ralph"></a>
 

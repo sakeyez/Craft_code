@@ -182,6 +182,8 @@ export interface Config {
    * configured root. False mounts a roster over `roots` alone.
    */
   includeUserRoot: boolean
+  /** When set, only these preset ids are visible and mountable. */
+  allowedIds?: string[]
 }
 
 /** One directory scanned for preset subdirectories. */
@@ -2706,7 +2708,9 @@ Source: [`packages/lsp/tool-lsp/src/index.ts:58`](../packages/lsp/tool-lsp/src/i
 Requires: `tools` · `fs`
 
 ```ts config-catalog
-/** Tool configuration. */
+/**
+ * Tool configuration.
+ */
 export interface Config {
   /**
    * Maximum directory entries walked while discovering source/resource and
@@ -2733,7 +2737,7 @@ export interface Config {
 }
 ```
 
-Source: [`packages/minecraft/tool-mc-project/src/index.ts:54`](../packages/minecraft/tool-mc-project/src/index.ts)
+Source: [`packages/minecraft/tool-mc-project/src/index.ts:68`](../packages/minecraft/tool-mc-project/src/index.ts)
 
 <a id="deepseek-aidsh-tool-pwsh"></a>
 
@@ -3281,6 +3285,8 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-client-ui-input-trigger` ([`packages/client/ui-input-trigger/src/index.ts`](../packages/client/ui-input-trigger/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-jobs` ([`packages/client/ui-jobs/src/index.ts`](../packages/client/ui-jobs/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-layout` ([`packages/client/ui-layout/src/index.ts`](../packages/client/ui-layout/src/index.ts))
+- `@deepseek-ai/dsh-client-ui-mcmod-bootstrap` ([`packages/client/ui-mcmod-bootstrap/src/index.ts`](../packages/client/ui-mcmod-bootstrap/src/index.ts))
+- `@deepseek-ai/dsh-client-ui-mcmod-workbench` ([`packages/client/ui-mcmod-workbench/src/index.ts`](../packages/client/ui-mcmod-workbench/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-message-feedback` ([`packages/client/ui-message-feedback/src/index.ts`](../packages/client/ui-message-feedback/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-model-selection` ([`packages/client/ui-model-selection/src/index.ts`](../packages/client/ui-model-selection/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-permission-presets` ([`packages/client/ui-permission-presets/src/index.ts`](../packages/client/ui-permission-presets/src/index.ts))
@@ -3314,6 +3320,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-host-plugin-inventory` — requires `loader` ([`packages/host/plugin-inventory/src/index.ts`](../packages/host/plugin-inventory/src/index.ts))
 - `@deepseek-ai/dsh-llm` ([`packages/llm/llm/src/index.ts`](../packages/llm/llm/src/index.ts))
 - `@deepseek-ai/dsh-lsp` ([`packages/lsp/lsp/src/index.ts`](../packages/lsp/lsp/src/index.ts))
+- `@deepseek-ai/dsh-mc-workbench` — requires `fs` · `subprocess` ([`packages/minecraft/mc-workbench/src/index.ts`](../packages/minecraft/mc-workbench/src/index.ts))
 - `@deepseek-ai/dsh-mcmod-agent` — requires `systemPrompt` ([`packages/minecraft/mcmod-agent/src/index.ts`](../packages/minecraft/mcmod-agent/src/index.ts))
 - `@deepseek-ai/dsh-schedule` — requires `agents` · `sessions` · `tools` · `sessionPersistence` ([`packages/schedule/schedule/src/index.ts`](../packages/schedule/schedule/src/index.ts))
 - `@deepseek-ai/dsh-session` ([`packages/core/session/src/index.ts`](../packages/core/session/src/index.ts))
@@ -3329,6 +3336,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-tool-ask-user` — requires `tools` · `userQuestions` ([`packages/interaction/tool-ask-user/src/index.ts`](../packages/interaction/tool-ask-user/src/index.ts))
 - `@deepseek-ai/dsh-tool-call-timeout-policy` — requires `tools` ([`packages/guard/timeout-policy/src/index.ts`](../packages/guard/timeout-policy/src/index.ts))
 - `@deepseek-ai/dsh-tool-cordis` — requires `tools` · `systemPrompt` · `dynamicCordisRunner` · `cordisInspect` ([`packages/extensions/tool-cordis/src/index.ts`](../packages/extensions/tool-cordis/src/index.ts))
+- `@deepseek-ai/dsh-tool-mc-bootstrap` ([`packages/minecraft/tool-mc-bootstrap/src/index.ts`](../packages/minecraft/tool-mc-bootstrap/src/index.ts))
 - `@deepseek-ai/dsh-tool-subagent-control` — requires `tools` · `subagents` ([`packages/subagent/tool-subagent-control/src/index.ts`](../packages/subagent/tool-subagent-control/src/index.ts))
 - `@deepseek-ai/dsh-user-questions` ([`packages/interaction/user-questions/src/index.ts`](../packages/interaction/user-questions/src/index.ts))
 - `@deepseek-ai/dsh-workspace` — requires `storageDomain` · `sessionPersistence` ([`packages/workspace/workspace/src/index.ts`](../packages/workspace/workspace/src/index.ts))

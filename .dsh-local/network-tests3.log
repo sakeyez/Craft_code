@@ -1,0 +1,73 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.8 E:/.sake/Desktop/craftcode
+
+noise before readiness
+dsh desktop: http://127.0.0.1:43123
+noise before readiness
+dsh desktop: http://127.0.0.1:43123
+shutdown requested
+fixture exited before readiness
+ ❯ |thread-safe| packages/client/ui-settings-general/tests/apply.client.spec.ts (8 tests | 1 failed) 199ms
+     × declares the services it uses 14ms
+ ❯ |thread-safe| packages/client/ui-settings-general/tests/shell.client.spec.ts (6 tests | 1 failed) 190ms
+     × declares only the slot registry (a pure composition face, no locale) 15ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |thread-safe| packages/client/ui-settings-general/tests/apply.client.spec.ts > ui-settings-general apply > declares the services it uses
+AssertionError: expected [ 'slots', 'locale', …(3) ] to deeply equal [ 'slots', 'locale', …(2) ]
+
+- Expected
++ Received
+
+  [
+    "slots",
+    "locale",
+    "connection",
+    "settingsScope",
++   "settingsNavigation",
+  ]
+
+ ❯ packages/client/ui-settings-general/tests/apply.client.spec.ts:82:20
+     80| describe('ui-settings-general apply', () => {
+     81|   it('declares the services it uses', () => {
+     82|     expect(inject).toEqual(['slots', 'locale', 'connection', 'settings…
+       |                    ^
+     83|   })
+     84|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |thread-safe| packages/client/ui-settings-general/tests/shell.client.spec.ts > ui-settings apply > declares only the slot registry (a pure composition face, no locale)
+AssertionError: expected [ 'slots', 'locale', …(3) ] to deeply equal [ 'slots', 'locale', …(2) ]
+
+- Expected
++ Received
+
+  [
+    "slots",
+    "locale",
+    "connection",
+    "settingsScope",
++   "settingsNavigation",
+  ]
+
+ ❯ packages/client/ui-settings-general/tests/shell.client.spec.ts:54:20
+     52| describe('ui-settings apply', () => {
+     53|   it('declares only the slot registry (a pure composition face, no loc…
+     54|     expect(inject).toEqual(['slots', 'locale', 'connection', 'settings…
+       |                    ^
+     55|   })
+     56|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 75 passed (77)
+      Tests  2 failed | 926 passed (928)
+   Start at  00:03:09
+   Duration  16.02s (transform 45.58s, setup 22.62s, import 91.80s, tests 32.64s, environment 34.04s)
+

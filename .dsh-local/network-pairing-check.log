@@ -1,0 +1,10 @@
+$ tsx scripts/verify-translation-pairing.ts
+verify-translation-pairing: bilingual pairing rules violated (see docs/i18n/README.md):
+  .agents/notes/implemented/mcmod/2026-09-13-mcmod-only-preset.md: in-scope documentation must merge bilingual (docs/i18n/README.md); add the counterpart and record the pair
+  .agents/notes/implemented/bug-fix/2026-09-14-desktop-clipboard-copy.zh.md: missing language switcher — no link to 2026-09-14-desktop-clipboard-copy.md
+  .agents/notes/implemented/bug-fix/2026-09-14-desktop-clipboard-copy.md ↔ .agents/notes/implemented/bug-fix/2026-09-14-desktop-clipboard-copy.zh.md: link target #1 diverges between the pair: nothing vs "dsh-translation-target:.agents/notes/implemented/bug-fix/2026-09-14-des…
+  docs/module-graph.zh.md: out of sync — content no longer matches the pair's last confirmed-consistent state in docs/module-graph.i18n.yaml (bring the other side along, then re-record with --write)
+  packages/client/ui-sidebar/README.md: out of sync — content no longer matches the pair's last confirmed-consistent state in packages/client/ui-sidebar/README.i18n.yaml (bring the other side along, then re-record with --write)
+  packages/client/ui-sidebar/README.zh.md: out of sync — content no longer matches the pair's last confirmed-consistent state in packages/client/ui-sidebar/README.i18n.yaml (bring the other side along, then re-record with --write)
+  packages/minecraft/tool-mc-bootstrap/README.zh.md:36: link target "../mc-workbench/README.md#download-and-build-network" uses the wrong locale; expected "../mc-workbench/README.zh.md#download-and-build-network"
+[ELIFECYCLE] Command failed with exit code 1.
