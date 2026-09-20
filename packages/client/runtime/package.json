@@ -43,7 +43,7 @@
   "license": "AGPL-3.0-only",
   "dependencies": {
     "immer": "^10.1.1",
-    "zustand": "~4.4.7"
+    "zustand": "~5.0.15"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
